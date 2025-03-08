@@ -1,0 +1,6 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mug shape for masking -->
+  <path d="M100,100 L100,240 C100,260 120,280 150,280 C180,280 200,260 200,240 L200,100 L100,100 Z" fill="white"/>
+  <!-- Handle -->
+  <path d="M200,140 L220,140 C235,140 240,160 240,180 C240,200 235,220 220,220 L200,220" fill="white"/>
+</svg> 

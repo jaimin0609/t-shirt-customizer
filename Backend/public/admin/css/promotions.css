@@ -1,0 +1,121 @@
+/* Promotions Management Styles */
+
+/* Fix for full screen title display */
+.navbar-text[data-translate="promotionManagement"] {
+    white-space: nowrap;
+    font-size: 1.5rem;
+    display: inline-block;
+    width: auto !important;
+    overflow: visible !important;
+}
+
+/* Fix for profile image display */
+img#userAvatar,
+.avatar,
+.avatar-img,
+.rounded-circle {
+    max-width: 40px !important;
+    max-height: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: cover !important;
+    overflow: hidden !important;
+}
+
+.navbar .dropdown-toggle img {
+    max-width: 40px !important;
+    max-height: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: cover !important;
+}
+
+/* Status badges */
+.badge-active {
+    background-color: #28a745;
+}
+
+.badge-inactive {
+    background-color: #6c757d;
+}
+
+.badge-expired {
+    background-color: #dc3545;
+}
+
+.badge-scheduled {
+    background-color: #17a2b8;
+}
+
+/* Table styles */
+#promotionsTable th {
+    font-weight: 600;
+}
+
+#promotionsTable .promotion-name {
+    font-weight: 500;
+}
+
+.loading-row {
+    height: 150px;
+}
+
+/* Promotion type badges */
+.badge-store-wide {
+    background-color: #6f42c1;
+}
+
+.badge-category {
+    background-color: #20c997;
+}
+
+.badge-product-specific {
+    background-color: #fd7e14;
+}
+
+.badge-clearance {
+    background-color: #e83e8c;
+}
+
+/* Form styles */
+#highlightColor {
+    cursor: pointer;
+}
+
+.form-control-color {
+    height: 38px;
+}
+
+/* Action buttons */
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.action-buttons .btn i {
+    font-size: 1rem;
+}
+
+/* Discount visualization */
+.discount-badge {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.6rem;
+}
+
+/* Date ranges */
+.date-range {
+    font-size: 0.875rem;
+    color: #495057;
+}
+
+/* Responsiveness */
+@media (max-width: 767.98px) {
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        margin-bottom: 0.25rem;
+    }
+}

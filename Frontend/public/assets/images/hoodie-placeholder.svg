@@ -1,0 +1,10 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hoodie shape -->
+  <path d="M75,60 C85,30 125,20 150,40 C175,20 215,30 225,60 L255,100 L230,120 L215,85 L215,320 L85,320 L85,85 L70,120 L45,100 L75,60 Z" fill="currentColor" stroke="#000" stroke-width="2"/>
+  <!-- Hoodie hood -->
+  <path d="M115,60 C125,30 175,30 185,60 C185,70 180,80 150,90 C120,80 115,70 115,60 Z" fill="currentColor" stroke="#000" stroke-width="2"/>
+  <!-- Hood opening -->
+  <path d="M135,70 C140,80 160,80 165,70" fill="none" stroke="#000" stroke-width="2"/>
+  <!-- Printable area indicator (dashed rectangle) -->
+  <rect x="100" y="100" width="100" height="120" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="5,5"/>
+</svg> 

@@ -1,0 +1,10 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cap body -->
+  <path d="M90,180 Q150,120 210,180 L210,220 Q150,200 90,220 Z" fill="currentColor" stroke="#000" stroke-width="2"/>
+  <!-- Cap brim -->
+  <path d="M90,220 Q150,200 210,220 L210,230 Q150,210 90,230 Z" fill="currentColor" stroke="#000" stroke-width="2"/>
+  <!-- Cap top view -->
+  <ellipse cx="150" cy="150" rx="60" ry="30" fill="none" stroke="#000" stroke-width="2"/>
+  <!-- Printable area indicator (dashed rectangle) -->
+  <rect x="120" y="150" width="60" height="40" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="5,5"/>
+</svg> 

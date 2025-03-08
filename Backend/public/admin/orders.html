@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="orderManagement">Order Management - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-wrapper">
+                    <div class="text-logo">AC</div>
+                    <h3 data-translate="adminPanel">Admin Panel</h3>
+                </div>
+            </div>
+            
+            <div class="sidebar-menu">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house-door"></i>
+                            <span data-translate="home">HOME</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analytics" data-bs-toggle="collapse">
+                            <i class="bi bi-graph-up"></i>
+                            <span data-translate="analytics">Analytics</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </a>
+                        <div class="collapse" id="analytics">
+                            <ul class="nav flex-column">
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="#">
+                                        <span data-translate="dashboard">Dashboard</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="#">
+                                        <span data-translate="reports">Reports</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#ecommerce" data-bs-toggle="collapse">
+                            <i class="bi bi-cart"></i>
+                            <span data-translate="ecommerce">Ecommerce</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </a>
+                        <div class="collapse show" id="ecommerce">
+                            <ul class="nav flex-column">
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="index.html">
+                                        <span data-translate="dashboard">Dashboard</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="products.html">
+                                        <span data-translate="products">Products</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="add-product.html">
+                                        <span data-translate="addProduct">Add Product</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link active" href="orders.html">
+                                        <span data-translate="orders">Orders</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="promotions.html">
+                                        <span data-translate="promotions">Promotions</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="coupons.html">
+                                        <span data-translate="coupons">Coupons</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link sub-link" href="customers.html">
+                                        <span data-translate="customers">Customers</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Top Navbar -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white">
+                <div class="container-fluid">
+                    <button class="btn" id="sidebar-toggle" aria-label="Toggle sidebar">
+                        <i class="bi bi-list fs-4"></i>
+                    </button>
+
+                    <!-- Search Bar -->
+                    <div class="d-none d-lg-flex flex-grow-1 mx-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input 
+                                type="text" 
+                                class="form-control border-start-0 ps-0" 
+                                data-translate-placeholder="searchOrders"
+                                placeholder="Search orders..." 
+                                id="orderSearch" 
+                                name="orderSearch"
+                                autocomplete="off"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Mobile Search Toggle -->
+                    <button class="btn d-lg-none ms-auto me-2" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#mobileSearch" aria-expanded="false" aria-controls="mobileSearch">
+                        <i class="bi bi-search fs-5"></i>
+                    </button>
+
+                    <!-- Right Side Icons -->
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Language -->
+                        <div class="nav-item dropdown">
+                            <button class="btn btn-link text-dark p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-translate fs-5"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <h6 class="dropdown-header" data-translate="selectLanguage">Select Language</h6>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item d-flex align-items-center" href="#" data-lang="en">
+                                    <img src="./images/united-kingdom.png" alt="English" class="me-2" width="20">
+                                    <span>English</span>
+                                </a>
+                                <a class="dropdown-item d-flex align-items-center" href="#" data-lang="es">
+                                    <img src="./images/spain.png" alt="Spanish" class="me-2" width="20">
+                                    <span>Español</span>
+                                </a>
+                                <a class="dropdown-item d-flex align-items-center" href="#" data-lang="fr">
+                                    <img src="./images/france.png" alt="French" class="me-2" width="20">
+                                    <span>Français</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Apps Grid -->
+                        <div class="nav-item dropdown">
+                            <button class="btn btn-link text-dark p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-grid fs-5"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 280px;">
+                                <h6 class="dropdown-header" data-translate="quickAccess">Quick Access</h6>
+                                <div class="row g-2">
+                                    <div class="col-4 text-center">
+                                        <a href="products.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-box fs-4 d-block mb-1 text-primary"></i>
+                                            <span class="small" data-translate="products">Products</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <a href="orders.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-cart fs-4 d-block mb-1 text-success"></i>
+                                            <span class="small" data-translate="orders">Orders</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <a href="customers.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-people fs-4 d-block mb-1 text-info"></i>
+                                            <span class="small" data-translate="customers">Customers</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <a href="index.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-graph-up fs-4 d-block mb-1 text-warning"></i>
+                                            <span class="small" data-translate="analytics">Analytics</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <a href="promotions.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-tag fs-4 d-block mb-1 text-secondary"></i>
+                                            <span class="small" data-translate="promotions">Promotions</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <a href="coupons.html" class="d-block p-2 rounded text-decoration-none">
+                                            <i class="bi bi-ticket-perforated fs-4 d-block mb-1 text-danger"></i>
+                                            <span class="small" data-translate="coupons">Coupons</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notifications -->
+                        <div class="nav-item dropdown">
+                            <button class="btn btn-link text-dark p-0 position-relative" data-bs-toggle="dropdown">
+                                <i class="bi bi-bell fs-5"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    3
+                                    <span class="visually-hidden" data-translate="unreadNotifications">unread notifications</span>
+                                </span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end notification-dropdown">
+                                <h6 class="dropdown-header" data-translate="notifications">Notifications</h6>
+                                <div class="dropdown-divider"></div>
+                                <!-- Notification Items -->
+                                <a class="dropdown-item" href="#">
+                                    <div class="d-flex align-items-center">
+                                        <div class="notification-icon bg-primary text-white rounded-circle p-2">
+                                            <i class="bi bi-cart"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0" data-translate="newOrder">New order received</p>
+                                            <small class="text-muted"><span>2</span> <span data-translate="minutesAgo">mins ago</span></small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Profile Dropdown -->
+                        <div class="dropdown">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="img/default-avatar.png" alt="User Avatar" class="avatar rounded-circle me-2" id="userAvatar">
+                                <span class="fw-semibold" id="userName">Admin</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#" id="profileLink">
+                                        <i class="bi bi-person me-2"></i>
+                                        <span data-translate="profile">Profile</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#" onclick="logout()">
+                                        <i class="bi bi-box-arrow-right me-2"></i>
+                                        <span data-translate="logout">Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Mobile Search Collapse -->
+            <div class="collapse" id="mobileSearch">
+                <div class="card card-body rounded-0 border-0">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control border-start-0 ps-0" 
+                            data-translate-placeholder="searchOrders"
+                            placeholder="Search orders..." 
+                            id="mobileOrderSearch" 
+                            name="mobileOrderSearch"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content p-4">
+                <!-- Order Stats -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1" data-translate="totalOrders">
+                                            Total Orders
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-cart-check fs-2 text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1" data-translate="pendingOrders">
+                                            Pending Orders
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="pendingOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1" data-translate="deliveredOrders">
+                                            Delivered Orders
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="deliveredOrdersCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-check-circle fs-2 text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1" data-translate="totalRevenue">
+                                            Total Revenue
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalRevenue">$0.00</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-currency-dollar fs-2 text-info"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-header mb-4">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title" data-translate="orderManagement">Order Management</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="index.html" data-translate="dashboard">Dashboard</a></li>
+                                <li class="breadcrumb-item active" data-translate="orders">Orders</li>
+                            </ul>
+                        </div>
+                        <div class="col-auto d-flex">
+                            <div class="me-2">
+                                <select id="statusFilter" class="form-select">
+                                    <option value="all" data-translate="allStatus">All Status</option>
+                                    <option value="pending" data-translate="pending">Pending</option>
+                                    <option value="processing" data-translate="processing">Processing</option>
+                                    <option value="shipped" data-translate="shipped">Shipped</option>
+                                    <option value="delivered" data-translate="delivered">Delivered</option>
+                                    <option value="cancelled" data-translate="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dateFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-calendar"></i> Date Filter
+                                </button>
+                                <div class="dropdown-menu p-3" aria-labelledby="dateFilterDropdown" style="width: 300px;">
+                                    <div class="mb-3">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="startDate">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="endDate">
+                                    </div>
+                                    <div class="d-grid">
+                                        <button id="applyDateFilter" class="btn btn-primary">Apply</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Orders Table Card -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="ordersTable">
+                                <thead>
+                                    <tr>
+                                        <th data-translate="orderId">Order ID</th>
+                                        <th data-translate="customer">Customer</th>
+                                        <th data-translate="date">Date</th>
+                                        <th data-translate="items">Items</th>
+                                        <th data-translate="total">Total</th>
+                                        <th data-translate="status">Status</th>
+                                        <th data-translate="paymentStatus">Payment</th>
+                                        <th data-translate="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody">
+                                    <!-- Orders will be loaded here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderModalTitle" data-translate="orderDetails">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="orderDetailTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">Details</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking" type="button" role="tab" aria-controls="tracking" aria-selected="false">Tracking</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="refunds-tab" data-bs-toggle="tab" data-bs-target="#refunds" type="button" role="tab" aria-controls="refunds" aria-selected="false">Refunds</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false">Notes</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="orderDetailTabsContent">
+                        <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+                            <div id="orderDetails" class="mt-3">
+                                <!-- Order details will be loaded here dynamically -->
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tracking" role="tabpanel" aria-labelledby="tracking-tab">
+                            <div class="mt-3">
+                                <form id="trackingForm">
+                                    <input type="hidden" id="trackingOrderId">
+                                    <div class="mb-3">
+                                        <label for="trackingNumber" class="form-label">Tracking Number</label>
+                                        <input type="text" class="form-control" id="trackingNumber" placeholder="Enter tracking number">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="carrier" class="form-label">Shipping Carrier</label>
+                                        <select class="form-select" id="carrier">
+                                            <option value="">Select a carrier</option>
+                                            <option value="ups">UPS</option>
+                                            <option value="fedex">FedEx</option>
+                                            <option value="usps">USPS</option>
+                                            <option value="dhl">DHL</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="estimatedDelivery" class="form-label">Estimated Delivery Date</label>
+                                        <input type="date" class="form-control" id="estimatedDelivery">
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="saveTrackingBtn">Save Tracking Information</button>
+                                </form>
+                                <div id="trackingHistory" class="mt-4">
+                                    <h5>Current Tracking Information</h5>
+                                    <div id="currentTracking">
+                                        <!-- Tracking info will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="refunds" role="tabpanel" aria-labelledby="refunds-tab">
+                            <div class="mt-3">
+                                <form id="refundForm">
+                                    <input type="hidden" id="refundOrderId">
+                                    <div class="mb-3">
+                                        <label for="refundAmount" class="form-label">Refund Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" step="0.01" class="form-control" id="refundAmount" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="refundReason" class="form-label">Reason for Refund</label>
+                                        <textarea class="form-control" id="refundReason" rows="3"></textarea>
+                                    </div>
+                                    <button type="button" class="btn btn-warning" id="processRefundBtn">Process Refund</button>
+                                </form>
+                                <div id="refundHistory" class="mt-4">
+                                    <h5>Refund History</h5>
+                                    <div id="currentRefunds">
+                                        <!-- Refund info will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
+                            <div class="mt-3">
+                                <form id="notesForm">
+                                    <input type="hidden" id="notesOrderId">
+                                    <div class="mb-3">
+                                        <label for="orderNotes" class="form-label">Order Notes</label>
+                                        <textarea class="form-control" id="orderNotes" rows="5"></textarea>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="saveNotesBtn">Save Notes</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="dropdown me-auto">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="updateStatusDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Update Status
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="updateStatusDropdown">
+                            <li><a class="dropdown-item status-option" data-status="pending" href="#">Pending</a></li>
+                            <li><a class="dropdown-item status-option" data-status="processing" href="#">Processing</a></li>
+                            <li><a class="dropdown-item status-option" data-status="shipped" href="#">Shipped</a></li>
+                            <li><a class="dropdown-item status-option" data-status="delivered" href="#">Delivered</a></li>
+                            <li><a class="dropdown-item status-option" data-status="cancelled" href="#">Cancelled</a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel" data-translate="editProfile">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm">
+                        <div class="mb-3 text-center">
+                            <div class="position-relative d-inline-block">
+                                <img id="profilePreview" src="./images/man.png" alt="Profile Preview" 
+                                    class="rounded-circle mb-2" 
+                                    style="width: 150px; height: 150px; object-fit: cover;">
+                                <label for="profileImage" 
+                                    class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2" 
+                                    style="cursor: pointer;">
+                                    <i class="bi bi-camera-fill"></i>
+                                </label>
+                            </div>
+                            <input type="file" id="profileImage" name="profileImage" 
+                                accept="image/*" style="display: none;">
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label" data-translate="name">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label" data-translate="email">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label" data-translate="newPassword">New Password (leave blank to keep current)</label>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProfile()" data-translate="saveChanges">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/orders.js"></script>
+</body>
+</html> 

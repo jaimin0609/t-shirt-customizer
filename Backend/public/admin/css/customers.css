@@ -1,0 +1,170 @@
+.customers-section {
+    background: #fff;
+    border-radius: 8px;
+}
+
+.filters {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.customer-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.status-active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-inactive {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.status-blocked {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.action-buttons {
+    white-space: nowrap;
+}
+
+.action-buttons button {
+    padding: 4px 8px;
+    margin: 0 2px;
+    border-radius: 4px;
+}
+
+.customer-details-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+}
+
+.customer-details-card h6 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.recent-orders {
+    border-top: 1px solid #dee2e6;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.order-item {
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.order-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+#searchCustomer {
+    min-width: 250px;
+}
+
+.modal-body label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Page Header Styles */
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.breadcrumb {
+    margin-bottom: 0;
+    padding: 0;
+    background: none;
+}
+
+.breadcrumb-item a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #7f8c8d;
+}
+
+/* Search Input Styles */
+.input-group-text {
+    background-color: transparent;
+    border-right: none;
+}
+
+.form-control.border-start-0 {
+    border-left: none;
+}
+
+.form-control.border-start-0:focus {
+    border-color: #dee2e6;
+    box-shadow: none;
+}
+
+/* Table Responsive */
+.table-responsive {
+    margin: 0;
+    border: none;
+}
+
+/* Status Filter */
+#statusFilter {
+    min-width: 150px;
+}

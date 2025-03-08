@@ -1,0 +1,6 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cap shape for masking -->
+  <path d="M70,180 C70,120 150,80 230,180 C230,200 230,220 150,220 C70,220 70,200 70,180 Z" fill="white"/>
+  <!-- Visor -->
+  <path d="M70,180 L50,190 C40,200 40,210 70,210 L70,180 Z" fill="white"/>
+</svg> 

@@ -1,0 +1,148 @@
+/* Coupon Management Styles */
+
+/* Stats Cards */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+/* Coupon Table */
+.table th {
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Status Badges */
+.badge {
+    padding: 0.5rem 0.7rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.badge-active {
+    background-color: #10b981;
+}
+
+.badge-inactive {
+    background-color: #6b7280;
+}
+
+.badge-scheduled {
+    background-color: #3b82f6;
+}
+
+.badge-expired {
+    background-color: #ef4444;
+}
+
+/* Discount Badge */
+.discount-badge {
+    font-weight: 600;
+    border-radius: 0.25rem;
+    padding: 0.35rem 0.7rem;
+}
+
+/* Coupon Code Display */
+.coupon-code {
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 1rem;
+    background-color: #f3f4f6;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.25rem;
+    letter-spacing: 1px;
+}
+
+/* Public Banner Indicator */
+.public-indicator {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* Form Controls */
+.form-control-color {
+    height: 38px;
+}
+
+/* Show/hide public options */
+.public-options {
+    display: none;
+}
+
+#isPublic:checked~.public-options,
+#isPublic:checked~* .public-options {
+    display: flex;
+}
+
+/* Action buttons */
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.action-buttons .btn i {
+    margin-right: 0.25rem;
+}
+
+/* Copy button */
+.copy-btn {
+    cursor: pointer;
+    color: #3b82f6;
+}
+
+.copy-btn:hover {
+    color: #2563eb;
+}
+
+/* Usage display */
+.usage-display {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.usage-bar {
+    height: 4px;
+    width: 100%;
+    background-color: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+/* Banner preview styles */
+.banner-preview {
+    border-radius: 4px;
+    margin-top: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.banner-preview:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+#previewText {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}

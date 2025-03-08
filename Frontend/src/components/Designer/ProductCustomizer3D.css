@@ -1,0 +1,666 @@
+.product-customizer {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+    padding: 2rem;
+    background-color: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin: 2rem auto;
+    position: relative;
+    max-width: 1200px;
+}
+
+/* Product preview section */
+.product-preview {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 20px;
+}
+
+/* Improved 3D container */
+.canvas-3d-container {
+    width: 100%;
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background-color: #f5f5f5;
+}
+
+.three-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Enhanced 2D fallback mode */
+.fallback-preview {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-image {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-template-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 1;
+}
+
+.product-color-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+.design-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Product information */
+.product-info {
+    background-color: white;
+    padding: 16px;
+    margin-top: 20px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.product-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.product-info p {
+    margin: 0;
+    color: #4b5563;
+    font-size: 14px;
+}
+
+/* Color options section */
+.color-options {
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.color-options h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.color-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+
+.color-swatch.active {
+    border: 2px solid #3b82f6;
+    transform: scale(1.1);
+}
+
+/* Design tools section */
+.design-tools {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 350px;
+}
+
+.design-tools h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+}
+
+.tool-section {
+    background-color: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.tool-section h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.add-elements {
+    display: flex;
+    gap: 10px;
+}
+
+.add-elements button,
+.upload-button {
+    padding: 10px 16px;
+    background-color: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: 500;
+    flex: 1;
+    text-align: center;
+}
+
+.add-elements button:hover,
+.upload-button:hover {
+    background-color: #4338ca;
+}
+
+.upload-button input[type="file"] {
+    display: none;
+}
+
+/* Layer controls for selected elements */
+.layer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.element-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.element-actions button {
+    padding: 8px 12px;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.element-actions button:hover {
+    background-color: #e5e7eb;
+}
+
+.element-actions .remove-btn {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.element-actions .remove-btn:hover {
+    background-color: #fecaca;
+}
+
+/* Text controls */
+.text-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.text-controls input,
+.text-controls select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+/* Product selection */
+.product-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: white;
+    cursor: pointer;
+}
+
+/* Save button */
+.save-design-btn {
+    background-color: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.save-design-btn:hover {
+    background-color: #059669;
+}
+
+/* 2D mode note */
+.mode-note {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px;
+    font-size: 14px;
+    text-align: center;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.mode-note p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Fabric canvas */
+.fabric-preview {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+#canvas-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.fabric-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .product-customizer {
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+
+    .product-preview {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    .design-tools {
+        max-width: 100%;
+    }
+}
+
+.customizer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.control-section {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.control-section h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.product-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.product-options button {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.product-options button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.view-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.view-options button {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-options button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.add-elements {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.add-elements button,
+.add-elements .upload-button {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.add-elements button:hover,
+.add-elements .upload-button:hover,
+.layer-controls button:hover {
+    background-color: #f3f4f6;
+}
+
+.layer-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.layer-controls button {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.text-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.text-options input,
+.text-options select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+}
+
+.customizer-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.product-preview-image {
+    max-width: 300px;
+    margin: 0 auto;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: white;
+}
+
+.info-banner {
+    display: flex;
+    align-items: flex-start;
+    background-color: #e0f2fe;
+    border-left: 4px solid #0ea5e9;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.info-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    color: #0ea5e9;
+    flex-shrink: 0;
+}
+
+.info-banner h4 {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0 0 4px 0;
+    color: #0c4a6e;
+}
+
+.info-banner p {
+    margin: 0;
+    color: #0c4a6e;
+    font-size: 14px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .product-customizer {
+        grid-template-columns: 1fr;
+    }
+
+    .product-options,
+    .color-options,
+    .add-elements,
+    .layer-controls {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Design tools container */
+.design-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    width: 100%;
+    max-width: 300px;
+}
+
+.design-tools h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.add-elements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.add-elements button,
+.upload-button {
+    padding: 8px 16px;
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+}
+
+.add-elements button:hover,
+.upload-button:hover {
+    background-color: #357abD;
+}
+
+.upload-button {
+    display: inline-block;
+    text-align: center;
+    position: relative;
+}
+
+.upload-button input[type="file"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+/* Controls for selected objects */
+.layer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.color-swatch.active {
+    border: 2px solid #4a90e2;
+}
+
+.text-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.text-controls input,
+.text-controls select {
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .product-customizer {
+        flex-direction: column;
+    }
+
+    .product-preview,
+    .design-tools {
+        width: 100%;
+        max-width: none;
+    }
+}

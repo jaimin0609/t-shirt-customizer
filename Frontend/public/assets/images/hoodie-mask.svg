@@ -1,0 +1,6 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hoodie shape for masking -->
+  <path d="M60,80 C70,40 120,20 150,30 C180,20 230,40 240,80 L260,100 L230,110 L225,90 L225,320 L75,320 L75,90 L70,110 L40,100 L60,80 Z" fill="white"/>
+  <!-- Hood -->
+  <path d="M120,50 C130,20 170,20 180,50 C190,30 160,10 150,30 C140,10 110,30 120,50 Z" fill="white"/>
+</svg> 

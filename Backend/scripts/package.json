@@ -1,0 +1,10 @@
+{
+    "name": "backend-scripts",
+    "version": "1.0.0",
+    "description": "Utility scripts for the backend",
+    "type": "module",
+    "scripts": {
+        "create-coupon": "node create-simple-coupon.js",
+        "insert-coupon": "node insert-coupon.js"
+    }
+}

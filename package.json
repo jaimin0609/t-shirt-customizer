@@ -1,0 +1,18 @@
+{
+    "name": "t-shirt-customizer",
+    "version": "1.0.0",
+    "scripts": {
+        "start:backend": "cd Backend && npm start",
+        "start:frontend": "cd Frontend && npm run dev",
+        "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+        "build:frontend": "cd Frontend && npm run build",
+        "start:prod": "cd Backend && NODE_ENV=production npm start",
+        "deploy": "npm run build:frontend && npm run start:prod"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    },
+    "dependencies": {
+        "node-fetch": "^3.3.2"
+    }
+}

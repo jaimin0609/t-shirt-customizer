@@ -1,0 +1,8 @@
+<svg width="300" height="360" viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg">
+  <!-- T-shirt shape -->
+  <path d="M75,40 C90,10 130,10 150,30 C170,10 210,10 225,40 L255,80 L230,100 L215,65 L215,320 L85,320 L85,65 L70,100 L45,80 L75,40 Z" fill="currentColor" stroke="#000" stroke-width="2"/>
+  <!-- T-shirt collar -->
+  <path d="M125,40 C135,30 165,30 175,40" fill="none" stroke="#000" stroke-width="2"/>
+  <!-- Printable area indicator (dashed rectangle) -->
+  <rect x="100" y="80" width="100" height="120" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="5,5"/>
+</svg> 

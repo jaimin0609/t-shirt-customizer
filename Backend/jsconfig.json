@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "forceConsistentCasingInFileNames": false,
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "*"
+            ]
+        }
+    },
+    "include": [
+        "**/*.js"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
