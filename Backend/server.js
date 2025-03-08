@@ -156,6 +156,53 @@ async function startServer() {
         await sequelize.authenticate();
         console.log('Database connection established.');
 
+        // Run migrations in production automatically
+        if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE === 'true') {
+            console.log('Running automatic migrations...');
+            try {
+                const { Umzug, SequelizeStorage } = await import('umzug');
+                
+                const umzug = new Umzug({
+                    migrations: { glob: 'migrations/*.js' },
+                    context: sequelize.getQueryInterface(),
+                    storage: new SequelizeStorage({ sequelize }),
+                    logger: console,
+                });
+                
+                // Run pending migrations
+                const migrations = await umzug.up();
+                console.log('Migrations completed:', migrations.map(m => m.name));
+                
+                // Create admin user if it doesn't exist
+                try {
+                    const { User } = await import('./models/user.js');
+                    const adminExists = await User.findOne({ 
+                        where: { 
+                            role: 'admin' 
+                        } 
+                    });
+                    
+                    if (!adminExists && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+                        const bcrypt = await import('bcryptjs');
+                        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+                        
+                        await User.create({
+                            email: process.env.ADMIN_EMAIL,
+                            password: hashedPassword,
+                            role: 'admin',
+                            name: 'Admin User'
+                        });
+                        
+                        console.log('Default admin user created successfully');
+                    }
+                } catch (error) {
+                    console.error('Error creating admin user:', error);
+                }
+            } catch (error) {
+                console.error('Error running migrations:', error);
+            }
+        }
+
         // Sync database models without dropping tables
         await sequelize.sync();
         console.log('Database models synchronized.');
