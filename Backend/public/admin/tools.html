@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Database Tools</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow: auto;
+        }
+        .output-container {
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>Admin Database Tools</h1>
+                    <a href="/admin/index.html" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to Admin Panel
+                    </a>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <strong>Important:</strong> These tools are for administrative use only and should not be accessible in production environments.
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Check Admin Users</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">This tool allows you to check what admin users exist in the database. You must be logged in as an admin to use this tool.</p>
+                        
+                        <button id="checkAdminUsersBtn" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Check Admin Users
+                        </button>
+                        
+                        <div id="adminUsersOutput" class="output-container">
+                            <h5>Results:</h5>
+                            <pre id="adminUsersData"></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Reset Admin User</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">If you're having trouble logging in, you can create a new admin user with known credentials.</p>
+                        
+                        <div class="alert alert-info mb-3">
+                            <strong>Note:</strong> This will create or update an admin user with the following credentials:
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Email:</strong> admin@example.com</li>
+                                <li><strong>Password:</strong> Admin123!</li>
+                            </ul>
+                        </div>
+                        
+                        <button id="resetAdminBtn" class="btn btn-success">
+                            <i class="bi bi-person-plus"></i> Reset Admin User
+                        </button>
+                        
+                        <div id="resetAdminOutput" class="output-container">
+                            <h5>Results:</h5>
+                            <pre id="resetAdminData"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Check if user is logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('You must be logged in as an admin to use these tools.');
+                window.location.href = '/admin/login.html';
+                return;
+            }
+            
+            // Attach event listeners
+            document.getElementById('checkAdminUsersBtn').addEventListener('click', checkAdminUsers);
+            document.getElementById('resetAdminBtn').addEventListener('click', resetAdminUser);
+        });
+        
+        // Function to check admin users
+        async function checkAdminUsers() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/admin-tools/check-users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                // Show the output container
+                const outputContainer = document.getElementById('adminUsersOutput');
+                outputContainer.style.display = 'block';
+                
+                // Format and display the data
+                const adminUsersData = document.getElementById('adminUsersData');
+                if (response.ok) {
+                    adminUsersData.innerHTML = JSON.stringify(data, null, 2);
+                } else {
+                    adminUsersData.innerHTML = `Error: ${data.message || 'Failed to check admin users'}`;
+                    adminUsersData.classList.add('text-danger');
+                }
+            } catch (error) {
+                console.error('Error checking admin users:', error);
+                alert('Error checking admin users. See console for details.');
+            }
+        }
+        
+        // Function to reset admin user
+        async function resetAdminUser() {
+            try {
+                const token = localStorage.getItem('token');
+                
+                // Create the admin user with hardcoded credentials
+                const adminData = {
+                    username: 'admin',
+                    name: 'Administrator',
+                    email: 'admin@example.com',
+                    password: 'Admin123!',
+                    role: 'admin',
+                    status: 'active'
+                };
+                
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(adminData)
+                });
+                
+                const data = await response.json();
+                
+                // Show the output container
+                const outputContainer = document.getElementById('resetAdminOutput');
+                outputContainer.style.display = 'block';
+                
+                // Format and display the data
+                const resetAdminData = document.getElementById('resetAdminData');
+                
+                if (response.ok) {
+                    resetAdminData.innerHTML = `Admin user successfully created/reset!\n\nEmail: admin@example.com\nPassword: Admin123!\n\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resetAdminData.classList.add('text-success');
+                } else if (data.message === 'Email already registered' || data.message === 'Username already taken') {
+                    // Try to update the existing user
+                    resetAdminData.innerHTML = `An admin user already exists with that email. Attempting to update password...`;
+                    
+                    // This part would require a dedicated password reset endpoint
+                    // For now, show instructions
+                    resetAdminData.innerHTML += `\n\nTo reset the password, try logging in with the default credentials: admin@example.com / Admin123!`;
+                } else {
+                    resetAdminData.innerHTML = `Error: ${data.message || 'Failed to reset admin user'}\n\n${JSON.stringify(data, null, 2)}`;
+                    resetAdminData.classList.add('text-danger');
+                }
+            } catch (error) {
+                console.error('Error resetting admin user:', error);
+                alert('Error resetting admin user. See console for details.');
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
