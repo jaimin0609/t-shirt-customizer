@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "create-admin": "node scripts/createAdmin.js",
     "reset-admin": "node scripts/createAdminUser.js",
+    "check-admins": "node scripts/checkAdminUsers.js",
     "coupon-manager": "node scripts/couponManager.js"
   },
   "keywords": [],
