@@ -6,13 +6,19 @@
         "start:frontend": "cd Frontend && npm run dev",
         "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
         "build:frontend": "cd Frontend && npm run build",
+        "build:install": "npm install && (cd Backend && npm install) && (cd Frontend && npm install)",
         "start:prod": "cd Backend && NODE_ENV=production npm start",
-        "deploy": "npm run build:frontend && npm run start:prod"
+        "deploy": "npm run build:frontend && npm run start:prod",
+        "postinstall": "cd Backend && npm install && cd ../Frontend && npm install"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
     },
     "dependencies": {
-        "node-fetch": "^3.3.2"
+        "node-fetch": "^3.3.2",
+        "cross-env": "^7.0.3"
+    },
+    "engines": {
+        "node": ">=16.0.0"
     }
 }

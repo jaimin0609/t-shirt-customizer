@@ -30,6 +30,8 @@
     "multer-sharp-resizer": "^1.0.5",
     "mysql2": "^3.12.0",
     "node-fetch": "^3.3.2",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
     "sanitize-html": "^2.14.0",
     "sequelize": "^6.30.0",
     "sharp": "^0.32.6",
