@@ -42,6 +42,10 @@ router.post('/register', async (req, res) => {
         });
         
         // Generate JWT token
+        if (!process.env.JWT_SECRET) {
+            console.error('WARNING: JWT_SECRET environment variable is not set!');
+        }
+        
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET || 'your-secret-key',
@@ -99,6 +103,10 @@ router.post('/login', async (req, res) => {
         }
         
         // Generate JWT token
+        if (!process.env.JWT_SECRET) {
+            console.error('WARNING: JWT_SECRET environment variable is not set!');
+        }
+        
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET || 'your-secret-key',
@@ -193,6 +201,10 @@ router.post('/customer/register', async (req, res) => {
         }, { transaction: t });
         
         // Generate JWT token
+        if (!process.env.JWT_SECRET) {
+            console.error('WARNING: JWT_SECRET environment variable is not set!');
+        }
+        
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, customerId: customer.id },
             process.env.JWT_SECRET || 'your-secret-key',
@@ -288,6 +300,10 @@ router.put('/profile', auth, async (req, res) => {
         }
         
         // Generate a fresh token to ensure continued authentication
+        if (!process.env.JWT_SECRET) {
+            console.error('WARNING: JWT_SECRET environment variable is not set!');
+        }
+        
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET || 'your-secret-key',

@@ -53,6 +53,10 @@ A full-stack web application for customizing and ordering T-shirts online.
    - Create a `.env` file in the root directory based on `.env.example`
    - Create a `.env` file in the Backend directory based on `.env.example`
    - Create a `.env` file in the Frontend directory based on `.env.example`
+   - **Important**: Set up a secure JWT_SECRET in the Backend `.env` file by running:
+   ```bash
+   node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex'))" >> Backend/.env
+   ```
 
 4. Set up the database
    ```bash

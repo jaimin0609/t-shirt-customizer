@@ -13,6 +13,10 @@ const auth = async (req, res, next) => {
         const token = authHeader.split(' ')[1];
         
         // Verify token
+        if (!process.env.JWT_SECRET) {
+            console.error('WARNING: JWT_SECRET environment variable is not set!');
+        }
+        
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
         
         // Find user by id
