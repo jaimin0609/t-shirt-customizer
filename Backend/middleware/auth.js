@@ -36,7 +36,9 @@ const auth = async (req, res, next) => {
             id: user.id,
             email: user.email,
             role: user.role,
-            status: user.status
+            status: user.status,
+            // Pass through emergency login flag if present in token
+            isEmergencyLogin: decoded.isEmergencyLogin || false
         };
         
         next();
@@ -47,6 +49,14 @@ const auth = async (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
+    // Special case for emergency login - always grant access
+    if (req.user && req.user.isEmergencyLogin === true) {
+        console.log('Emergency login admin access granted for user:', req.user.email);
+        next();
+        return;
+    }
+
+    // Regular admin check
     if (req.user && req.user.role === 'admin') {
         next();
     } else {

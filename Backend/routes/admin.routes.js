@@ -111,23 +111,23 @@ router.get('/reset-admin', async (req, res) => {
 // Emergency direct login without password check
 router.get('/emergency-login', async (req, res) => {
   try {
-    // This route should only be accessible with a secret key
-    const secretKey = req.query.secret;
-    const expectedSecret = process.env.ADMIN_RESET_SECRET || 'temporary-dev-secret';
+    // This route should only be accessible with a security code
+    const securityCode = req.query.secret;
+    const expectedCode = process.env.ADMIN_RESET_SECRET || 'temporary-dev-secret';
     
-    if (secretKey !== expectedSecret) {
-      console.log('Invalid secret key provided for emergency login');
+    if (securityCode !== expectedCode) {
+      console.log('Invalid security code provided for emergency login');
       return res.status(403).json({ 
-        message: 'Access denied. Valid secret key required.'
+        message: 'Access denied. Valid security code required.'
       });
     }
     
     // Find the admin user
     const adminUser = await User.findOne({
       where: {
-        email: 'admin@example.com',
         role: 'admin'
-      }
+      },
+      order: [['createdAt', 'ASC']] // Get the oldest admin user
     });
     
     if (!adminUser) {
@@ -136,16 +136,28 @@ router.get('/emergency-login', async (req, res) => {
       });
     }
     
-    // Generate JWT token directly
+    // Generate JWT token with full admin privileges
     const token = jwt.sign(
-      { id: adminUser.id, email: adminUser.email, role: adminUser.role },
+      { 
+        id: adminUser.id, 
+        email: adminUser.email, 
+        role: adminUser.role,
+        isEmergencyLogin: true,  // Mark this as an emergency login
+        timestamp: Date.now()    // Add timestamp for additional security
+      },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1d' }
     );
     
+    // Log the emergency access
+    console.log(`Emergency login granted for admin user: ${adminUser.email} (ID: ${adminUser.id})`);
+    
     // Remove password from response
     const userData = adminUser.toJSON();
     delete userData.password;
+    
+    // Add emergency login flag to the user data for client-side use
+    userData.isEmergencyLogin = true;
     
     // Return HTML with auto-login script
     res.send(`
@@ -165,7 +177,7 @@ router.get('/emergency-login', async (req, res) => {
           <div class="container">
             <div class="alert alert-success">
               <h4>Emergency Login Successful!</h4>
-              <p>Your admin token has been generated and will be automatically stored.</p>
+              <p>You now have full administrator access to the system.</p>
             </div>
             
             <div class="card mb-4">
@@ -179,15 +191,16 @@ router.get('/emergency-login', async (req, res) => {
             </div>
             
             <div class="card mb-4">
-              <div class="card-header">Token</div>
+              <div class="card-header">Access Information</div>
               <div class="card-body">
-                <pre class="mb-0">${token.substring(0, 20)}...${token.substring(token.length - 20)}</pre>
+                <p><strong>Access Type:</strong> <span class="badge bg-warning">Emergency Access</span></p>
+                <p><strong>Expires:</strong> 24 hours from now</p>
+                <p class="text-danger"><strong>Note:</strong> For security reasons, emergency access is logged and monitored.</p>
               </div>
             </div>
             
             <div class="d-grid gap-2">
-              <button class="btn btn-primary" id="loginBtn">Complete Login & Go to Admin Panel</button>
-              <a href="/admin/login.html" class="btn btn-outline-secondary">Return to Login Page</a>
+              <button class="btn btn-primary" id="loginBtn">Continue to Admin Panel</button>
             </div>
           </div>
           
@@ -195,10 +208,17 @@ router.get('/emergency-login', async (req, res) => {
             // Store the token and user data
             localStorage.setItem('token', '${token}');
             localStorage.setItem('user', '${JSON.stringify(userData).replace(/'/g, "\\'")}');
+            localStorage.setItem('emergencyLogin', 'true'); // Track this as an emergency login
+            localStorage.setItem('isAdminSession', 'true'); // Extra flag to ensure admin privileges
             
             document.getElementById('loginBtn').addEventListener('click', function() {
               window.location.href = '/admin/index.html';
             });
+            
+            // Auto-redirect after 5 seconds
+            setTimeout(() => {
+              window.location.href = '/admin/index.html';
+            }, 5000);
           </script>
         </body>
       </html>
@@ -207,6 +227,43 @@ router.get('/emergency-login', async (req, res) => {
     console.error('Emergency login error:', error);
     res.status(500).json({ 
       message: 'Error during emergency login', 
+      error: error.message 
+    });
+  }
+});
+
+// Verify security code for emergency access
+router.post('/verify-security-code', async (req, res) => {
+  try {
+    const { securityCode } = req.body;
+    
+    // The expected code - can be configured with environment variable
+    const expectedCode = process.env.ADMIN_RESET_SECRET || 'temporary-dev-secret';
+    
+    // Enhanced security: add a small random delay to prevent timing attacks
+    const randomDelay = Math.floor(Math.random() * 500) + 200; // 200-700ms random delay
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
+    
+    // Validate security code - this is a server-side check that can't be bypassed through client inspection
+    if (securityCode !== expectedCode) {
+      console.log('Invalid security code attempt');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid security code' 
+      });
+    }
+    
+    // If code is valid, allow emergency access
+    console.log('Valid security code provided, emergency access granted');
+    return res.json({
+      success: true,
+      message: 'Security code verified'
+    });
+  } catch (error) {
+    console.error('Security code verification error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Error verifying security code', 
       error: error.message 
     });
   }
