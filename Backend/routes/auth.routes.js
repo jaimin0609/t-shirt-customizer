@@ -71,19 +71,25 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password, isAdminLogin } = req.body;
-        console.log('Login attempt:', { email, isAdminLogin });
+        console.log('Login attempt - Details:', { 
+            email, 
+            isAdminLogin,
+            body: JSON.stringify(req.body),
+            headers: JSON.stringify(req.headers['content-type']),
+            method: req.method
+        });
         
         // Find user by email
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            console.log('User not found:', email);
+            console.log('Login failure - User not found:', email);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         console.log('User found:', { id: user.id, email: user.email, role: user.role, status: user.status });
         
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        console.log('Password validation:', { isPasswordValid });
+        console.log('Password validation:', { isPasswordValid, providedPassword: !!password });
         
         if (!isPasswordValid) {
             console.log('Invalid password for user:', email);
@@ -125,7 +131,8 @@ router.post('/login', async (req, res) => {
             token
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error - Exception details:', error);
+        console.error('Error stack:', error.stack);
         res.status(500).json({ message: 'Error logging in' });
     }
 });
