@@ -104,9 +104,16 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// Static files
+// Static files - make sure these come before API routes
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// Admin panel specific route
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/admin/index.html'));
+});
+
+// Serve admin panel files with proper path
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
 
 // API Routes
@@ -128,7 +135,12 @@ app.use(errorHandler);
 
 // Default route
 app.get('/', (req, res) => {
-    res.json({ message: 'Server is running' });
+    res.json({ 
+        message: 'T-Shirt Customizer API is running',
+        docs: 'API Documentation is not available. Please check the frontend application.',
+        adminPanel: `${req.protocol}://${req.get('host')}/admin`,
+        status: 'healthy'
+    });
 });
 
 // Add this route for testing image serving
@@ -160,18 +172,18 @@ async function startServer() {
         if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE === 'true') {
             console.log('Running automatic migrations...');
             try {
-                const { Umzug, SequelizeStorage } = await import('umzug');
+                // Instead of using Umzug, directly sync the models
+                console.log('Using Sequelize sync instead of migrations...');
                 
-                const umzug = new Umzug({
-                    migrations: { glob: 'migrations/*.js' },
-                    context: sequelize.getQueryInterface(),
-                    storage: new SequelizeStorage({ sequelize }),
-                    logger: console,
-                });
+                // Force sync in production only if specifically requested
+                // CAUTION: This will drop and recreate all tables
+                const forceSync = process.env.FORCE_SYNC === 'true';
+                if (forceSync) {
+                    console.log('WARNING: Forcing table sync (drop and recreate)');
+                }
                 
-                // Run pending migrations
-                const migrations = await umzug.up();
-                console.log('Migrations completed:', migrations.map(m => m.name));
+                await sequelize.sync({ force: forceSync });
+                console.log('Database schema synchronized successfully');
                 
                 // Create admin user if it doesn't exist
                 try {
@@ -194,18 +206,20 @@ async function startServer() {
                         });
                         
                         console.log('Default admin user created successfully');
+                    } else if (adminExists) {
+                        console.log('Admin user already exists, skipping creation');
                     }
                 } catch (error) {
-                    console.error('Error creating admin user:', error);
+                    console.error('Error handling admin user:', error);
                 }
             } catch (error) {
-                console.error('Error running migrations:', error);
+                console.error('Error syncing database:', error);
             }
+        } else {
+            // Standard model sync for non-production or when migrations disabled
+            await sequelize.sync();
+            console.log('Database models synchronized.');
         }
-
-        // Sync database models without dropping tables
-        await sequelize.sync();
-        console.log('Database models synchronized.');
 
         // Start server
         app.listen(PORT, () => {
