@@ -328,4 +328,68 @@ router.put('/profile', auth, async (req, res) => {
     }
 });
 
+// JWT check endpoint - helpful for debugging JWT issues
+router.get('/jwt-check', (req, res) => {
+  try {
+    // Check if JWT_SECRET is set
+    const jwtSecret = process.env.JWT_SECRET;
+    let secretStatus = 'Not configured';
+    
+    if (jwtSecret) {
+      secretStatus = jwtSecret.length > 30 ? 'Properly configured (long secret)' : 'Configured but potentially weak';
+    }
+    
+    // Create a test token
+    const testToken = jwt.sign({ test: true }, jwtSecret || 'test-secret', { expiresIn: '1m' });
+    
+    // Try to verify it
+    const verified = jwt.verify(testToken, jwtSecret || 'test-secret');
+    
+    res.json({
+      status: 'JWT system operational',
+      jwtSecretStatus: secretStatus,
+      testTokenCreated: !!testToken,
+      verificationSuccessful: !!verified,
+      environment: process.env.NODE_ENV || 'development',
+      bcryptAvailable: typeof bcrypt === 'object'
+    });
+  } catch (error) {
+    console.error('JWT check error:', error);
+    res.status(500).json({
+      status: 'JWT system error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'production' ? null : error.stack
+    });
+  }
+});
+
+// For debugging password issues - create a test hash
+router.post('/test-password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+    
+    // Create a hash
+    const hash = await bcrypt.hash(password, 10);
+    
+    // Test comparison
+    const isMatch = await bcrypt.compare(password, hash);
+    
+    res.json({
+      original: password,
+      hash,
+      matchesOriginal: isMatch
+    });
+  } catch (error) {
+    console.error('Password test error:', error);
+    res.status(500).json({ 
+      message: 'Error testing password', 
+      error: error.message 
+    });
+  }
+});
+
 export default router; 
