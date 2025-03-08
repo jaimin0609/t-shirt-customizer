@@ -187,19 +187,24 @@ async function startServer() {
                 
                 // Create admin user if it doesn't exist
                 try {
-                    const { User } = await import('./models/user.js');
+                    // Import User model directly
+                    const User = (await import('./models/user.js')).default;
+                    
+                    // Check if admin user exists
                     const adminExists = await User.findOne({ 
-                        where: { 
-                            role: 'admin' 
-                        } 
+                        where: { role: 'admin' } 
                     });
                     
                     if (!adminExists && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
                         const bcrypt = await import('bcryptjs');
                         const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
                         
+                        // Generate a username from the email
+                        const username = process.env.ADMIN_EMAIL.split('@')[0] + '_admin';
+                        
                         await User.create({
                             email: process.env.ADMIN_EMAIL,
+                            username: username,
                             password: hashedPassword,
                             role: 'admin',
                             name: 'Admin User'
@@ -208,6 +213,8 @@ async function startServer() {
                         console.log('Default admin user created successfully');
                     } else if (adminExists) {
                         console.log('Admin user already exists, skipping creation');
+                    } else {
+                        console.log('Missing admin credentials in environment variables');
                     }
                 } catch (error) {
                     console.error('Error handling admin user:', error);
