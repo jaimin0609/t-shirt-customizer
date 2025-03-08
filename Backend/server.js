@@ -108,6 +108,21 @@ app.use((err, req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
+// Admin panel CSS and JS files - serve with correct MIME types
+app.use('/admin/js', (req, res, next) => {
+    res.set('Content-Type', 'application/javascript');
+    next();
+}, express.static(path.join(__dirname, 'public/admin/js')));
+
+app.use('/admin/css', (req, res, next) => {
+    res.set('Content-Type', 'text/css');
+    next();
+}, express.static(path.join(__dirname, 'public/admin/css')));
+
+// Image files
+app.use('/admin/images', express.static(path.join(__dirname, 'public/admin/images')));
+app.use('/admin/img', express.static(path.join(__dirname, 'public/admin/img')));
+
 // Admin panel routes - serve entire admin directory
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
 
@@ -121,9 +136,17 @@ app.get('/admin/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin/login.html'));
 });
 
-// Specific admin routes - redirect to index for client-side routing
-app.get('/admin/*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/admin/index.html'));
+// Handle 404 errors for admin panel pages
+app.get('/admin/*', (req, res, next) => {
+    // Check if the requested file exists
+    const requestedPath = path.join(__dirname, 'public', req.path);
+    if (fs.existsSync(requestedPath)) {
+        // If it exists, let express.static handle it
+        next();
+    } else {
+        // If it doesn't exist, send the admin index.html for client-side routing
+        res.sendFile(path.join(__dirname, 'public/admin/index.html'));
+    }
 });
 
 // API Routes
@@ -140,7 +163,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/product-variants', productVariantsRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 
-// Error handler
+// Error handler - should be after all routes
 app.use(errorHandler);
 
 // Default route
@@ -150,6 +173,14 @@ app.get('/', (req, res) => {
         docs: 'API Documentation is not available. Please check the frontend application.',
         adminPanel: `${req.protocol}://${req.get('host')}/admin`,
         status: 'healthy'
+    });
+});
+
+// Global 404 handler for API routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({
+        error: 'API endpoint not found',
+        path: req.originalUrl
     });
 });
 

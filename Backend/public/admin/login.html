@@ -82,10 +82,8 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Get the current host and port
-        const currentHost = window.location.hostname;
-        const currentPort = '5002'; // This should match your backend port
-        const API_URL = `http://${currentHost}:${currentPort}/api`;
+        // Use relative path for API URL that works in any environment
+        const API_URL = '/api';
 
         // Check if already logged in
         async function checkAdminAuth() {
