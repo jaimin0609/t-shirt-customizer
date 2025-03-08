@@ -143,6 +143,22 @@ router.get('/:id', auth, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         
+        // Check if id is a special route like 'stats' and handle appropriately
+        if (id === 'stats') {
+            return res.json({
+                success: true,
+                message: 'Stats endpoint is not implemented yet'
+            });
+        }
+        
+        // Validate id is numeric
+        if (isNaN(parseInt(id))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format. ID must be a number.'
+            });
+        }
+        
         const coupon = await Coupon.findByPk(id);
         
         if (!coupon) {
@@ -170,6 +186,24 @@ router.get('/:id', auth, isAdmin, async (req, res) => {
 router.put('/:id', auth, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Validate id is numeric
+        if (isNaN(parseInt(id))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format. ID must be a number.'
+            });
+        }
+        
+        const coupon = await Coupon.findByPk(id);
+        
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
         const {
             description,
             discountType,
@@ -183,15 +217,6 @@ router.put('/:id', auth, isAdmin, async (req, res) => {
             bannerText,
             bannerColor
         } = req.body;
-
-        const coupon = await Coupon.findByPk(id);
-        
-        if (!coupon) {
-            return res.status(404).json({
-                success: false,
-                message: 'Coupon not found'
-            });
-        }
 
         await coupon.update({
             description,
@@ -226,6 +251,15 @@ router.put('/:id', auth, isAdmin, async (req, res) => {
 router.delete('/:id', auth, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Validate id is numeric
+        if (isNaN(parseInt(id))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format. ID must be a number.'
+            });
+        }
+        
         const coupon = await Coupon.findByPk(id);
         
         if (!coupon) {

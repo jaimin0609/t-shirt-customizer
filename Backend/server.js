@@ -31,6 +31,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Trust proxy - Important for Render and other cloud platforms
+// This fixes the "ERR_ERL_UNEXPECTED_X_FORWARDED_FOR" warning
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
     origin: function(origin, callback) {
