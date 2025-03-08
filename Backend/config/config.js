@@ -1,4 +1,5 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 const config = {
   development: {
@@ -41,4 +42,4 @@ if (process.env.DATABASE_URL) {
   };
 }
 
-module.exports = config; 
+export default config; 

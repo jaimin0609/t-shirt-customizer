@@ -8,6 +8,7 @@ import sequelize from './config/database.js';
 import * as models from './models/index.js';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
