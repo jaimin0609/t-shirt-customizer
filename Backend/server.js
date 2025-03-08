@@ -108,6 +108,17 @@ app.use((err, req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
+// Path rewrites for common JS and CSS files
+app.use('/js', (req, res) => {
+    // Redirect requests from /js/* to /admin/js/*
+    res.redirect(`/admin/js${req.path}`);
+});
+
+app.use('/css', (req, res) => {
+    // Redirect requests from /css/* to /admin/css/*
+    res.redirect(`/admin/css${req.path}`);
+});
+
 // Admin panel CSS and JS files - serve with correct MIME types
 app.use('/admin/js', (req, res, next) => {
     res.set('Content-Type', 'application/javascript');
@@ -149,6 +160,19 @@ app.get('/admin/*', (req, res, next) => {
     }
 });
 
+// Add this before the API Routes section
+app.use((req, res, next) => {
+    // Log all requests for JavaScript and CSS files
+    if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
+        console.log(`[DEBUG] Resource request: ${req.method} ${req.path}`, {
+            'User-Agent': req.headers['user-agent'],
+            'Accept': req.headers['accept'],
+            'Referer': req.headers['referer'] || 'not specified'
+        });
+    }
+    next();
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -168,6 +192,14 @@ app.use(errorHandler);
 
 // Default route
 app.get('/', (req, res) => {
+    // If user agent is a browser (contains Mozilla, Safari, Chrome, etc.)
+    const userAgent = req.headers['user-agent'] || '';
+    if (userAgent.includes('Mozilla') || userAgent.includes('Chrome') || userAgent.includes('Safari')) {
+        // Redirect browser requests to admin panel
+        return res.redirect('/admin');
+    }
+    
+    // For API clients, return JSON
     res.json({ 
         message: 'T-Shirt Customizer API is running',
         docs: 'API Documentation is not available. Please check the frontend application.',
