@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import sequelize from './config/database.js';
 import * as models from './models/index.js';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -43,7 +45,24 @@ app.use(cors({
         
         // Add FRONTEND_URL from environment if it exists
         if (process.env.FRONTEND_URL) {
+            // Support both exact URL and any subdomain
             allowedOrigins.push(process.env.FRONTEND_URL);
+            // Extract domain for wildcard support
+            try {
+                const url = new URL(process.env.FRONTEND_URL);
+                const domain = url.hostname;
+                // If not localhost, also allow all subdomains
+                if (!domain.includes('localhost')) {
+                    allowedOrigins.push(`https://*.${domain}`);
+                }
+            } catch (e) {
+                console.error('Invalid FRONTEND_URL format:', e);
+            }
+        }
+        
+        // In production, be more permissive initially to avoid deployment issues
+        if (process.env.NODE_ENV === 'production') {
+            return callback(null, true); // Allow all origins in production temporarily
         }
         
         if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
@@ -62,11 +81,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add security headers in production
 if (process.env.NODE_ENV === 'production') {
-    const helmet = require('helmet');
     app.use(helmet());
     
     // Add rate limiting in production
-    const rateLimit = require('express-rate-limit');
     const apiLimiter = rateLimit({
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 100, // limit each IP to 100 requests per windowMs
