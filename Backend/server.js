@@ -82,7 +82,22 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add security headers in production
 if (process.env.NODE_ENV === 'production') {
-    app.use(helmet());
+    app.use(helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+                imgSrc: ["'self'", "data:", "https:", "blob:"],
+                connectSrc: ["'self'", "https://api.stripe.com"],
+                fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+                objectSrc: ["'none'"],
+                mediaSrc: ["'self'"],
+                frameSrc: ["'self'", "https://js.stripe.com"],
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+    }));
     
     // Add rate limiting in production
     const apiLimiter = rateLimit({
