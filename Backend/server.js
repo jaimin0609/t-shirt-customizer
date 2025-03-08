@@ -108,13 +108,23 @@ app.use((err, req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// Admin panel specific route
+// Admin panel routes - serve entire admin directory
+app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
+
+// Admin panel index route - handle the root admin page
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin/index.html'));
 });
 
-// Serve admin panel files with proper path
-app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
+// Admin login page
+app.get('/admin/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/admin/login.html'));
+});
+
+// Specific admin routes - redirect to index for client-side routing
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/admin/index.html'));
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -141,6 +151,42 @@ app.get('/', (req, res) => {
         adminPanel: `${req.protocol}://${req.get('host')}/admin`,
         status: 'healthy'
     });
+});
+
+// Diagnostic route for admin panel files
+app.get('/check-admin-files', (req, res) => {
+    try {
+        const adminDir = path.join(__dirname, 'public/admin');
+        const files = fs.readdirSync(adminDir);
+        
+        // Check if key files exist
+        const hasIndexHtml = files.includes('index.html');
+        const hasLoginHtml = files.includes('login.html');
+        
+        // Check JS directory
+        let jsFiles = [];
+        const jsDir = path.join(adminDir, 'js');
+        if (fs.existsSync(jsDir)) {
+            jsFiles = fs.readdirSync(jsDir);
+        }
+        
+        res.json({
+            success: true,
+            adminDirExists: true,
+            adminFiles: files,
+            hasIndexHtml,
+            hasLoginHtml,
+            jsDirectoryExists: fs.existsSync(jsDir),
+            jsFiles,
+            adminPath: adminDir
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: process.env.NODE_ENV === 'production' ? null : error.stack
+        });
+    }
 });
 
 // Add this route for testing image serving
@@ -196,8 +242,9 @@ async function startServer() {
                     });
                     
                     if (!adminExists && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-                        const bcrypt = await import('bcryptjs');
-                        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+                        // Import bcrypt properly
+                        const bcryptjs = await import('bcryptjs');
+                        const hashedPassword = await bcryptjs.default.hash(process.env.ADMIN_PASSWORD, 10);
                         
                         // Generate a username from the email
                         const username = process.env.ADMIN_EMAIL.split('@')[0] + '_admin';
