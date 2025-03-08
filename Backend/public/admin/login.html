@@ -41,6 +41,16 @@
             background-color: #0b5ed7;
             border-color: #0a58ca;
         }
+        .bypass-option {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        .troubleshooter-link {
+            display: none;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -79,9 +89,20 @@
             <div id="loginError" class="alert alert-danger mt-3" style="display: none;"></div>
         </form>
         
-        <div class="text-center mt-3">
+        <!-- This div will only be shown after a failed login attempt -->
+        <div id="bypassOption" class="bypass-option">
+            <p class="text-muted mb-2">Having trouble logging in?</p>
+            <div class="d-grid">
+                <button id="emergencyLoginBtn" class="btn btn-outline-secondary">
+                    <i class="bi bi-shield-lock"></i> Emergency Access
+                </button>
+            </div>
+            <p class="text-muted small mt-2">Use only if you're unable to log in with your credentials.</p>
+        </div>
+        
+        <div id="troubleshooterLink" class="text-center troubleshooter-link">
             <a href="/admin/login-fix.html" class="text-muted small">
-                <i class="bi bi-tools"></i> Login Troubleshooter
+                <i class="bi bi-tools"></i> Advanced Login Troubleshooter
             </a>
         </div>
     </div>
@@ -90,6 +111,7 @@
     <script>
         // Use relative path for API URL that works in any environment
         const API_URL = '/api';
+        let loginAttempts = 0;
 
         // Check if already logged in
         async function checkAdminAuth() {
@@ -111,9 +133,23 @@
             }
         }
 
+        // Emergency login function
+        async function performEmergencyLogin() {
+            try {
+                window.location.href = '/api/admin-tools/emergency-login?secret=temporary-dev-secret';
+            } catch (error) {
+                console.error('Emergency login failed:', error);
+                alert('Failed to perform emergency login. Please try the advanced troubleshooter.');
+            }
+        }
+
         // Check auth on page load
         checkAdminAuth();
         
+        // Add event listener for emergency login button
+        document.getElementById('emergencyLoginBtn').addEventListener('click', performEmergencyLogin);
+        
+        // Regular login form submission
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -135,7 +171,15 @@
                 });
                 
                 if (!response.ok) {
+                    loginAttempts++;
                     const errorData = await response.json();
+                    
+                    // Show bypass option after first failed attempt
+                    if (loginAttempts >= 1) {
+                        document.getElementById('bypassOption').style.display = 'block';
+                        document.getElementById('troubleshooterLink').style.display = 'block';
+                    }
+                    
                     throw new Error(errorData.message || 'Login failed');
                 }
                 
