@@ -7,12 +7,13 @@ function debug(message, data) {
 // Log initial setup
 debug('Analytics dashboard initializing');
 
-// Use the API_URL from the global scope (set by config.js)
-const API_URL = window.API_URL || '/api';
-debug('API URL:', API_URL);
-
-// Ensure API_URL is available on window object
-window.API_URL = API_URL;
+// Use the global API_URL if already defined, otherwise set a default
+if (typeof window.API_URL === 'undefined') {
+    console.log('API_URL not defined in window, setting default value in main.js');
+    window.API_URL = '/api';
+} else {
+    console.log('Using existing API_URL:', window.API_URL);
+}
 
 // Global chart instances
 let sessionsChart = null;

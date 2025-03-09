@@ -486,5 +486,24 @@ function logout() {
     window.location.href = '/admin/login.html';
 }
 
-// Expose to global window
-window.logout = logout; 
+// Setup logout button event listeners
+function setupLogoutButtons() {
+    console.log('Setting up logout button listeners');
+    const logoutButtons = document.querySelectorAll('[data-action="logout"]');
+    logoutButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    });
+    
+    // Keep the global logout function for backward compatibility
+    window.logout = logout;
+    
+    console.log(`Found and setup ${logoutButtons.length} logout buttons`);
+}
+
+// Initialize on DOM content loaded
+document.addEventListener('DOMContentLoaded', function() {
+    setupLogoutButtons();
+}); 
