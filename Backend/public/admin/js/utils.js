@@ -244,6 +244,33 @@ function checkAuth() {
     return true;
 }
 
+// Get auth headers for fetch requests
+function getAuthHeaders() {
+    const token = getAuthToken();
+    if (!token) return {};
+    return {
+        'Authorization': `Bearer ${token}`
+    };
+}
+
+// Helper function for fetch requests with auth
+function getAuthFetchOptions(options = {}) {
+    const token = getAuthToken();
+    const defaultOptions = {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    };
+    
+    // Merge with provided options
+    if (options.headers) {
+        options.headers = { ...defaultOptions.headers, ...options.headers };
+        return options;
+    }
+    
+    return { ...defaultOptions, ...options };
+}
+
 // Show toast notification
 function showToast(message, type = 'success') {
     // Check if we have a toast container
@@ -322,6 +349,8 @@ window.checkAuth = checkAuth;
 window.setTranslations = setTranslations;
 window.showLoader = showLoader;
 window.hideLoader = hideLoader;
+window.getAuthHeaders = getAuthHeaders;
+window.getAuthFetchOptions = getAuthFetchOptions;
 
 // DO NOT use export directly - it will cause errors when loaded as a regular script
 // Instead, only export when in a module context
@@ -339,7 +368,9 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         checkAuth,
         setTranslations,
         showLoader,
-        hideLoader
+        hideLoader,
+        getAuthHeaders,
+        getAuthFetchOptions
     };
 } else if (typeof exports !== 'undefined') {
     // For some CommonJS environments
@@ -355,6 +386,8 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     exports.setTranslations = setTranslations;
     exports.showLoader = showLoader;
     exports.hideLoader = hideLoader;
+    exports.getAuthHeaders = getAuthHeaders;
+    exports.getAuthFetchOptions = getAuthFetchOptions;
 }
 
 // Do not include ES module export syntax directly in the file
@@ -435,5 +468,7 @@ window.utilsModule = {
     checkAuth,
     setTranslations,
     showLoader,
-    hideLoader
+    hideLoader,
+    getAuthHeaders,
+    getAuthFetchOptions
 }; 

@@ -297,7 +297,10 @@ async function handleFormSubmit(e) {
         // Make the API request to create the product
         const response = await fetch(`${window.API_URL}/products`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
         
         const result = await response.json();
