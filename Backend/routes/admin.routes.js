@@ -2,6 +2,7 @@ import express from 'express';
 import { User } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
@@ -50,14 +51,12 @@ router.get('/reset-admin', async (req, res) => {
       });
     }
     
-    const bcrypt = await import('bcryptjs');
-    
     // Admin user details
     const adminUser = {
       username: 'admin',
       name: 'Administrator',
       email: 'admin@example.com',
-      password: await bcrypt.default.hash('Admin123!', 10),
+      password: await bcrypt.hash('Admin123!', 10),
       role: 'admin',
       status: 'active'
     };
