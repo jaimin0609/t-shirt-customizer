@@ -471,4 +471,20 @@ window.utilsModule = {
     hideLoader,
     getAuthHeaders,
     getAuthFetchOptions
-}; 
+};
+
+// Standard logout function
+function logout() {
+    console.log('Logging out user...');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('emergencyLogin');
+    localStorage.removeItem('isAdminSession');
+    
+    // Redirect to login page
+    console.log('Redirecting to login page...');
+    window.location.href = '/admin/login.html';
+}
+
+// Expose to global window
+window.logout = logout; 

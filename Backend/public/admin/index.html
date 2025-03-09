@@ -470,16 +470,12 @@
     <script src="/admin/js/profile.js"></script>
     <script src="/admin/js/language.js"></script>
     <script src="/admin/js/main.js"></script>
+    <script src="/admin/js/auth.js"></script>
 
     <!-- Global functions -->
     <script>
-        // Ensure logout function is available globally
-        if (typeof window.logout !== 'function') {
-            window.logout = function() {
-                localStorage.removeItem('token');
-                window.location.href = '/admin/login.html';
-            };
-        }
+        // The logout function is now provided by utils.js
+        // No need to define it here
     </script>
 </body>
 </html> 
