@@ -2,7 +2,9 @@ import express from 'express';
 import { User } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const bcrypt = require('bcryptjs');
 
 const router = express.Router();
 

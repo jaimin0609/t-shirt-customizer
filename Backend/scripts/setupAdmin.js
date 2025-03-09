@@ -1,5 +1,7 @@
 import { User } from '../models/index.js';
-import bcrypt from 'bcryptjs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const bcrypt = require('bcryptjs');
 
 (async () => {
     try {

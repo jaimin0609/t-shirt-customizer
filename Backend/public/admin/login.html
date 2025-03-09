@@ -87,6 +87,9 @@
             </div>
             
             <div id="loginError" class="alert alert-danger mt-3" style="display: none;"></div>
+            <div id="loginDebug" class="alert alert-info mt-2" style="display: none;">
+                <small>Debug information will appear here if login fails.</small>
+            </div>
         </form>
         
         <!-- This div will only be shown after a failed login attempt -->
@@ -243,8 +246,13 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
+            const debugInfo = document.getElementById('loginDebug');
             
             try {
+                console.log('Attempting login with:', email);
+                debugInfo.innerHTML = `<p>Attempting login for: ${email}</p>`;
+                debugInfo.style.display = 'block';
+                
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: {
@@ -257,9 +265,15 @@
                     })
                 });
                 
+                const responseData = await response.json();
+                debugInfo.innerHTML += `<p>Server status: ${response.status}</p>`;
+                
                 if (!response.ok) {
                     loginAttempts++;
-                    const errorData = await response.json();
+                    const errorData = responseData;
+                    
+                    // Add debug information
+                    debugInfo.innerHTML += `<p>Error: ${errorData.message || 'Unknown error'}</p>`;
                     
                     // Show bypass option after first failed attempt
                     if (loginAttempts >= 1) {
@@ -270,10 +284,11 @@
                     throw new Error(errorData.message || 'Login failed');
                 }
                 
-                const data = await response.json();
+                const data = responseData;
                 
                 // Verify admin role
                 if (data.user.role !== 'admin') {
+                    debugInfo.innerHTML += '<p>Error: User is not an admin</p>';
                     throw new Error('Access denied. Admin privileges required.');
                 }
                 
@@ -283,8 +298,10 @@
                 localStorage.setItem('isAdminSession', 'true'); // Flag for admin session
                 
                 // Redirect to dashboard
+                debugInfo.innerHTML += '<p>Login successful, redirecting...</p>';
                 window.location.href = '/admin/index.html';
             } catch (error) {
+                console.error('Login error:', error);
                 const errorElement = document.getElementById('loginError');
                 errorElement.textContent = error.message;
                 errorElement.style.display = 'block';

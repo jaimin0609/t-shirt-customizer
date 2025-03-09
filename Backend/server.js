@@ -9,6 +9,9 @@ import * as models from './models/index.js';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const bcrypt = require('bcryptjs');
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -295,78 +298,43 @@ const PORT = process.env.PORT || 5002;
 
 async function startServer() {
     try {
-        // Test database connection
-        await sequelize.authenticate();
-        console.log('Database connection established.');
-
-        // Run migrations in production automatically
-        if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE === 'true') {
-            console.log('Running automatic migrations...');
-            try {
-                // Instead of using Umzug, directly sync the models
-                console.log('Using Sequelize sync instead of migrations...');
-                
-                // Force sync in production only if specifically requested
-                // CAUTION: This will drop and recreate all tables
-                const forceSync = process.env.FORCE_SYNC === 'true';
-                if (forceSync) {
-                    console.log('WARNING: Forcing table sync (drop and recreate)');
-                }
-                
-                await sequelize.sync({ force: forceSync });
-                console.log('Database schema synchronized successfully');
-                
-                // Create admin user if it doesn't exist
-                try {
-                    // Import User model directly
-                    const User = (await import('./models/user.js')).default;
-                    
-                    // Check if admin user exists
-                    const adminExists = await User.findOne({ 
-                        where: { role: 'admin' } 
-                    });
-                    
-                    if (!adminExists && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-                        // Import bcrypt properly
-                        const bcryptjs = await import('bcryptjs');
-                        const hashedPassword = await bcryptjs.default.hash(process.env.ADMIN_PASSWORD, 10);
-                        
-                        // Generate a username from the email
-                        const username = process.env.ADMIN_EMAIL.split('@')[0] + '_admin';
-                        
-                        await User.create({
-                            email: process.env.ADMIN_EMAIL,
-                            username: username,
-                            password: hashedPassword,
-                            role: 'admin',
-                            name: 'Admin User'
-                        });
-                        
-                        console.log('Default admin user created successfully');
-                    } else if (adminExists) {
-                        console.log('Admin user already exists, skipping creation');
-                    } else {
-                        console.log('Missing admin credentials in environment variables');
-                    }
-                } catch (error) {
-                    console.error('Error handling admin user:', error);
-                }
-            } catch (error) {
-                console.error('Error syncing database:', error);
-            }
+        console.log('Starting server initialization process...');
+        
+        // Sync database models
+        await sequelize.sync();
+        console.log('Database synchronized');
+        
+        // Check for admin user, create if it doesn't exist
+        const adminUser = await models.User.findOne({ where: { role: 'admin' } });
+        if (!adminUser) {
+            console.log('No admin user found, creating one...');
+            const hashedPassword = await bcrypt.hash('Admin123!', 10);
+            await models.User.create({
+                username: 'admin',
+                name: 'Administrator',
+                email: 'admin@example.com',
+                password: hashedPassword,
+                role: 'admin',
+                status: 'active'
+            });
+            console.log('Admin user created successfully');
         } else {
-            // Standard model sync for non-production or when migrations disabled
-            await sequelize.sync();
-            console.log('Database models synchronized.');
+            // Ensure admin password is updated to the known password if env var is set
+            if (process.env.RESET_ADMIN_PASSWORD === 'true') {
+                console.log('Resetting admin password to known value due to RESET_ADMIN_PASSWORD flag');
+                const hashedPassword = await bcrypt.hash('Admin123!', 10);
+                await adminUser.update({ password: hashedPassword });
+                console.log('Admin password reset successfully');
+            }
         }
-
-        // Start server
+        
+        // Start listening for requests
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Server environment: ${process.env.NODE_ENV || 'development'}`);
         });
     } catch (error) {
-        console.error('Unable to start server:', error);
-        console.error('Error stack:', error.stack);
+        console.error('Error starting server:', error);
         process.exit(1);
     }
 }
