@@ -229,10 +229,42 @@ const ProductCard = ({ product }) => {
     const getImageUrl = (product) => {
         if (!product) return '/assets/placeholder-product.jpg';
 
-        // Try different image properties
-        const imagePath = product.image || product.imageUrl || product.images?.[0]?.front || product.thumbnail;
+        // Log available image fields for debugging
+        console.log('ProductCard - image data:', {
+            id: product.id || product._id,
+            name: product.name,
+            image: product.image,
+            imageUrl: product.imageUrl,
+            imagesArray: product.images,
+            thumbnail: product.thumbnail
+        });
 
-        if (!imagePath) return '/assets/placeholder-product.jpg';
+        let imagePath = null;
+
+        // Check for images array first (our newest format)
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            // Use the first image from the array
+            imagePath = product.images[0];
+        }
+        // Then look for legacy image fields
+        else if (product.image) {
+            imagePath = product.image;
+        }
+        // Then check for other possible image fields
+        else if (product.imageUrl) {
+            imagePath = product.imageUrl;
+        }
+        else if (product.images && product.images.front) {
+            imagePath = product.images.front;
+        }
+        else if (product.thumbnail) {
+            imagePath = product.thumbnail;
+        }
+
+        // If no image found, use placeholder
+        if (!imagePath) {
+            return '/assets/placeholder-product.jpg';
+        }
 
         // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
@@ -241,7 +273,9 @@ const ProductCard = ({ product }) => {
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            return `http://localhost:5002${imagePath}`;
+            // Get the API base URL from environment variable, excluding the /api part
+            const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002';
+            return `${apiBaseUrl}${imagePath}`;
         }
 
         // For relative paths
@@ -249,7 +283,7 @@ const ProductCard = ({ product }) => {
             return imagePath;
         }
 
-        // Default case - assume it's a relative path
+        // Default case - assume it's a relative path without leading slash
         return `/${imagePath}`;
     };
 
@@ -258,7 +292,7 @@ const ProductCard = ({ product }) => {
 
     return (
         <div className="product-card">
-            <Link to={`/product/${safeProduct._id}`} className="block">
+            <Link to={`/product/${safeProduct._id || safeProduct.id}`} className="block">
                 {/* Product Image */}
                 <div className="product-image-container">
                     <img
@@ -298,32 +332,7 @@ const ProductCard = ({ product }) => {
 
                     {/* Price Section */}
                     <div className="price-section">
-                        {hasPromotion ? (
-                            <div className="flex items-center gap-1 flex-wrap">
-                                <span className="text-red-600 font-semibold">
-                                    {priceInfo.discountedPrice || priceInfo.finalPrice}
-                                </span>
-                                <span className="text-gray-500 text-sm line-through">
-                                    {priceInfo.originalPrice}
-                                </span>
-                                {(priceInfo.discountBadge || displayDiscountPercentage > 0) && (
-                                    <span className="text-xs bg-red-100 text-red-600 px-1 py-0.5 rounded">
-                                        {priceInfo.discountBadge || `-${displayDiscountPercentage}%`}
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <span className="text-gray-800">
-                                {priceInfo.originalPrice || `$${parseFloat(safeProduct.price).toFixed(2)}`}
-                            </span>
-                        )}
-
-                        {/* Condition Text (e.g., Min. order amount) */}
-                        {priceInfo.condition && (
-                            <div className="text-xs text-gray-500 mt-1">
-                                {priceInfo.condition}
-                            </div>
-                        )}
+                        {renderPriceInfo()}
                     </div>
 
                     {/* Promotion Tags */}
@@ -346,8 +355,39 @@ const ProductCard = ({ product }) => {
                     )}
                 </div>
             </Link>
+
+            {/* Product Actions */}
+            <div className="product-actions">
+                {/* Quick Add to Cart */}
+                <button
+                    className="add-to-cart-btn"
+                    onClick={() => addToCart(safeProduct, 1)}
+                    aria-label="Add to Cart"
+                >
+                    Add to Cart
+                </button>
+
+                {/* Wishlist Toggle */}
+                <button
+                    className={`wishlist-btn ${isInWishlist(safeProduct._id) ? 'active' : ''}`}
+                    onClick={() => {
+                        if (isInWishlist(safeProduct._id)) {
+                            removeFromWishlist(safeProduct._id);
+                        } else {
+                            addToWishlist(safeProduct);
+                        }
+                    }}
+                    aria-label={isInWishlist(safeProduct._id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                >
+                    {isInWishlist(safeProduct._id) ? (
+                        <HeartIconSolid className="h-5 w-5" />
+                    ) : (
+                        <HeartIcon className="h-5 w-5" />
+                    )}
+                </button>
+            </div>
         </div>
     );
 };
 
-export default ProductCard; 
+export default ProductCard;

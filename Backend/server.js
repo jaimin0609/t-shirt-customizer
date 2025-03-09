@@ -50,6 +50,9 @@ app.use(cors({
             'http://localhost:5002',  // Backend URL
             'http://localhost:3000',  // Common React dev server
             'http://localhost:8080',  // Another common dev port
+            'http://127.0.0.1:5173',  // Also allow access via IP
+            'http://127.0.0.1:5002',
+            'http://127.0.0.1:3000',
         ];
         
         // Add FRONTEND_URL from environment if it exists
@@ -67,6 +70,13 @@ app.use(cors({
             } catch (e) {
                 console.error('Invalid FRONTEND_URL format:', e);
             }
+        }
+        
+        console.log('CORS request from origin:', origin);
+        
+        // In development or where needed, print allowed origins for debugging
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Allowed origins:', allowedOrigins);
         }
         
         // In production, be more permissive initially to avoid deployment issues
@@ -96,8 +106,8 @@ if (process.env.NODE_ENV === 'production') {
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-                imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://img.icons8.com"],
-                connectSrc: ["'self'", "https://api.stripe.com"],
+                imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://img.icons8.com", "http://localhost:5173", "http://localhost:5002", "*"],
+                connectSrc: ["'self'", "https://api.stripe.com", "http://localhost:5002", "*"],
                 fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
@@ -128,9 +138,123 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// Static files - make sure these come before API routes
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Add a special CORS handler for the uploads directory to ensure images are accessible
+app.use('/uploads', (req, res, next) => {
+    // Allow from any origin
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Add cache headers for images
+    const filePath = req.path;
+    if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        res.header('Cache-Control', 'public, max-age=86400'); // 24 hours
+    }
+    
+    next();
+});
+
+// Serve static files with proper MIME types
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, filePath) => {
+        // Set appropriate content type for image files
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+        } else if (filePath.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+        }
+        
+        // Set caching headers
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+    }
+}));
+
+// Add more specific static routes with proper URL paths
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
+    setHeaders: (res, filePath) => {
+        // Set appropriate content type for image files
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+        } else if (filePath.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+        }
+        
+        // Set caching headers
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+    }
+}));
+
+// Add specific handlers for product images
+app.use('/uploads/products', express.static(path.join(__dirname, 'public/uploads/products'), {
+    setHeaders: (res, filePath) => {
+        console.log('Serving product image:', filePath);
+        // Set appropriate content type for image files
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+        } else if (filePath.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+        }
+        
+        // Set caching headers
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+    }
+}));
+
+// Add explicit route for direct access to images
+app.get('/uploads/products/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'public/uploads/products', filename);
+    
+    console.log(`Direct image request for: ${filename}`);
+    console.log(`Looking for file at: ${filePath}`);
+    
+    if (fs.existsSync(filePath)) {
+        console.log('File found, sending response');
+        
+        // Set MIME type based on extension
+        if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filename.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+        } else if (filename.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+        }
+        
+        // Set caching headers
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+        
+        res.sendFile(filePath);
+    } else {
+        console.log('File not found');
+        res.status(404).send('Image not found');
+    }
+});
+
+// Log the static file paths for debugging
+console.log('Static file paths:');
+console.log('- Public directory:', path.join(__dirname, 'public'));
+console.log('- Uploads directory:', path.join(__dirname, 'public/uploads'));
+console.log('- Product images directory:', path.join(__dirname, 'public/uploads/products'));
+
+// Verify uploads directories exist
+const uploadsProductsDir = path.join(__dirname, 'public/uploads/products');
+if (!fs.existsSync(uploadsProductsDir)) {
+    console.log('Creating missing uploads/products directory');
+    fs.mkdirSync(uploadsProductsDir, { recursive: true });
+} else {
+    // List existing files in the directory
+    const files = fs.readdirSync(uploadsProductsDir);
+    console.log(`Found ${files.length} existing files in uploads/products directory`);
+    if (files.length > 0) {
+        console.log('Sample files:', files.slice(0, 5));
+    }
+}
 
 // Path rewrites for common JS and CSS files
 app.use('/js', (req, res) => {

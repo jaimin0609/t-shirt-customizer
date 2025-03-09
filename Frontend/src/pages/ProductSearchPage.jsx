@@ -304,10 +304,42 @@ const ProductSearchPage = () => {
     const getImageUrl = (product) => {
         if (!product) return '/assets/placeholder-product.jpg';
 
-        // Try different image properties
-        const imagePath = product.image || product.imageUrl || product.images?.[0]?.front || product.thumbnail;
+        // Log available image fields for debugging
+        console.log('ProductSearchPage - image data:', {
+            id: product.id || product._id,
+            name: product.name,
+            image: product.image,
+            imageUrl: product.imageUrl,
+            imagesArray: product.images,
+            thumbnail: product.thumbnail
+        });
 
-        if (!imagePath) return '/assets/placeholder-product.jpg';
+        let imagePath = null;
+
+        // Check for images array first (our newest format)
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            // Use the first image from the array
+            imagePath = product.images[0];
+        }
+        // Then look for legacy image fields
+        else if (product.image) {
+            imagePath = product.image;
+        }
+        // Then check for other possible image fields
+        else if (product.imageUrl) {
+            imagePath = product.imageUrl;
+        }
+        else if (product.images && product.images.front) {
+            imagePath = product.images.front;
+        }
+        else if (product.thumbnail) {
+            imagePath = product.thumbnail;
+        }
+
+        // If no image found, use placeholder
+        if (!imagePath) {
+            return '/assets/placeholder-product.jpg';
+        }
 
         // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
@@ -316,12 +348,18 @@ const ProductSearchPage = () => {
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            // Use the backend URL to create a full image path
-            return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002'}${imagePath}`;
+            // Get the API base URL from environment variable, excluding the /api part
+            const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002';
+            return `${apiBaseUrl}${imagePath}`;
         }
 
-        // Otherwise, assume it's a local asset
-        return imagePath;
+        // For relative paths
+        if (imagePath.startsWith('/')) {
+            return imagePath;
+        }
+
+        // Default case - assume it's a relative path without leading slash
+        return `/${imagePath}`;
     };
 
     // Helper to render product card

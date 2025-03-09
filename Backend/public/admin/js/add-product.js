@@ -275,13 +275,46 @@ async function handleFormSubmit(e) {
             if (hasVariants) {
                 // Get color variants
                 const colorVariants = window.variantSystem.getColorVariants();
-                formData.append('colorVariantsData', JSON.stringify(colorVariants));
+                
+                // Validate color variants
+                if (Array.isArray(colorVariants) && colorVariants.length > 0) {
+                    // Make sure all required fields are present and valid
+                    const validColorVariants = colorVariants.map(variant => ({
+                        color: String(variant.color || ''),
+                        colorCode: String(variant.colorCode || ''),
+                        stock: parseInt(variant.stock || 0, 10),
+                        priceAdjustment: parseFloat(variant.priceAdjustment || 0)
+                    }));
+                    formData.append('colorVariantsData', JSON.stringify(validColorVariants));
+                    console.log('Valid color variants:', validColorVariants);
+                } else {
+                    console.warn('No color variants provided or invalid format');
+                    formData.append('colorVariantsData', JSON.stringify([]));
+                }
                 
                 // Get size variants
                 const sizeVariants = window.variantSystem.getSizeVariants();
-                formData.append('sizeVariantsData', JSON.stringify(sizeVariants));
                 
-                console.log('Added variant data:', { colorVariants, sizeVariants });
+                // Validate size variants
+                if (Array.isArray(sizeVariants) && sizeVariants.length > 0) {
+                    // Make sure all required fields are present and valid
+                    const validSizeVariants = sizeVariants.map(variant => ({
+                        size: String(variant.size || ''),
+                        stock: parseInt(variant.stock || 0, 10),
+                        priceAdjustment: parseFloat(variant.priceAdjustment || 0)
+                    }));
+                    formData.append('sizeVariantsData', JSON.stringify(validSizeVariants));
+                    console.log('Valid size variants:', validSizeVariants);
+                } else {
+                    console.warn('No size variants provided or invalid format');
+                    formData.append('sizeVariantsData', JSON.stringify([]));
+                }
+                
+                // Log the complete FormData for debugging
+                console.log('Form data entries:');
+                for (const pair of formData.entries()) {
+                    console.log(pair[0], pair[1]);
+                }
             }
         } else {
             formData.append('hasVariants', 'false');
@@ -303,10 +336,25 @@ async function handleFormSubmit(e) {
             }
         });
         
-        const result = await response.json();
+        // Log the full response for debugging
+        console.log('Server response status:', response.status);
+        console.log('Server response headers:', Object.fromEntries([...response.headers.entries()]));
+        
+        let result;
+        try {
+            // Try to parse the JSON response
+            result = await response.json();
+            console.log('Server response body:', result);
+        } catch (jsonError) {
+            console.error('Failed to parse response as JSON:', jsonError);
+            // Get the raw text if JSON parsing fails
+            const textResponse = await response.text();
+            console.log('Raw server response:', textResponse);
+            result = { message: 'Invalid server response format' };
+        }
         
         if (!response.ok) {
-            throw new Error(result.message || 'Failed to add product');
+            throw new Error(result.message || `Server error (${response.status})`);
         }
         
         showToast('success', 'Product added successfully!');

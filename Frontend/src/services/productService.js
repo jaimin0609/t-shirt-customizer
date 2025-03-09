@@ -1,4 +1,8 @@
+// Use the environment variable for API URL with fallback to local development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+
+// Log the API URL being used (helpful for debugging deployment issues)
+console.log('Using API URL:', API_URL);
 
 export const productService = {
     getAllProducts: async () => {

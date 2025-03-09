@@ -64,6 +64,12 @@ const Product = sequelize.define('Product', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    images: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: [],
+        comment: 'Array of image URLs for the product'
+    },
     thumbnail: {
         type: DataTypes.STRING,
         allowNull: true

@@ -147,8 +147,34 @@ async function editProduct(productId) {
         }
 
         // Show image preview if exists
-        if (product.image) {
-            document.getElementById('imagePreviewElement').src = product.image;
+        let mainImage = null;
+
+        // Check for images array first
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            mainImage = product.images[0];
+            console.log(`Edit mode: Using image from images array: ${mainImage}`);
+        } 
+        // Fall back to legacy image field
+        else if (product.image) {
+            mainImage = product.image;
+            console.log(`Edit mode: Using legacy image field: ${mainImage}`);
+        }
+
+        if (mainImage) {
+            // Ensure the image URL starts with a slash if it's a relative path
+            if (!mainImage.startsWith('/') && !mainImage.startsWith('http')) {
+                mainImage = '/' + mainImage;
+            }
+            
+            console.log(`Edit mode: Setting image preview to: ${mainImage}`);
+            
+            // Set the preview image
+            document.getElementById('imagePreviewElement').src = mainImage;
+            document.getElementById('imagePreviewElement').onerror = function() {
+                console.log('Edit mode: Image failed to load, using placeholder');
+                this.onerror = null;
+                this.src = '/admin/assets/placeholder.png';
+            };
             document.getElementById('imagePreview').style.display = 'block';
         } else {
             document.getElementById('imagePreview').style.display = 'none';
@@ -407,13 +433,34 @@ function displayProducts(products) {
     
     tableBody.innerHTML = '';
     products.forEach(product => {
+        // Get the main image from either images array or legacy image field
+        let mainImage = '/admin/assets/placeholder.png';
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            // Use the first image from the images array
+            mainImage = product.images[0];
+            console.log(`Using image from images array: ${mainImage}`);
+        } else if (product.image) {
+            // Fallback to the legacy image field
+            mainImage = product.image;
+            console.log(`Using legacy image field: ${mainImage}`);
+        }
+        
+        // Ensure the image URL starts with a slash if it's a relative path
+        if (mainImage && !mainImage.startsWith('/') && !mainImage.startsWith('http')) {
+            mainImage = '/' + mainImage;
+        }
+        
+        // Log the final image URL for debugging
+        console.log(`Final image URL for product ${product.id}: ${mainImage}`);
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${product.id}</td>
             <td>
-                <img src="${product.image || '/admin/assets/placeholder.png'}" 
+                <img src="${mainImage}" 
                      alt="${product.name}" 
                      class="product-thumbnail"
+                     onerror="this.onerror=null; this.src='/admin/assets/placeholder.png'; console.log('Image load error, using placeholder');"
                      style="width: 50px; height: 50px; object-fit: cover;">
             </td>
             <td>${product.name}</td>

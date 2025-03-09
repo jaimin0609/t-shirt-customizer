@@ -243,27 +243,72 @@ const ProductDetailPage = () => {
     const getImageUrl = (product) => {
         if (!product) return '/assets/placeholder-product.jpg';
 
-        // Try different image properties
-        const imagePath = product.image || product.imageUrl || product.images?.[0]?.front || product.thumbnail;
+        // Log available image fields for debugging
+        console.log('Product image data:', {
+            id: product.id,
+            name: product.name,
+            image: product.image,
+            imageUrl: product.imageUrl,
+            imagesArray: product.images,
+            thumbnail: product.thumbnail
+        });
 
-        if (!imagePath) return '/assets/placeholder-product.jpg';
+        let imagePath = null;
+
+        // Check for images array first (our newest format)
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            // Use the first image from the array
+            imagePath = product.images[0];
+            console.log('Using first image from images array:', imagePath);
+        }
+        // Then look for legacy image fields
+        else if (product.image) {
+            imagePath = product.image;
+            console.log('Using legacy image field:', imagePath);
+        }
+        // Then check for other possible image fields
+        else if (product.imageUrl) {
+            imagePath = product.imageUrl;
+            console.log('Using imageUrl field:', imagePath);
+        }
+        else if (product.images && product.images.front) {
+            imagePath = product.images.front;
+            console.log('Using images.front field:', imagePath);
+        }
+        else if (product.thumbnail) {
+            imagePath = product.thumbnail;
+            console.log('Using thumbnail field:', imagePath);
+        }
+
+        // If no image found, use placeholder
+        if (!imagePath) {
+            console.log('No image found, using placeholder');
+            return '/assets/placeholder-product.jpg';
+        }
 
         // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
+            console.log('Using full URL image:', imagePath);
             return imagePath;
         }
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            return `http://localhost:5002${imagePath}`;
+            // Get the API base URL from environment variable, excluding the /api part
+            const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002';
+            const fullUrl = `${apiBaseUrl}${imagePath}`;
+            console.log('Constructing URL for backend image:', fullUrl);
+            return fullUrl;
         }
 
         // For relative paths
         if (imagePath.startsWith('/')) {
+            console.log('Using relative path with leading slash:', imagePath);
             return imagePath;
         }
 
-        // Default case - assume it's a relative path
+        // Default case - assume it's a relative path without leading slash
+        console.log('Using relative path without leading slash:', `/${imagePath}`);
         return `/${imagePath}`;
     };
 

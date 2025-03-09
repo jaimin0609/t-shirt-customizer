@@ -23,6 +23,9 @@ const uploadDir = path.join(__dirname, '../public/uploads/products');
 // Create uploads directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
+    console.log('Created upload directory:', uploadDir);
+} else {
+    console.log('Upload directory exists:', uploadDir);
 }
 
 // Configure multer for image upload
@@ -31,12 +34,15 @@ const storage = multer.diskStorage({
         // Ensure directory exists before saving
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
+            console.log('Created upload directory in destination handler:', uploadDir);
         }
         cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+        const filename = 'product-' + uniqueSuffix + path.extname(file.originalname);
+        console.log('Generated filename for upload:', filename);
+        cb(null, filename);
     }
 });
 
@@ -279,6 +285,29 @@ router.get('/:id', async (req, res) => {
 // Create new product - Updated to handle multiple images and variants
 router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {
+        console.log('==== Creating new product - Request received ====');
+        
+        // Log request body fields (excluding binary data)
+        const logBody = { ...req.body };
+        delete logBody.images; // Don't log binary data
+        console.log('Request body:', JSON.stringify(logBody, null, 2));
+        
+        // Log files
+        console.log('Received files:', req.files ? req.files.length : 0);
+        if (req.files && req.files.length > 0) {
+            console.log('Files info:', req.files.map(f => ({
+                fieldname: f.fieldname,
+                originalname: f.originalname,
+                mimetype: f.mimetype,
+                size: f.size,
+                path: f.path,
+                destination: f.destination
+            })));
+        }
+        
+        // Log auth user
+        console.log('User ID from auth middleware:', req.user ? req.user.id : 'Not available');
+        
         const { 
             name, description, price, category, gender, ageGroup, 
             stock, status, featured, customizationOptions, tags,
@@ -287,69 +316,303 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
 
         // Validate required fields
         if (!name || !description || !price || !category || !stock) {
+            console.log('Missing required fields:', { name, description, price, category, stock });
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
         // Process uploaded images
         let images = [];
         if (req.files && req.files.length > 0) {
-            images = req.files.map(file => `/uploads/${file.filename}`);
+            try {
+                // Log the uploads directory path for debugging
+                const uploadDir = path.join(__dirname, '../public/uploads/products');
+                console.log('Upload directory:', uploadDir);
+                console.log('Does upload directory exist?', fs.existsSync(uploadDir));
+                
+                // Ensure the uploads directory exists
+                if (!fs.existsSync(uploadDir)) {
+                    console.log('Creating upload directory...');
+                    fs.mkdirSync(uploadDir, { recursive: true });
+                }
+                
+                // Process each file
+                for (const file of req.files) {
+                    console.log('Processing file:', file.originalname);
+                    // Create a proper URL path for the image that will work with static file serving
+                    // Make sure the path starts with /uploads/products/ to match our express.static configuration
+                    const imagePath = `/uploads/products/${file.filename}`;
+                    console.log('Created image URL path:', imagePath);
+                    
+                    // Verify the file exists at the expected location
+                    const fullPath = path.join(__dirname, '../public', imagePath);
+                    const fileExists = fs.existsSync(fullPath);
+                    console.log('Full file path:', fullPath);
+                    console.log('File exists at path:', fileExists);
+                    
+                    images.push(imagePath);
+                    console.log('Added image path:', imagePath);
+                }
+                
+                console.log('Final images array:', images);
+            } catch (imageError) {
+                console.error('Error processing images:', imageError);
+                return res.status(500).json({ 
+                    message: 'Image processing error', 
+                    error: imageError.message,
+                    stack: process.env.NODE_ENV === 'development' ? imageError.stack : undefined
+                });
+            }
         } else {
+            console.log('No images uploaded');
             return res.status(400).json({ message: 'At least one image is required' });
         }
 
-        // Create product
-        const product = await Product.create({
-            name,
-            description,
-            price: parseFloat(price),
-            category,
+        // Validate price and stock
+        const parsedPrice = parseFloat(price);
+        const parsedStock = parseInt(stock);
+        
+        if (isNaN(parsedPrice) || parsedPrice <= 0) {
+            console.log('Invalid price:', price);
+            return res.status(400).json({ message: 'Price must be a positive number' });
+        }
+        
+        if (isNaN(parsedStock) || parsedStock < 0) {
+            console.log('Invalid stock:', stock);
+            return res.status(400).json({ message: 'Stock must be a non-negative integer' });
+        }
+
+        // Log database connection status
+        try {
+            await sequelize.authenticate();
+            console.log('Database connection is OK before creating product');
+        } catch (dbError) {
+            console.error('Database connection error:', dbError);
+            return res.status(500).json({ message: 'Database connection error', error: dbError.message });
+        }
+
+        // Create product with detailed error handling
+        console.log('Creating product in database with fields:', {
+            name, description, price: parsedPrice, category,
             gender: gender || 'unisex',
             ageGroup: ageGroup || 'adult',
-            stock: parseInt(stock),
+            stock: parsedStock,
             status: status || 'active',
             featured: featured === 'true',
-            images,
-            customizationOptions: customizationOptions ? JSON.parse(customizationOptions) : [],
-            tags: tags ? JSON.parse(tags) : []
+            imagesCount: images.length
         });
+        
+        let product;
+        try {
+            // Process tags - handle string, array, and JSON formats
+            let processedTags = [];
+            if (tags) {
+                try {
+                    // Check if tags is already an array
+                    if (Array.isArray(tags)) {
+                        console.log('Tags is already an array:', tags);
+                        // Process each tag in the array - it might be a comma-separated string, a JSON string, or a plain tag
+                        for (const tag of tags) {
+                            if (typeof tag === 'string') {
+                                // If the tag looks like a JSON array string, try to parse it
+                                if (tag.trim().startsWith('[') && tag.trim().endsWith(']')) {
+                                    try {
+                                        const parsedTags = JSON.parse(tag);
+                                        if (Array.isArray(parsedTags)) {
+                                            processedTags = [...processedTags, ...parsedTags];
+                                            continue;
+                                        }
+                                    } catch (e) {
+                                        // Ignore parse error and treat as comma-separated
+                                    }
+                                }
+                                
+                                // Check if it's a comma-separated list
+                                if (tag.includes(',')) {
+                                    const splitTags = tag.split(',').map(t => t.trim()).filter(t => t);
+                                    processedTags = [...processedTags, ...splitTags];
+                                } else {
+                                    // Single tag
+                                    processedTags.push(tag.trim());
+                                }
+                            } else if (tag) {
+                                // Non-string tags (should be rare)
+                                processedTags.push(String(tag));
+                            }
+                        }
+                    } 
+                    // Not an array, try to parse as JSON
+                    else if (typeof tags === 'string') {
+                        // Try to parse as JSON first
+                        if (tags.trim().startsWith('[') && tags.trim().endsWith(']')) {
+                            try {
+                                processedTags = JSON.parse(tags);
+                                console.log('Tags parsed as JSON array:', processedTags);
+                            } catch (e) {
+                                // If parsing fails, treat as comma-separated string
+                                console.log('Tags JSON parsing failed, processing as comma-separated string');
+                                processedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                            }
+                        } else {
+                            // Plain comma-separated string
+                            console.log('Processing tags as comma-separated string');
+                            processedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                        }
+                    }
+                    
+                    // Final check to ensure processedTags is an array
+                    if (!Array.isArray(processedTags)) {
+                        console.log('Processed tags is not an array, using empty array');
+                        processedTags = [];
+                    }
+                    
+                    console.log('Final processed tags:', processedTags);
+                } catch (tagError) {
+                    console.error('Error processing tags:', tagError);
+                    processedTags = [];
+                }
+            }
+            
+            // Process customization options
+            let processedCustomOptions = [];
+            if (customizationOptions) {
+                try {
+                    processedCustomOptions = JSON.parse(customizationOptions);
+                } catch (customError) {
+                    console.log('Customization options not in JSON format:', customError);
+                    // Keep as empty array if parsing fails
+                }
+            }
+            
+            product = await Product.create({
+                name,
+                description,
+                price: parsedPrice,
+                category,
+                gender: gender || 'unisex',
+                ageGroup: ageGroup || 'adult',
+                stock: parsedStock,
+                status: status || 'active',
+                featured: featured === 'true',
+                images, // This should be stored as a JSON array in the database
+                customizationOptions: processedCustomOptions,
+                tags: processedTags
+            });
+            console.log('Product created successfully, ID:', product.id);
+        } catch (productError) {
+            console.error('Error creating product in database:', productError);
+            // Check for specific database errors
+            if (productError.name === 'SequelizeValidationError') {
+                console.log('Validation error:', productError.errors.map(e => e.message));
+                return res.status(400).json({ 
+                    message: 'Validation error', 
+                    errors: productError.errors.map(e => e.message)
+                });
+            }
+            
+            if (productError.name === 'SequelizeDatabaseError') {
+                console.log('Database error type:', productError.parent ? productError.parent.code : 'Unknown');
+                // Check if the error is related to the images column
+                if (productError.message.includes('images')) {
+                    console.log('Error related to images column, checking schema...');
+                    try {
+                        const tableInfo = await sequelize.getQueryInterface().describeTable('Products');
+                        console.log('Products table schema:', tableInfo);
+                    } catch (schemaError) {
+                        console.error('Error checking schema:', schemaError);
+                    }
+                }
+            }
+            
+            return res.status(500).json({ 
+                message: 'Failed to create product in database', 
+                error: productError.message,
+                stack: process.env.NODE_ENV === 'development' ? productError.stack : undefined
+            });
+        }
 
         // Handle variants if they exist
         if (hasVariants === 'true' && (colorVariantsData || sizeVariantsData)) {
             try {
+                console.log('Processing variants...');
+                
                 // Process color variants
                 if (colorVariantsData) {
-                    const colorVariants = JSON.parse(colorVariantsData);
-                    for (const variant of colorVariants) {
-                        await ProductVariant.create({
-                            productId: product.id,
-                            type: 'color',
-                            color: variant.color,
-                            colorCode: variant.colorCode,
-                            stock: parseInt(variant.stock) || 0,
-                            priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                            status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
-                        });
+                    console.log('Processing color variants...');
+                    try {
+                        let colorVariants = [];
+                        
+                        // Check if already an array
+                        if (Array.isArray(colorVariantsData)) {
+                            colorVariants = colorVariantsData;
+                        } else {
+                            // Parse JSON string
+                            colorVariants = JSON.parse(colorVariantsData);
+                        }
+                        
+                        console.log('Parsed color variants:', colorVariants);
+                        
+                        if (Array.isArray(colorVariants) && colorVariants.length > 0) {
+                            for (const variant of colorVariants) {
+                                console.log('Creating color variant:', variant);
+                                await ProductVariant.create({
+                                    productId: product.id,
+                                    type: 'color',
+                                    color: variant.color,
+                                    colorCode: variant.colorCode,
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
+                                });
+                            }
+                        } else {
+                            console.log('No valid color variants to process');
+                        }
+                    } catch (colorParseError) {
+                        console.error('Error parsing color variants data:', colorParseError);
+                        console.error('Raw color variants data:', colorVariantsData);
                     }
                 }
                 
                 // Process size variants
                 if (sizeVariantsData) {
-                    const sizeVariants = JSON.parse(sizeVariantsData);
-                    for (const variant of sizeVariants) {
-                        await ProductVariant.create({
-                            productId: product.id,
-                            type: 'size',
-                            size: variant.size,
-                            stock: parseInt(variant.stock) || 0,
-                            priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                            status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
-                        });
+                    console.log('Processing size variants...');
+                    try {
+                        let sizeVariants = [];
+                        
+                        // Check if already an array
+                        if (Array.isArray(sizeVariantsData)) {
+                            sizeVariants = sizeVariantsData;
+                        } else {
+                            // Parse JSON string
+                            sizeVariants = JSON.parse(sizeVariantsData);
+                        }
+                        
+                        console.log('Parsed size variants:', sizeVariants);
+                        
+                        if (Array.isArray(sizeVariants) && sizeVariants.length > 0) {
+                            for (const variant of sizeVariants) {
+                                console.log('Creating size variant:', variant);
+                                await ProductVariant.create({
+                                    productId: product.id,
+                                    type: 'size',
+                                    size: variant.size,
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
+                                });
+                            }
+                        } else {
+                            console.log('No valid size variants to process');
+                        }
+                    } catch (sizeParseError) {
+                        console.error('Error parsing size variants data:', sizeParseError);
+                        console.error('Raw size variants data:', sizeVariantsData);
                     }
                 }
                 
                 // Update product to indicate it has variants
                 await product.update({ hasVariants: true });
+                console.log('Variants processed successfully');
                 
             } catch (variantError) {
                 console.error('Error creating variants:', variantError);
@@ -357,13 +620,19 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             }
         }
 
+        console.log('Product creation completed successfully');
         res.status(201).json({
             success: true,
             product
         });
     } catch (error) {
-        console.error('Error creating product:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Error creating product:', error.message);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
@@ -485,43 +754,121 @@ router.put('/:id', auth, isAdmin, upload.array('images', 5), async (req, res) =>
 // Delete product
 router.delete('/:id', auth, isAdmin, async (req, res) => {
     try {
+        console.log(`Attempting to delete product with ID: ${req.params.id}`);
+        
         const product = await Product.findByPk(req.params.id);
         
         if (!product) {
+            console.log(`Product with ID ${req.params.id} not found`);
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Delete main image
+        // First, check if product has variants
+        if (product.hasVariants) {
+            console.log(`Product has variants. Deleting variants first...`);
+            
+            try {
+                // Delete all related product variants first
+                const deletedVariants = await ProductVariant.destroy({
+                    where: { productId: product.id }
+                });
+                
+                console.log(`Successfully deleted ${deletedVariants} product variants`);
+            } catch (variantError) {
+                console.error('Error deleting product variants:', variantError);
+                return res.status(500).json({ 
+                    message: 'Error deleting product variants',
+                    error: variantError.message
+                });
+            }
+        }
+
+        // Now proceed with image deletion
+        console.log('Deleting product images...');
+        
+        // Handle the 'images' array field
+        if (product.images && Array.isArray(product.images)) {
+            console.log(`Processing ${product.images.length} images from images array`);
+            for (const imgPath of product.images) {
+                if (typeof imgPath === 'string') {
+                    const fullPath = path.join(__dirname, '../public', imgPath);
+                    console.log(`Checking image at: ${fullPath}`);
+                    if (fs.existsSync(fullPath)) {
+                        console.log(`Deleting image: ${fullPath}`);
+                        fs.unlinkSync(fullPath);
+                    } else {
+                        console.log(`Image not found at: ${fullPath}`);
+                    }
+                }
+            }
+        }
+
+        // Delete main image (legacy field)
         if (product.image) {
             const imagePath = path.join(__dirname, '../public', product.image);
+            console.log(`Checking main image at: ${imagePath}`);
             if (fs.existsSync(imagePath)) {
+                console.log(`Deleting main image: ${imagePath}`);
                 fs.unlinkSync(imagePath);
+            } else {
+                console.log(`Main image not found at: ${imagePath}`);
             }
         }
         
         // Delete thumbnail
         if (product.thumbnail && product.thumbnail !== product.image) {
             const thumbnailPath = path.join(__dirname, '../public', product.thumbnail);
+            console.log(`Checking thumbnail at: ${thumbnailPath}`);
             if (fs.existsSync(thumbnailPath)) {
+                console.log(`Deleting thumbnail: ${thumbnailPath}`);
                 fs.unlinkSync(thumbnailPath);
+            } else {
+                console.log(`Thumbnail not found at: ${thumbnailPath}`);
             }
         }
         
-        // Delete additional images
+        // Delete additional images from metadata
         if (product.imageMetadata && product.imageMetadata.additionalImages) {
+            console.log(`Processing additional images from metadata`);
             product.imageMetadata.additionalImages.forEach(imgPath => {
                 const fullPath = path.join(__dirname, '../public', imgPath);
+                console.log(`Checking additional image at: ${fullPath}`);
                 if (fs.existsSync(fullPath)) {
+                    console.log(`Deleting additional image: ${fullPath}`);
                     fs.unlinkSync(fullPath);
+                } else {
+                    console.log(`Additional image not found at: ${fullPath}`);
                 }
             });
         }
 
+        // Finally delete the product
+        console.log(`Deleting product with ID: ${product.id}`);
         await product.destroy();
+        console.log(`Product successfully deleted`);
+        
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting product:', error);
-        res.status(500).json({ message: 'Error deleting product' });
+        
+        // Provide more detailed error information
+        let errorMessage = 'Error deleting product';
+        
+        // Check for foreign key constraint error
+        if (error.name === 'SequelizeForeignKeyConstraintError') {
+            errorMessage = 'Cannot delete product because it is referenced by other records in the database';
+            
+            // Check which tables still reference this product
+            if (error.table) {
+                errorMessage += ` (in table: ${error.table})`;
+            }
+        }
+        
+        res.status(500).json({ 
+            message: errorMessage,
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error : undefined
+        });
     }
 });
 
