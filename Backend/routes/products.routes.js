@@ -98,184 +98,190 @@ router.get('/', async (req, res) => {
                 if (categoryMatch && categoryMatch.category) {
                     // If we found a category match, recommend products from that category
                     whereClause.category = categoryMatch.category;
-                } else {
-                    // If no category match, return popular products (no specific where clause)
-                    // Just use the default sort below
                 }
             }
             
-            // Sort by popularity or rating for recommendations
-            const limit = parseInt(req.query.limit) || 10;
-            const recommendedProducts = await Product.findAll({
-                where: whereClause,
-                order: [
-                    ['popularity', 'DESC'],
-                    ['averageRating', 'DESC'],
-                    ['createdAt', 'DESC']
-                ],
-                limit
-            });
+            // If we aren't filtering by category, just get featured or popular items
+            if (!whereClause.category) {
+                whereClause.status = 'active';
+                // Get products with sales
+                whereClause.sales = { [Op.gt]: 0 };
+            }
+        } else {
+            // Regular product filtering logic
+            if (req.query.category) {
+                whereClause.category = req.query.category;
+            }
             
-            return res.json(recommendedProducts);
-        }
-        
-        // Handle search
-        if (req.query.search) {
-            const searchTerm = req.query.search.trim();
-            const isFuzzySearch = req.query.fuzzy === 'true';
+            if (req.query.gender) {
+                whereClause.gender = req.query.gender;
+            }
             
-            if (isFuzzySearch) {
-                // Enhanced fuzzy search with improved handling for word variations
-                // Create fuzzy patterns that are more effective for common word stems
-                const fuzzyPattern = searchTerm.split('').join('%');
-                
-                // Common word stem mappings for clothing-related terms
-                const stemMappings = {
-                    'cloth': ['cloth', 'clothes', 'clothing', 'clothe'],
-                    'shirt': ['shirt', 'tshirt', 't-shirt', 'tee'],
-                    'pant': ['pant', 'pants', 'trouser', 'trousers'],
-                    'jack': ['jacket', 'jackets'],
-                    'hood': ['hood', 'hoodie', 'hoodies'],
-                    'sweat': ['sweat', 'sweater', 'sweatshirt'],
-                };
-                
-                // Check if the search term matches any stems
-                const relatedTerms = [];
-                for (const [stem, variations] of Object.entries(stemMappings)) {
-                    if (searchTerm.includes(stem) || variations.some(v => v === searchTerm)) {
-                        relatedTerms.push(...variations);
-                    }
-                }
-                
-                // Build a more comprehensive OR condition for the search
-                whereClause[Op.or] = [
-                    // Exact match gets highest priority
-                    { name: { [Op.like]: `%${searchTerm}%` } },
-                    { description: { [Op.like]: `%${searchTerm}%` } },
-                    { category: { [Op.like]: `%${searchTerm}%` } },
-                    
-                    // Fuzzy match - more flexible for typos
-                    { name: { [Op.like]: `%${fuzzyPattern}%` } },
-                    { description: { [Op.like]: `%${fuzzyPattern}%` } },
-                    
-                    // Check for related terms based on stem mappings
-                    ...(relatedTerms.length > 0 ? relatedTerms.map(term => ({
-                        [Op.or]: [
-                            { name: { [Op.like]: `%${term}%` } },
-                            { description: { [Op.like]: `%${term}%` } },
-                            { category: { [Op.like]: `%${term}%` } }
-                        ]
-                    })) : []),
-                    
-                    // Individual word matching for multi-word queries
-                    ...searchTerm.split(' ').filter(word => word.length > 2).map(word => ({
-                        [Op.or]: [
-                            { name: { [Op.like]: `%${word}%` } },
-                            { description: { [Op.like]: `%${word}%` } },
-                            { category: { [Op.like]: `%${word}%` } }
-                        ]
-                    }))
-                ];
+            if (req.query.ageGroup) {
+                whereClause.ageGroup = req.query.ageGroup;
+            }
+            
+            if (req.query.status) {
+                whereClause.status = req.query.status;
             } else {
-                // Standard search (without fuzzy matching)
+                // By default, only show active products
+                whereClause.status = 'active';
+            }
+            
+            if (req.query.featured === 'true') {
+                whereClause.featured = true;
+            }
+            
+            if (req.query.minPrice || req.query.maxPrice) {
+                const priceFilter = {};
+                
+                if (req.query.minPrice) {
+                    priceFilter[Op.gte] = parseFloat(req.query.minPrice);
+                }
+                
+                if (req.query.maxPrice) {
+                    priceFilter[Op.lte] = parseFloat(req.query.maxPrice);
+                }
+                
+                whereClause.price = priceFilter;
+            }
+
+            // Search functionality
+            if (req.query.search) {
                 whereClause[Op.or] = [
-                    { name: { [Op.like]: `%${searchTerm}%` } },
-                    { description: { [Op.like]: `%${searchTerm}%` } },
-                    { category: { [Op.like]: `%${searchTerm}%` } }
+                    { name: { [Op.like]: `%${req.query.search}%` } },
+                    { description: { [Op.like]: `%${req.query.search}%` } },
+                    { category: { [Op.like]: `%${req.query.search}%` } }
                 ];
+            }
+            
+            // Add filtering for customizable products
+            if (req.query.customizable === 'true') {
+                whereClause.isCustomizable = true;
             }
         }
         
-        // Handle category filter
-        if (req.query.category) {
-            // Handle multiple categories as an array
-            const categories = Array.isArray(req.query.category) 
-                ? req.query.category 
-                : [req.query.category];
-                
-            whereClause.category = {
-                [Op.in]: categories
-            };
-        }
+        // Get pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
         
-        // Handle gender filter
-        if (req.query.gender) {
-            // Handle multiple genders as an array
-            const genders = Array.isArray(req.query.gender) 
-                ? req.query.gender 
-                : [req.query.gender];
-                
-            whereClause.gender = {
-                [Op.in]: genders
-            };
-        }
-        
-        // Handle age group filter
-        if (req.query.ageGroup) {
-            // Handle multiple age groups as an array
-            const ageGroups = Array.isArray(req.query.ageGroup) 
-                ? req.query.ageGroup 
-                : [req.query.ageGroup];
-                
-            whereClause.ageGroup = {
-                [Op.in]: ageGroups
-            };
-        }
-        
-        // Determine sort order
-        let order = [['createdAt', 'DESC']]; // Default sort
-        
-        if (req.query.sortBy) {
-            switch (req.query.sortBy) {
-                case 'price-low-to-high':
+        // Get sorting parameters
+        let order = [['createdAt', 'DESC']];
+        if (req.query.sort) {
+            switch (req.query.sort.toLowerCase()) {
+                case 'price_asc':
                     order = [['price', 'ASC']];
                     break;
-                case 'price-high-to-low':
+                case 'price_desc':
                     order = [['price', 'DESC']];
                     break;
                 case 'newest':
                     order = [['createdAt', 'DESC']];
                     break;
-                // Default case uses the initial value
+                case 'name_asc':
+                    order = [['name', 'ASC']];
+                    break;
+                case 'name_desc':
+                    order = [['name', 'DESC']];
+                    break;
+                case 'popular':
+                    order = [['sales', 'DESC']];
+                    break;
+                default:
+                    order = [['createdAt', 'DESC']];
             }
         }
         
-        console.log('Where clause:', JSON.stringify(whereClause, null, 2));
-        console.log('Sort order:', JSON.stringify(order, null, 2));
+        console.log('Finding products with where clause:', JSON.stringify(whereClause));
+        console.log('Order:', order);
+        console.log('Limit:', limit, 'Offset:', offset);
         
-        const products = await Product.findAll({
+        // Query the database with filters, sorting, and pagination
+        const { count, rows: products } = await Product.findAndCountAll({
+            where: whereClause,
             order,
-            where: whereClause
+            limit,
+            offset,
+            // Include variants
+            include: [
+                {
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false,
+                    attributes: ['id', 'type', 'size', 'color', 'colorCode', 'stock', 'status']
+                }
+            ]
         });
         
-        console.log('Found products count:', products.length);
+        // Fix for images column - ensure all products have an images array
+        // This handles both old products with just 'image' and new ones with 'images'
+        const processedProducts = products.map(product => {
+            const productData = product.toJSON();
+            
+            // If images is null/undefined or empty array, but image exists, use image instead
+            if ((!productData.images || productData.images.length === 0) && productData.image) {
+                productData.images = [productData.image];
+            }
+            
+            // Ensure images is always at least an empty array
+            if (!productData.images) {
+                productData.images = [];
+            }
+            
+            return productData;
+        });
         
-        if (!products || products.length === 0) {
-            console.log('No products found in database');
-            return res.json([]);
-        }
+        console.log(`Found ${count} products, returning ${processedProducts.length} for this page`);
         
-        res.json(products);
+        // Return the results
+        res.json({
+            products: processedProducts,
+            totalProducts: count,
+            currentPage: page,
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
-        console.error('=== Error Fetching Products ===');
-        console.error('Error details:', error);
-        console.error('Stack trace:', error.stack);
-        res.status(500).json({ 
-            message: 'Error fetching products',
-            error: error.message 
-        });
+        console.error('Error fetching products:', error);
+        res.status(500).json({ message: 'Error fetching products', error: error.message });
     }
 });
 
 // Get single product - Move this BEFORE other routes with :id parameter
 router.get('/:id', async (req, res) => {
     try {
-        const product = await Product.findByPk(req.params.id);
-
+        const productId = req.params.id;
+        console.log(`Fetching product with ID: ${productId}`);
+        
+        const product = await Product.findByPk(productId, {
+            include: [
+                {
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false
+                }
+            ]
+        });
+        
         if (!product) {
+            console.log(`Product with ID ${productId} not found`);
             return res.status(404).json({ message: 'Product not found' });
         }
-        res.json(product);
+        
+        // Fix for images column - ensure product has an images array
+        const productData = product.toJSON();
+        
+        // If images is null/undefined or empty array, but image exists, use image instead
+        if ((!productData.images || productData.images.length === 0) && productData.image) {
+            productData.images = [productData.image];
+        }
+        
+        // Ensure images is always at least an empty array
+        if (!productData.images) {
+            productData.images = [];
+        }
+        
+        res.json(productData);
     } catch (error) {
         console.error('Error fetching product:', error);
         res.status(500).json({ message: 'Error fetching product details' });

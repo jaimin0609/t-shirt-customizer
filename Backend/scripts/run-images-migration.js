@@ -1,78 +1,69 @@
 import { Sequelize, DataTypes } from 'sequelize';
-import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-async function runMigration() {
-  let sequelize;
-  
-  // Connect to database using environment variables
-  if (process.env.DATABASE_URL) {
-    sequelize = new Sequelize(process.env.DATABASE_URL, {
-      dialect: 'postgres',
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
-    });
-    console.log('Using PostgreSQL with DATABASE_URL');
-  } else {
-    sequelize = new Sequelize(
-      process.env.DB_NAME,
-      process.env.DB_USER,
-      process.env.DB_PASSWORD,
-      {
-        host: process.env.DB_HOST,
-        dialect: process.env.DB_DIALECT || 'mysql'
-      }
-    );
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+let envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
     console.log('Using local database configuration');
-  }
-
-  try {
-    // Test connection
-    await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
-
-    // Get the QueryInterface
-    const queryInterface = sequelize.getQueryInterface();
-
-    // Check if the column already exists
-    console.log('Checking if images column exists in Products table...');
-    let tableExists = false;
-    
-    try {
-      const tableInfo = await queryInterface.describeTable('Products');
-      tableExists = true;
-      
-      if (tableInfo.images) {
-        console.log('The images column already exists.');
-        return;
-      }
-    } catch (error) {
-      if (error.name === 'SequelizeDatabaseError') {
-        console.log('Products table does not exist yet.');
-        return;
-      }
-      throw error;
-    }
-
-    if (tableExists) {
-      // Add the column
-      console.log('Adding images column to Products table...');
-      await queryInterface.addColumn('Products', 'images', {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: null
-      });
-      console.log('Migration completed successfully.');
-    }
-  } catch (error) {
-    console.error('Error running migration:', error);
-  } finally {
-    await sequelize.close();
-  }
+    import('dotenv').then(dotenv => {
+        dotenv.config({ path: envPath });
+    });
+} else {
+    console.log('Using production database configuration');
 }
+
+// Initialize Sequelize with the database configuration
+const sequelize = new Sequelize(
+    process.env.DB_NAME || 'tshirt_customizer',
+    process.env.DB_USER || 'root',
+    process.env.DB_PASSWORD || '6941@Sjp',
+    {
+        host: process.env.DB_HOST || 'localhost',
+        dialect: process.env.DB_DIALECT || 'mysql',
+        logging: console.log,
+        dialectOptions: {
+            ssl: process.env.DB_SSL === 'true' ? {
+                require: true,
+                rejectUnauthorized: false
+            } : false
+        }
+    }
+);
+
+const runMigration = async () => {
+    try {
+        // Test database connection
+        await sequelize.authenticate();
+        console.log('Database connection has been established successfully.');
+
+        // Check if the images column already exists
+        console.log('Checking if images column exists in Products table...');
+        const tableInfo = await sequelize.getQueryInterface().describeTable('Products');
+        
+        if (!tableInfo.images) {
+            console.log('Adding images column to Products table...');
+            // Add the images column
+            await sequelize.getQueryInterface().addColumn('Products', 'images', {
+                type: DataTypes.JSON,
+                allowNull: true,
+                defaultValue: [],
+                comment: 'Array of image URLs for the product'
+            });
+            console.log('Migration completed successfully.');
+        } else {
+            console.log('Images column already exists in Products table.');
+        }
+    } catch (error) {
+        console.error('Error running migration:', error);
+    } finally {
+        await sequelize.close();
+    }
+};
 
 // Run the migration
 runMigration(); 

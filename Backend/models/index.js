@@ -11,6 +11,8 @@ import Coupon from './Coupon.js';
 import Promotion from './Promotion.js';
 import ProductVariant from './ProductVariant.js';
 import Analytics from './Analytics.js';
+// Import Product model patch
+import { applyProductModelPatch } from './ProductPatch.js';
 
 // Initialize models with sequelize instance
 const models = {
@@ -27,6 +29,9 @@ const models = {
     sequelize,
     Sequelize
 };
+
+// Apply patch to handle image/images compatibility
+applyProductModelPatch(Product);
 
 // Define relationships
 models.User.hasMany(models.Order, {
