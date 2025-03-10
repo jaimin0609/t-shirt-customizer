@@ -4,6 +4,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
 // Log the API URL being used (helpful for debugging deployment issues)
 console.log('Using API URL:', API_URL);
 
+import axios from 'axios';
+
 export const productService = {
     getAllProducts: async () => {
         try {
@@ -58,18 +60,40 @@ export const productService = {
             const queryString = queryParams.toString();
             const url = `${API_URL}/products${queryString ? `?${queryString}` : ''}`;
             
-            const response = await fetch(url);
+            console.log('Fetching products from:', url);
+            const token = localStorage.getItem('token'); 
+            console.log('Using token:', token ? token.substring(0, 10) + '...' : 'none');
+            
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            const response = await fetch(url, { headers });
+            
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error(`Failed to fetch filtered products: ${response.status} ${response.statusText}`, errorData);
+                console.error(`Failed to fetch filtered products: ${response.status}`, errorData);
                 return []; // Return empty array instead of throwing error
             }
             
             const data = await response.json();
-            return data;
+            console.log('Response data:', data);
+            
+            // Handle different response formats
+            if (Array.isArray(data)) {
+                // Backend returned an array directly
+                return data;
+            } else if (data && Array.isArray(data.products)) {
+                // Backend returned an object with a products array property
+                return data.products;
+            } else {
+                // Unexpected format, log error and return empty array
+                console.error('Error response:', data);
+                throw new Error(`Failed to load products: ${response.status} - ${JSON.stringify(data)}`);
+            }
         } catch (error) {
-            console.error('Error fetching filtered products:', error);
+            console.error('Error loading products:', error);
             // Fallback to returning an empty array
             return [];
         }
@@ -553,6 +577,77 @@ export const productService = {
         } catch (error) {
             console.error('Error fetching popular products:', error);
             return [];
+        }
+    },
+
+    // Get all products
+    getProducts: async (filters = {}) => {
+        try {
+            const response = await axios.get(`${API_URL}/products`, {
+                params: filters,
+                withCredentials: true
+            });
+            
+            // Handle both formats - either direct array or {products: [...]} 
+            if (response.data && Array.isArray(response.data)) {
+                // Legacy format - direct array
+                return response.data;
+            } else if (response.data && response.data.products && Array.isArray(response.data.products)) {
+                // New format - object with products array
+                return response.data.products;
+            } else {
+                // Fallback - return empty array
+                console.warn("Unexpected API response format", response.data);
+                return [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch products:', error);
+            throw error;
+        }
+    },
+
+    // Add product
+    addProduct: async (productData) => {
+        try {
+            const response = await axios.post(`${API_URL}/products`, productData, {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to add product:', error);
+            throw error;
+        }
+    },
+
+    // Update product
+    updateProduct: async (id, productData) => {
+        try {
+            const response = await axios.put(`${API_URL}/products/${id}`, productData, {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Failed to update product with ID ${id}:`, error);
+            throw error;
+        }
+    },
+
+    // Delete product
+    deleteProduct: async (id) => {
+        try {
+            const response = await axios.delete(`${API_URL}/products/${id}`, {
+                withCredentials: true
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Failed to delete product with ID ${id}:`, error);
+            throw error;
         }
     }
 }; 
