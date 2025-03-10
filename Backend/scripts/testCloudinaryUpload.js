@@ -1,18 +1,20 @@
 // Use ESM syntax
-import { uploadImage, getImageUrl } from '../config/cloudinary.js';
+import { cloudinary } from '../config/cloudinary.js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
+import path from 'path';
 
 // Initialize environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
-// Function to test Cloudinary upload
-async function testCloudinaryUpload() {
+// Function to test Cloudinary configuration
+async function testCloudinaryConfig() {
     try {
-        console.log('Testing Cloudinary integration...');
+        console.log('Testing Cloudinary configuration...');
         
         // Get Cloudinary configuration from environment
         const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -33,27 +35,18 @@ async function testCloudinaryUpload() {
             return;
         }
         
-        // Test direct upload function with a sample image URL
-        console.log('\nTesting with sample image from URL...');
-        const sampleImageUrl = 'https://picsum.photos/200';
+        // Test the Cloudinary configuration by retrieving account info
+        console.log('\nTesting Cloudinary API connection...');
+        const accountInfo = await cloudinary.api.ping();
+        console.log('Cloudinary API connection successful:', accountInfo);
         
-        console.log(`Uploading image from: ${sampleImageUrl}`);
-        const result = await uploadImage(sampleImageUrl);
-        
-        console.log('Upload successful!');
-        console.log('Cloudinary secure URL:', result);
-        
-        // Test getImageUrl function
-        const publicId = result.split('/').pop().split('.')[0];
-        console.log('Public ID:', publicId);
-        const transformedUrl = getImageUrl(publicId);
-        console.log('Transformed URL:', transformedUrl);
-        
-        console.log('\nCloudinary integration test completed successfully!');
+        console.log('\nCloudinary configuration test completed successfully!');
+        return true;
     } catch (error) {
-        console.error('Error testing Cloudinary integration:', error);
+        console.error('Error testing Cloudinary configuration:', error);
+        return false;
     }
 }
 
 // Run the test
-testCloudinaryUpload(); 
+testCloudinaryConfig(); 

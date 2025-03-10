@@ -8,7 +8,7 @@ import { optimizeProductImage } from '../middleware/imageOptimization.js';
 import { sequelize } from '../models/index.js';
 import { Sequelize } from 'sequelize';
 import { auth, isAdmin } from '../middleware/auth.js';
-import { storage, uploadImage } from '../config/cloudinary.js';
+import { storage, uploadImage, getCloudinaryUrl } from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,16 +32,14 @@ if (!fs.existsSync(uploadDir)) {
 // Configure multer to use Cloudinary storage
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png|gif|webp/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
-        if (mimetype && extname) {
-            return cb(null, true);
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB size limit
+    fileFilter: (req, file, cb) => {
+        // Accept image files only
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'), false);
         }
-        cb(new Error('Only image files (jpg, jpeg, png, gif, webp) are allowed!'));
     }
 });
 
@@ -373,72 +371,50 @@ router.get('/:id', async (req, res) => {
 // Create new product - Updated to handle multiple images and variants
 router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {
-        console.log('==== Creating new product - Request received ====');
-        
-        // Log request body fields (excluding binary data)
+        console.log('Creating new product...');
+        // Log request body (excluding binary data)
         const logBody = { ...req.body };
-        delete logBody.images; // Don't log binary data
+        delete logBody.images;
         console.log('Request body:', JSON.stringify(logBody, null, 2));
-        
-        // Log files
-        console.log('Received files:', req.files ? req.files.length : 0);
-        if (req.files && req.files.length > 0) {
-            console.log('Files info:', req.files.map(f => ({
-                fieldname: f.fieldname,
-                originalname: f.originalname,
-                mimetype: f.mimetype,
-                size: f.size,
-                path: f.path,
-                url: f.path // Cloudinary returns URL in path
-            })));
-        }
-        
-        // Log auth user
-        console.log('User ID from auth middleware:', req.user ? req.user.id : 'Not available');
-        
-        const { 
-            name, description, price, category, gender, ageGroup, 
-            stock, status, featured, customizationOptions, tags,
-            hasVariants, colorVariantsData, sizeVariantsData
-        } = req.body;
+        console.log('Files received:', req.files ? req.files.length : 0);
 
         // Validate required fields
-        if (!name || !description || !price || !category || !stock) {
-            console.log('Missing required fields:', { name, description, price, category, stock });
-            return res.status(400).json({ message: 'Missing required fields' });
+        if (!req.body.name || !req.body.description || !req.body.price || !req.body.category) {
+            return res.status(400).json({ message: 'Name, description, price and category are required' });
         }
 
         // Process uploaded images
-        let images = [];
+        let imageUrls = [];
         if (req.files && req.files.length > 0) {
             try {
-                // With Cloudinary, the URL is already in the file.path
-                images = req.files.map(file => file.path);
-                console.log('Cloudinary image URLs:', images);
-            } catch (imageError) {
-                console.error('Error processing images:', imageError);
-                return res.status(500).json({ 
-                    message: 'Image processing error', 
-                    error: imageError.message,
-                    stack: process.env.NODE_ENV === 'development' ? imageError.stack : undefined
-                });
+                // With Cloudinary, the secure URL is in file.path
+                imageUrls = req.files.map(file => file.path);
+                console.log('Cloudinary image URLs:', imageUrls);
+            } catch (error) {
+                console.error('Error processing uploaded images:', error);
+                return res.status(500).json({ message: 'Error processing images', error: error.message });
             }
-        } else {
-            console.log('No images uploaded');
-            return res.status(400).json({ message: 'At least one image is required' });
+        }
+
+        // Ensure we have at least one image
+        if (imageUrls.length === 0) {
+            // Use a default placeholder image
+            const placeholderUrl = getCloudinaryUrl();
+            imageUrls = [placeholderUrl];
+            console.log('No images uploaded, using placeholder:', placeholderUrl);
         }
 
         // Validate price and stock
-        const parsedPrice = parseFloat(price);
-        const parsedStock = parseInt(stock);
+        const parsedPrice = parseFloat(req.body.price);
+        const parsedStock = parseInt(req.body.stock);
         
         if (isNaN(parsedPrice) || parsedPrice <= 0) {
-            console.log('Invalid price:', price);
+            console.log('Invalid price:', req.body.price);
             return res.status(400).json({ message: 'Price must be a positive number' });
         }
         
         if (isNaN(parsedStock) || parsedStock < 0) {
-            console.log('Invalid stock:', stock);
+            console.log('Invalid stock:', req.body.stock);
             return res.status(400).json({ message: 'Stock must be a non-negative integer' });
         }
 
@@ -453,26 +429,29 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
 
         // Create product with detailed error handling
         console.log('Creating product in database with fields:', {
-            name, description, price: parsedPrice, category,
-            gender: gender || 'unisex',
-            ageGroup: ageGroup || 'adult',
+            name: req.body.name,
+            description: req.body.description,
+            price: parsedPrice,
+            category: req.body.category,
+            gender: req.body.gender || 'unisex',
+            ageGroup: req.body.ageGroup || 'adult',
             stock: parsedStock,
-            status: status || 'active',
-            featured: featured === 'true',
-            imagesCount: images.length
+            status: req.body.status || 'active',
+            featured: req.body.featured === 'true',
+            imagesCount: imageUrls.length
         });
         
         let product;
         try {
             // Process tags - handle string, array, and JSON formats
             let processedTags = [];
-            if (tags) {
+            if (req.body.tags) {
                 try {
                     // Check if tags is already an array
-                    if (Array.isArray(tags)) {
-                        console.log('Tags is already an array:', tags);
+                    if (Array.isArray(req.body.tags)) {
+                        console.log('Tags is already an array:', req.body.tags);
                         // Process each tag in the array - it might be a comma-separated string, a JSON string, or a plain tag
-                        for (const tag of tags) {
+                        for (const tag of req.body.tags) {
                             if (typeof tag === 'string') {
                                 // If the tag looks like a JSON array string, try to parse it
                                 if (tag.trim().startsWith('[') && tag.trim().endsWith(']')) {
@@ -502,21 +481,21 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                         }
                     } 
                     // Not an array, try to parse as JSON
-                    else if (typeof tags === 'string') {
+                    else if (typeof req.body.tags === 'string') {
                         // Try to parse as JSON first
-                        if (tags.trim().startsWith('[') && tags.trim().endsWith(']')) {
+                        if (req.body.tags.trim().startsWith('[') && req.body.tags.trim().endsWith(']')) {
                             try {
-                                processedTags = JSON.parse(tags);
+                                processedTags = JSON.parse(req.body.tags);
                                 console.log('Tags parsed as JSON array:', processedTags);
                             } catch (e) {
                                 // If parsing fails, treat as comma-separated string
                                 console.log('Tags JSON parsing failed, processing as comma-separated string');
-                                processedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                                processedTags = req.body.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
                             }
                         } else {
                             // Plain comma-separated string
                             console.log('Processing tags as comma-separated string');
-                            processedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                            processedTags = req.body.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
                         }
                     }
                     
@@ -535,9 +514,9 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             
             // Process customization options
             let processedCustomOptions = [];
-            if (customizationOptions) {
+            if (req.body.customizationOptions) {
                 try {
-                    processedCustomOptions = JSON.parse(customizationOptions);
+                    processedCustomOptions = JSON.parse(req.body.customizationOptions);
                 } catch (customError) {
                     console.log('Customization options not in JSON format:', customError);
                     // Keep as empty array if parsing fails
@@ -545,16 +524,16 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             }
             
             product = await Product.create({
-                name,
-                description,
+                name: req.body.name,
+                description: req.body.description,
                 price: parsedPrice,
-                category,
-                gender: gender || 'unisex',
-                ageGroup: ageGroup || 'adult',
+                category: req.body.category,
+                gender: req.body.gender || 'unisex',
+                ageGroup: req.body.ageGroup || 'adult',
                 stock: parsedStock,
-                status: status || 'active',
-                featured: featured === 'true',
-                images, // This should be stored as a JSON array in the database
+                status: req.body.status || 'active',
+                featured: req.body.featured === 'true',
+                images: imageUrls,
                 customizationOptions: processedCustomOptions,
                 tags: processedTags
             });
@@ -592,22 +571,22 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         }
 
         // Handle variants if they exist
-        if (hasVariants === 'true' && (colorVariantsData || sizeVariantsData)) {
+        if (req.body.hasVariants === 'true' && (req.body.colorVariantsData || req.body.sizeVariantsData)) {
             try {
                 console.log('Processing variants...');
                 
                 // Process color variants
-                if (colorVariantsData) {
+                if (req.body.colorVariantsData) {
                     console.log('Processing color variants...');
                     try {
                         let colorVariants = [];
                         
                         // Check if already an array
-                        if (Array.isArray(colorVariantsData)) {
-                            colorVariants = colorVariantsData;
+                        if (Array.isArray(req.body.colorVariantsData)) {
+                            colorVariants = req.body.colorVariantsData;
                         } else {
                             // Parse JSON string
-                            colorVariants = JSON.parse(colorVariantsData);
+                            colorVariants = JSON.parse(req.body.colorVariantsData);
                         }
                         
                         console.log('Parsed color variants:', colorVariants);
@@ -630,22 +609,22 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                         }
                     } catch (colorParseError) {
                         console.error('Error parsing color variants data:', colorParseError);
-                        console.error('Raw color variants data:', colorVariantsData);
+                        console.error('Raw color variants data:', req.body.colorVariantsData);
                     }
                 }
                 
                 // Process size variants
-                if (sizeVariantsData) {
+                if (req.body.sizeVariantsData) {
                     console.log('Processing size variants...');
                     try {
                         let sizeVariants = [];
                         
                         // Check if already an array
-                        if (Array.isArray(sizeVariantsData)) {
-                            sizeVariants = sizeVariantsData;
+                        if (Array.isArray(req.body.sizeVariantsData)) {
+                            sizeVariants = req.body.sizeVariantsData;
                         } else {
                             // Parse JSON string
-                            sizeVariants = JSON.parse(sizeVariantsData);
+                            sizeVariants = JSON.parse(req.body.sizeVariantsData);
                         }
                         
                         console.log('Parsed size variants:', sizeVariants);
@@ -667,7 +646,7 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                         }
                     } catch (sizeParseError) {
                         console.error('Error parsing size variants data:', sizeParseError);
-                        console.error('Raw size variants data:', sizeVariantsData);
+                        console.error('Raw size variants data:', req.body.sizeVariantsData);
                     }
                 }
                 

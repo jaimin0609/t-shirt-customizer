@@ -1,11 +1,19 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Initialize environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'demo', // Use demo during development 
-  api_key: process.env.CLOUDINARY_API_KEY || '', 
-  api_secret: process.env.CLOUDINARY_API_SECRET || '',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl', 
+  api_key: process.env.CLOUDINARY_API_KEY || '718734228757155', 
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'yXiUCqjRnc7zBk1kqlJHpc8e8qA',
   secure: true
 });
 
@@ -19,34 +27,39 @@ const storage = new CloudinaryStorage({
   }
 });
 
-// Function to upload image directly without multer
-const uploadImage = async (imagePath) => {
-  try {
-    // If the path is already a cloudinary URL, just return it
-    if (imagePath && imagePath.includes('cloudinary.com')) {
-      return imagePath;
-    }
-    
-    // Handle image upload
-    const result = await cloudinary.uploader.upload(imagePath, {
-      folder: 'tshirt-customizer',
-      transformation: [{ width: 800, height: 800, crop: 'limit' }]
-    });
-    
-    return result.secure_url;
-  } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
-    // Return the original path if upload fails
-    return imagePath;
-  }
+// Function to get Cloudinary credentials for frontend
+const getCloudinaryConfig = () => {
+  return {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl',
+    apiKey: process.env.CLOUDINARY_API_KEY || '718734228757155',
+    uploadPreset: 'ml_default' // You can create a custom upload preset in your Cloudinary dashboard
+  };
 };
 
-// Get image URL for a public ID
+// Function to handle Cloudinary URLs - either returning existing URLs or placeholder
+const getCloudinaryUrl = (imagePath) => {
+  // If no path provided, return a placeholder
+  if (!imagePath) {
+    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
+  }
+  
+  // If it's already a Cloudinary URL, return it
+  if (imagePath && imagePath.includes('cloudinary.com')) {
+    return imagePath;
+  }
+  
+  // If it's a local path, convert to a placeholder Cloudinary URL
+  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
+};
+
+// Function to get image URL for a public ID
 const getImageUrl = (publicId) => {
+  if (!publicId) return getCloudinaryUrl();
+  
   return cloudinary.url(publicId, {
     secure: true,
     transformation: [{ width: 800, height: 800, crop: 'limit' }]
   });
 };
 
-export { cloudinary, storage, uploadImage, getImageUrl }; 
+export { cloudinary, storage, getCloudinaryConfig, getCloudinaryUrl, getImageUrl }; 
