@@ -197,25 +197,73 @@ router.get('/', async (req, res) => {
         console.log('Order:', order);
         console.log('Limit:', limit, 'Offset:', offset);
         
-        // Query the database with filters, sorting, and pagination
-        const { count, rows: products } = await Product.findAndCountAll({
-            where: whereClause,
-            order,
-            limit,
-            offset,
-            // Include variants
-            include: [
-                {
+        // Create include array - make it resilient against association issues
+        let includeOptions = [];
+        try {
+            // Check if the association exists
+            if (Product.associations && Product.associations.variants) {
+                includeOptions.push({
                     model: ProductVariant,
                     as: 'variants',
                     required: false,
                     attributes: ['id', 'type', 'size', 'color', 'colorCode', 'stock', 'status']
-                }
-            ]
-        });
+                });
+            } else {
+                console.log('Warning: variants association is not defined on Product model');
+                // Try to define it dynamically
+                Product.hasMany(ProductVariant, {
+                    foreignKey: 'productId',
+                    as: 'variants'
+                });
+                
+                ProductVariant.belongsTo(Product, {
+                    foreignKey: 'productId',
+                    as: 'product'
+                });
+                
+                // Try to include it now
+                includeOptions.push({
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false,
+                    attributes: ['id', 'type', 'size', 'color', 'colorCode', 'stock', 'status']
+                });
+            }
+        } catch (associationError) {
+            console.error('Error setting up Product-ProductVariant association:', associationError);
+            // Continue without including variants
+        }
+        
+        // Query the database with filters, sorting, and pagination
+        let products = [];
+        let count = 0;
+        
+        try {
+            // Try with associations
+            const result = await Product.findAndCountAll({
+                where: whereClause,
+                order,
+                limit,
+                offset,
+                include: includeOptions
+            });
+            products = result.rows;
+            count = result.count;
+        } catch (queryError) {
+            console.error('Error with full query, trying without variants:', queryError);
+            
+            // Fallback query without associations
+            const result = await Product.findAndCountAll({
+                where: whereClause,
+                order,
+                limit,
+                offset
+            });
+            products = result.rows;
+            count = result.count;
+        }
         
         // Fix for images column - ensure all products have an images array
-        // This handles both old products with just 'image' and new ones with 'images'
         const processedProducts = products.map(product => {
             const productData = product.toJSON();
             
@@ -253,15 +301,52 @@ router.get('/:id', async (req, res) => {
         const productId = req.params.id;
         console.log(`Fetching product with ID: ${productId}`);
         
-        const product = await Product.findByPk(productId, {
-            include: [
-                {
+        // Create include array - make it resilient against association issues
+        let includeOptions = [];
+        try {
+            // Check if the association exists
+            if (Product.associations && Product.associations.variants) {
+                includeOptions.push({
                     model: ProductVariant,
                     as: 'variants',
                     required: false
-                }
-            ]
-        });
+                });
+            } else {
+                console.log('Warning: variants association is not defined on Product model');
+                // Try to define it dynamically
+                Product.hasMany(ProductVariant, {
+                    foreignKey: 'productId',
+                    as: 'variants'
+                });
+                
+                ProductVariant.belongsTo(Product, {
+                    foreignKey: 'productId',
+                    as: 'product'
+                });
+                
+                // Try to include it now
+                includeOptions.push({
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false
+                });
+            }
+        } catch (associationError) {
+            console.error('Error setting up Product-ProductVariant association:', associationError);
+            // Continue without including variants
+        }
+        
+        // Try to fetch the product with variants
+        let product;
+        try {
+            product = await Product.findByPk(productId, {
+                include: includeOptions
+            });
+        } catch (queryError) {
+            console.error('Error fetching product with variants, trying without:', queryError);
+            // Fallback without variants
+            product = await Product.findByPk(productId);
+        }
         
         if (!product) {
             console.log(`Product with ID ${productId} not found`);

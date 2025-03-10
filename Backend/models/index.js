@@ -25,6 +25,7 @@ const models = {
     Customer,
     Coupon,
     Promotion,
+    ProductVariant,
     Analytics,
     sequelize,
     Sequelize
@@ -32,6 +33,17 @@ const models = {
 
 // Apply patch to handle image/images compatibility
 applyProductModelPatch(Product);
+
+// Explicitly define Product-ProductVariant association
+Product.hasMany(ProductVariant, {
+    foreignKey: 'productId',
+    as: 'variants'
+});
+
+ProductVariant.belongsTo(Product, {
+    foreignKey: 'productId',
+    as: 'product'
+});
 
 // Define relationships
 models.User.hasMany(models.Order, {
