@@ -263,7 +263,7 @@ router.get('/', async (req, res) => {
             count = result.count;
         }
         
-        // Fix for images column - ensure all products have an images array
+        // Process the products to ensure images are properly set
         const processedProducts = products.map(product => {
             const productData = product.toJSON();
             
@@ -282,7 +282,14 @@ router.get('/', async (req, res) => {
         
         console.log(`Found ${count} products, returning ${processedProducts.length} for this page`);
         
-        // Return the results
+        // Check if the client expects the legacy format (just the array)
+        // Look for a specific header or query parameter
+        if (req.query.format === 'legacy' || req.headers['x-api-version'] === 'legacy') {
+            // Return just the array for backward compatibility
+            return res.json(processedProducts);
+        }
+        
+        // Otherwise return the new format with metadata
         res.json({
             products: processedProducts,
             totalProducts: count,

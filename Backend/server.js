@@ -431,6 +431,17 @@ async function startServer() {
         try {
             await fixProductImagesColumn();
             console.log('Database fixes completed successfully.');
+            
+            // Check if we need to populate sample products
+            const [productCount] = await sequelize.query('SELECT COUNT(*) as count FROM "Products"');
+            if (productCount[0].count === 0) {
+                console.log('No products found in database. Adding sample products...');
+                // Import and run the populate script
+                const { populateSampleProducts } = await import('./scripts/populate-sample-products.js');
+                await populateSampleProducts();
+            } else {
+                console.log(`Found ${productCount[0].count} products in the database.`);
+            }
         } catch (fixError) {
             console.error('Error during database fixes:', fixError);
             console.log('Continuing with server startup despite fix errors');
