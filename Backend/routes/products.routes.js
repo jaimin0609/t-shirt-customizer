@@ -282,8 +282,13 @@ router.get('/', async (req, res) => {
         
         console.log(`Found ${count} products, returning ${processedProducts.length} for this page`);
         
+        // IMPORTANT: For backward compatibility, always return an array format
+        // This ensures old frontend components continue to work
+        return res.json(processedProducts);
+        
+        // The following code is commented out until frontend is updated
+        /*
         // Check if the client expects the legacy format (just the array)
-        // Look for a specific header or query parameter
         if (req.query.format === 'legacy' || req.headers['x-api-version'] === 'legacy') {
             // Return just the array for backward compatibility
             return res.json(processedProducts);
@@ -296,6 +301,7 @@ router.get('/', async (req, res) => {
             currentPage: page,
             totalPages: Math.ceil(count / limit)
         });
+        */
     } catch (error) {
         console.error('Error fetching products:', error);
         res.status(500).json({ message: 'Error fetching products', error: error.message });
