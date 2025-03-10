@@ -8,6 +8,7 @@ import { optimizeProductImage } from '../middleware/imageOptimization.js';
 import { sequelize } from '../models/index.js';
 import { Sequelize } from 'sequelize';
 import { auth, isAdmin } from '../middleware/auth.js';
+import { storage, uploadImage } from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,10 +18,10 @@ const Op = Sequelize.Op;
 
 const router = express.Router();
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists for local development fallback
 const uploadDir = path.join(__dirname, '../public/uploads/products');
 
-// Create uploads directory if it doesn't exist
+// Create uploads directory if it doesn't exist (for local development)
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
     console.log('Created upload directory:', uploadDir);
@@ -28,36 +29,19 @@ if (!fs.existsSync(uploadDir)) {
     console.log('Upload directory exists:', uploadDir);
 }
 
-// Configure multer for image upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // Ensure directory exists before saving
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-            console.log('Created upload directory in destination handler:', uploadDir);
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const filename = 'product-' + uniqueSuffix + path.extname(file.originalname);
-        console.log('Generated filename for upload:', filename);
-        cb(null, filename);
-    }
-});
-
+// Configure multer to use Cloudinary storage
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png|gif/;
+        const filetypes = /jpeg|jpg|png|gif|webp/;
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
         
         if (mimetype && extname) {
             return cb(null, true);
         }
-        cb(new Error('Only image files (jpg, jpeg, png, gif) are allowed!'));
+        cb(new Error('Only image files (jpg, jpeg, png, gif, webp) are allowed!'));
     }
 });
 
@@ -405,7 +389,7 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 mimetype: f.mimetype,
                 size: f.size,
                 path: f.path,
-                destination: f.destination
+                url: f.path // Cloudinary returns URL in path
             })));
         }
         
@@ -428,36 +412,9 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         let images = [];
         if (req.files && req.files.length > 0) {
             try {
-                // Log the uploads directory path for debugging
-                const uploadDir = path.join(__dirname, '../public/uploads/products');
-                console.log('Upload directory:', uploadDir);
-                console.log('Does upload directory exist?', fs.existsSync(uploadDir));
-                
-                // Ensure the uploads directory exists
-                if (!fs.existsSync(uploadDir)) {
-                    console.log('Creating upload directory...');
-                    fs.mkdirSync(uploadDir, { recursive: true });
-                }
-                
-                // Process each file
-                for (const file of req.files) {
-                    console.log('Processing file:', file.originalname);
-                    // Create a proper URL path for the image that will work with static file serving
-                    // Make sure the path starts with /uploads/products/ to match our express.static configuration
-                    const imagePath = `/uploads/products/${file.filename}`;
-                    console.log('Created image URL path:', imagePath);
-                    
-                    // Verify the file exists at the expected location
-                    const fullPath = path.join(__dirname, '../public', imagePath);
-                    const fileExists = fs.existsSync(fullPath);
-                    console.log('Full file path:', fullPath);
-                    console.log('File exists at path:', fileExists);
-                    
-                    images.push(imagePath);
-                    console.log('Added image path:', imagePath);
-                }
-                
-                console.log('Final images array:', images);
+                // With Cloudinary, the URL is already in the file.path
+                images = req.files.map(file => file.path);
+                console.log('Cloudinary image URLs:', images);
             } catch (imageError) {
                 console.error('Error processing images:', imageError);
                 return res.status(500).json({ 
@@ -743,111 +700,170 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
 // Update product
 router.put('/:id', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {
-        const product = await Product.findByPk(req.params.id);
+        const productId = req.params.id;
+        console.log(`Updating product with ID: ${productId}`);
+        
+        // Log request body (excluding binary data)
+        const logBody = { ...req.body };
+        delete logBody.images;
+        console.log('Update request body:', JSON.stringify(logBody, null, 2));
+        
+        // Find the product
+        const product = await Product.findByPk(productId);
         
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
         
-        // Process variants if they exist (similar to create)
-        const variantKeys = Object.keys(req.body).filter(key => key.match(/variants\[\d+\]/));
-        const variants = [];
+        // Get fields from request
+        const { 
+            name, description, price, category, gender, ageGroup,
+            stock, status, featured, customizationOptions, tags,
+            hasVariants, colorVariantsData, sizeVariantsData,
+            keepExistingImages
+        } = req.body;
         
-        if (variantKeys.length > 0) {
-            const variantIndices = [...new Set(variantKeys.map(key => {
-                const match = key.match(/variants\[(\d+)\]/);
-                return match ? match[1] : null;
-            }).filter(Boolean))];
-            
-            variantIndices.forEach(index => {
-                const attribute = req.body[`variants[${index}][attribute]`];
-                const value = req.body[`variants[${index}][value]`];
-                const priceAdjustment = req.body[`variants[${index}][priceAdjustment]`];
-                const stock = req.body[`variants[${index}][stock]`];
-                
-                if (attribute && value) {
-                    variants.push({
-                        attribute,
-                        value,
-                        priceAdjustment: parseFloat(priceAdjustment || 0),
-                        stock: parseInt(stock || 0)
-                    });
-                }
-            });
-        }
-        
-        // Handle image files
-        let imagePaths = [];
-        
-        // If new images were uploaded
+        // Process uploaded images
+        let newImages = [];
         if (req.files && req.files.length > 0) {
-            req.files.forEach(file => {
-                imagePaths.push(`/uploads/products/${file.filename}`);
-            });
-            
-            // Delete old images if they exist
-            if (product.image) {
-                const mainImagePath = path.join(__dirname, '../public', product.image);
-                if (fs.existsSync(mainImagePath)) {
-                    fs.unlinkSync(mainImagePath);
-                }
-            }
-            
-            if (product.thumbnail && product.thumbnail !== product.image) {
-                const thumbnailPath = path.join(__dirname, '../public', product.thumbnail);
-                if (fs.existsSync(thumbnailPath)) {
-                    fs.unlinkSync(thumbnailPath);
-                }
-            }
-            
-            // Delete additional images
-            if (product.imageMetadata && product.imageMetadata.additionalImages) {
-                product.imageMetadata.additionalImages.forEach(imgPath => {
-                    const fullPath = path.join(__dirname, '../public', imgPath);
-                    if (fs.existsSync(fullPath)) {
-                        fs.unlinkSync(fullPath);
-                    }
-                });
-            }
-        } else {
-            // Keep existing images
-            imagePaths = [product.image];
-            if (product.imageMetadata && product.imageMetadata.additionalImages) {
-                imagePaths = imagePaths.concat(product.imageMetadata.additionalImages);
+            try {
+                // With Cloudinary, the secure URL is in file.path
+                newImages = req.files.map(file => file.path);
+                console.log('New Cloudinary image URLs:', newImages);
+            } catch (error) {
+                console.error('Error processing uploaded images:', error);
+                return res.status(500).json({ message: 'Error processing images', error: error.message });
             }
         }
         
-        // Update product data
-        await product.update({
-            name: req.body.name,
-            description: req.body.description,
-            price: parseFloat(req.body.price || 0),
-            category: req.body.category,
-            gender: req.body.gender || product.gender || 'unisex',  // Add gender field with fallback
-            ageGroup: req.body.ageGroup || product.ageGroup || 'adult',  // Add ageGroup field with fallback
-            stock: parseInt(req.body.stock || 0),
-            // Handle sizes and colors
-            availableSizes: req.body.availableSizes ? 
-                (typeof req.body.availableSizes === 'string' ? 
-                    JSON.parse(req.body.availableSizes) : req.body.availableSizes) : 
-                product.availableSizes || ["S", "M", "L", "XL"],
-            availableColors: req.body.availableColors ? 
-                (typeof req.body.availableColors === 'string' ? 
-                    JSON.parse(req.body.availableColors) : req.body.availableColors) : 
-                product.availableColors || ["black", "white", "gray"],
-            status: req.body.status === 'active' ? 'active' : 'inactive',
-            isCustomizable: req.body.isCustomizable === 'on' || req.body.isCustomizable === true,
-            image: req.files?.length > 0 ? imagePaths[0] : product.image,
-            thumbnail: req.files?.length > 0 ? imagePaths[0] : product.thumbnail,
-            imageMetadata: {
-                additionalImages: req.files?.length > 1 ? imagePaths.slice(1) : 
-                    (product.imageMetadata?.additionalImages || []),
-                variants: variants.length > 0 ? variants : 
-                    (product.imageMetadata?.variants || [])
-            }
+        // Determine final images array based on keepExistingImages flag
+        let finalImages = [];
+        
+        if (keepExistingImages === 'true') {
+            // Keep existing images and add new ones
+            const existingImages = product.images || [];
+            finalImages = [...existingImages, ...newImages];
+            console.log('Keeping existing images and adding new ones:', finalImages);
+        } else if (newImages.length > 0) {
+            // Replace with new images only
+            finalImages = newImages;
+            console.log('Replacing with new images only:', finalImages);
+        } else {
+            // If no new images and not keeping existing, keep the existing anyway to avoid having no images
+            finalImages = product.images || [];
+            console.log('No new images uploaded, keeping existing:', finalImages);
+        }
+        
+        // Update the product
+        const updatedProduct = await product.update({
+            name: name || product.name,
+            description: description || product.description,
+            price: price || product.price,
+            category: category || product.category,
+            gender: gender || product.gender,
+            ageGroup: ageGroup || product.ageGroup,
+            stock: stock !== undefined ? stock : product.stock,
+            status: status || product.status,
+            featured: featured === 'true' ? true : featured === 'false' ? false : product.featured,
+            images: finalImages,
+            // Always set the main image to be the first image in the array
+            image: finalImages.length > 0 ? finalImages[0] : product.image,
+            // Update customization options if provided
+            ...(customizationOptions ? { customizationOptions: JSON.parse(customizationOptions) } : {}),
+            // Update has variants flag
+            hasVariants: hasVariants === 'true' ? true : hasVariants === 'false' ? false : product.hasVariants
         });
         
-        const updatedProduct = await Product.findByPk(req.params.id);
+        // Handle variants if they exist
+        if (hasVariants === 'true' && (colorVariantsData || sizeVariantsData)) {
+            try {
+                console.log('Processing variants...');
+                
+                // Process color variants
+                if (colorVariantsData) {
+                    console.log('Processing color variants...');
+                    try {
+                        let colorVariants = [];
+                        
+                        // Check if already an array
+                        if (Array.isArray(colorVariantsData)) {
+                            colorVariants = colorVariantsData;
+                        } else {
+                            // Parse JSON string
+                            colorVariants = JSON.parse(colorVariantsData);
+                        }
+                        
+                        console.log('Parsed color variants:', colorVariants);
+                        
+                        if (Array.isArray(colorVariants) && colorVariants.length > 0) {
+                            for (const variant of colorVariants) {
+                                console.log('Creating color variant:', variant);
+                                await ProductVariant.create({
+                                    productId: updatedProduct.id,
+                                    type: 'color',
+                                    color: variant.color,
+                                    colorCode: variant.colorCode,
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
+                                });
+                            }
+                        } else {
+                            console.log('No valid color variants to process');
+                        }
+                    } catch (colorParseError) {
+                        console.error('Error parsing color variants data:', colorParseError);
+                        console.error('Raw color variants data:', colorVariantsData);
+                    }
+                }
+                
+                // Process size variants
+                if (sizeVariantsData) {
+                    console.log('Processing size variants...');
+                    try {
+                        let sizeVariants = [];
+                        
+                        // Check if already an array
+                        if (Array.isArray(sizeVariantsData)) {
+                            sizeVariants = sizeVariantsData;
+                        } else {
+                            // Parse JSON string
+                            sizeVariants = JSON.parse(sizeVariantsData);
+                        }
+                        
+                        console.log('Parsed size variants:', sizeVariants);
+                        
+                        if (Array.isArray(sizeVariants) && sizeVariants.length > 0) {
+                            for (const variant of sizeVariants) {
+                                console.log('Creating size variant:', variant);
+                                await ProductVariant.create({
+                                    productId: updatedProduct.id,
+                                    type: 'size',
+                                    size: variant.size,
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
+                                });
+                            }
+                        } else {
+                            console.log('No valid size variants to process');
+                        }
+                    } catch (sizeParseError) {
+                        console.error('Error parsing size variants data:', sizeParseError);
+                        console.error('Raw size variants data:', sizeVariantsData);
+                    }
+                }
+                
+                // Update product to indicate it has variants
+                await updatedProduct.update({ hasVariants: true });
+                console.log('Variants processed successfully');
+                
+            } catch (variantError) {
+                console.error('Error creating variants:', variantError);
+                // Continue with product update even if variants fail
+            }
+        }
+        
         res.json(updatedProduct);
     } catch (error) {
         console.error('Error updating product:', error);
