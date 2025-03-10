@@ -1,7 +1,7 @@
 {
   "name": "t-shirt-customizer-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for T-Shirt Customizer",
   "main": "server.js",
   "type": "module",
   "scripts": {
