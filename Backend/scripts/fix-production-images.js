@@ -48,7 +48,7 @@ if (process.env.DATABASE_URL) {
     );
 }
 
-const fixProductImagesColumn = async () => {
+export const fixProductImagesColumn = async () => {
     try {
         // Test database connection
         await sequelize.authenticate();
@@ -205,5 +205,7 @@ export function applyProductModelPatch(Product) {
     }
 };
 
-// Run the function
-fixProductImagesColumn(); 
+// Run the function if script is called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    fixProductImagesColumn();
+} 
