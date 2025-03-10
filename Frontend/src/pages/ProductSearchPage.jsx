@@ -341,6 +341,11 @@ const ProductSearchPage = () => {
             return '/assets/placeholder-product.jpg';
         }
 
+        // If it's a Cloudinary URL, use it as is
+        if (imagePath.includes('cloudinary.com')) {
+            return imagePath;
+        }
+
         // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
             return imagePath;

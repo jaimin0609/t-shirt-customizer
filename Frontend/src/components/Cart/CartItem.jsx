@@ -17,29 +17,31 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => {
 
     // Properly resolve image path
     const getImageUrl = () => {
-        // Handle nested structure for customizable products
-        if (product.images && typeof product.images === 'object') {
-            // If it's a nested structure with color options
-            if (product.images[color]?.front) {
-                const imagePath = product.images[color].front;
-                // If it's a backend image path (starts with /uploads)
-                if (imagePath.startsWith('/uploads')) {
-                    return `http://localhost:5002${imagePath}`;
-                }
-                return imagePath;
+        // Use customizedImageUrl if available
+        if (customizedImageUrl) {
+            return customizedImageUrl;
+        }
+
+        // If product not loaded yet
+        if (!product) {
+            return PLACEHOLDER_IMAGE;
+        }
+
+        // If product has images array
+        if (product.images) {
+            // If images is an object with front property (design studio format)
+            if (product.images.front) {
+                return product.images.front;
             }
-            // Try white as default color if the selected color isn't available
-            else if (product.images.white?.front) {
-                const imagePath = product.images.white.front;
-                // If it's a backend image path (starts with /uploads)
-                if (imagePath.startsWith('/uploads')) {
-                    return `http://localhost:5002${imagePath}`;
-                }
-                return imagePath;
-            }
-            // If it has a different structure with array
+            // If images is an array (backend format)
             else if (Array.isArray(product.images) && product.images.length > 0) {
                 const imagePath = product.images[0];
+
+                // If it's a Cloudinary URL, use it as is
+                if (imagePath.includes('cloudinary.com')) {
+                    return imagePath;
+                }
+
                 // If it's a backend image path (starts with /uploads)
                 if (imagePath.startsWith('/uploads')) {
                     return `http://localhost:5002${imagePath}`;
@@ -50,6 +52,11 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => {
 
         // If product has a single image property
         if (product.image) {
+            // If it's a Cloudinary URL, use it as is
+            if (product.image.includes('cloudinary.com')) {
+                return product.image;
+            }
+
             // If it's a backend image path (starts with /uploads)
             if (product.image.startsWith('/uploads')) {
                 return `http://localhost:5002${product.image}`;

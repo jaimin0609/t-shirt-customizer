@@ -414,6 +414,11 @@ const ReadyMadeProductCard = ({ product, onAddToCart }) => {
     const getImageUrl = (imagePath) => {
         if (!imagePath) return PLACEHOLDER_IMAGE;
 
+        // If it's a Cloudinary URL, use it as is
+        if (imagePath.includes('cloudinary.com')) {
+            return imagePath;
+        }
+
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
             return `http://localhost:5002${imagePath}`;
