@@ -1,4 +1,4 @@
-import { sequelize, Product, ProductVariant, Category } from '../models/index.js';
+import db from '../models/index.js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -13,7 +13,7 @@ dotenv.config({ path: join(__dirname, '..', '.env') });
 async function init() {
     try {
         // Sync database
-        await sequelize.authenticate();
+        await db.sequelize.authenticate();
         console.log('Connection established successfully.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);
@@ -159,26 +159,18 @@ async function seedCloudinaryProducts() {
             }
         ];
         
-        // Ensure categories exist
-        const categories = [...new Set(sampleProducts.map(p => p.category))];
-        for (const categoryName of categories) {
-            await Category.findOrCreate({
-                where: { name: categoryName }
-            });
-        }
-        
         // Create products
         for (const productData of sampleProducts) {
             console.log(`Creating product: ${productData.name}`);
             
-            const product = await Product.create(productData);
+            const product = await db.Product.create(productData);
             
             // Create variants for the product
             if (productData.hasVariants) {
                 // Create size variants
                 const sizes = ['S', 'M', 'L', 'XL'];
                 for (const size of sizes) {
-                    await ProductVariant.create({
+                    await db.ProductVariant.create({
                         productId: product.id,
                         type: 'size',
                         size: size,
@@ -191,7 +183,7 @@ async function seedCloudinaryProducts() {
                 // Create color variants
                 const colors = productData.customizationOptions.colors;
                 for (const color of colors) {
-                    await ProductVariant.create({
+                    await db.ProductVariant.create({
                         productId: product.id,
                         type: 'color',
                         color: color,
