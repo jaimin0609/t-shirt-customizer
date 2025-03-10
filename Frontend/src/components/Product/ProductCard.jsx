@@ -266,7 +266,7 @@ const ProductCard = ({ product }) => {
             return '/assets/placeholder-product.jpg';
         }
 
-        // If it's a Cloudinary URL, use it as is
+        // If it's a Cloudinary URL, use it directly
         if (imagePath.includes('cloudinary.com')) {
             return imagePath;
         }
@@ -278,9 +278,9 @@ const ProductCard = ({ product }) => {
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            // Get the API base URL from environment variable, excluding the /api part
-            const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002';
-            return `${apiBaseUrl}${imagePath}`;
+            // Don't try to load from backend - use placeholder instead
+            console.log('Backend image path detected, using placeholder');
+            return '/assets/placeholder-product.jpg';
         }
 
         // For relative paths

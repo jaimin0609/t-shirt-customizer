@@ -353,9 +353,8 @@ const ProductSearchPage = () => {
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            // Get the API base URL from environment variable, excluding the /api part
-            const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002';
-            return `${apiBaseUrl}${imagePath}`;
+            // Use placeholder instead of trying to load from backend
+            return '/assets/placeholder-product.jpg';
         }
 
         // For relative paths

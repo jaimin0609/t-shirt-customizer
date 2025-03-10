@@ -421,7 +421,8 @@ const ReadyMadeProductCard = ({ product, onAddToCart }) => {
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            return `http://localhost:5002${imagePath}`;
+            // Use placeholder instead of trying to load from backend
+            return PLACEHOLDER_IMAGE;
         }
 
         // Otherwise, use the path as is (for frontend static images)

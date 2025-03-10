@@ -44,7 +44,8 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => {
 
                 // If it's a backend image path (starts with /uploads)
                 if (imagePath.startsWith('/uploads')) {
-                    return `http://localhost:5002${imagePath}`;
+                    // Use placeholder instead of trying to load from backend
+                    return PLACEHOLDER_IMAGE;
                 }
                 return imagePath;
             }
@@ -59,7 +60,8 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => {
 
             // If it's a backend image path (starts with /uploads)
             if (product.image.startsWith('/uploads')) {
-                return `http://localhost:5002${product.image}`;
+                // Use placeholder instead of trying to load from backend
+                return PLACEHOLDER_IMAGE;
             }
             return product.image;
         }
