@@ -1,22 +1,24 @@
 #!/bin/bash
 # Build script for Render.com deployment
 
-echo "Starting build process from root directory..."
+echo "Starting build process..."
 echo "Current directory: $(pwd)"
 echo "Directory contents: $(ls -la)"
 
-# Install dependencies with legacy-peer-deps flag for the root package.json
-echo "Installing root dependencies..."
-npm install --legacy-peer-deps
+# Check if we're already in the Backend directory
+if [[ "$(pwd)" == *"Backend"* ]]; then
+  echo "Already in Backend directory, no need to change directories"
+else
+  # Change to Backend directory only if not already there
+  echo "Changing to Backend directory..."
+  cd Backend || { echo "Failed to cd into Backend directory"; exit 1; }
+  echo "Now in: $(pwd)"
+fi
 
-# Change to Backend directory
-echo "Changing to Backend directory..."
-cd Backend || { echo "Failed to cd into Backend directory"; exit 1; }
-echo "Now in: $(pwd)"
-echo "Backend directory contents: $(ls -la)"
+echo "Directory contents: $(ls -la)"
 
-# Install dependencies with legacy-peer-deps flag for Backend
-echo "Installing Backend dependencies with --legacy-peer-deps flag..."
+# Install dependencies with legacy-peer-deps flag
+echo "Installing dependencies with --legacy-peer-deps flag..."
 npm install --legacy-peer-deps
 
 # Check for errors

@@ -5,11 +5,17 @@ echo "Starting build process..."
 echo "Current directory: $(pwd)"
 echo "Directory contents: $(ls -la)"
 
-# Change to Backend directory
-echo "Changing to Backend directory..."
-cd Backend || { echo "Failed to cd into Backend directory"; exit 1; }
-echo "Now in: $(pwd)"
-echo "Backend directory contents: $(ls -la)"
+# Check if we're already in the Backend directory
+if [[ "$(pwd)" == *"Backend"* ]]; then
+  echo "Already in Backend directory, no need to change directories"
+else
+  # Change to Backend directory only if not already there
+  echo "Changing to Backend directory..."
+  cd Backend || { echo "Failed to cd into Backend directory"; exit 1; }
+  echo "Now in: $(pwd)"
+fi
+
+echo "Directory contents: $(ls -la)"
 
 # Install dependencies with legacy-peer-deps flag
 echo "Installing dependencies with --legacy-peer-deps flag..."
