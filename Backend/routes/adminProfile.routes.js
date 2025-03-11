@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 import { fileURLToPath } from 'url';
 import { User } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
-import { cloudinaryEnabled, uploadToCloudinary } from '../config/cloudinary.js';
+import { cloudinaryEnabled, uploadImage } from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,7 +106,7 @@ router.put('/profile', auth, isAdmin, upload.single('profileImage'), async (req,
                     console.log('Uploading profile image to Cloudinary');
                     
                     // Upload to Cloudinary
-                    const result = await uploadToCloudinary(req.file.path, {
+                    const result = await uploadImage(req.file.path, {
                         folder: 'profiles',
                         transformation: [
                             { width: 500, height: 500, crop: 'limit' },
