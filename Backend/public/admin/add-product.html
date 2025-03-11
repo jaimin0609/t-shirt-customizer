@@ -579,16 +579,44 @@
         document.addEventListener('DOMContentLoaded', function() {
             const profileModal = document.getElementById('profileModal');
             if (profileModal) {
+                // Handle modal showing - remove aria-hidden immediately to avoid conflicts
                 profileModal.addEventListener('show.bs.modal', function() {
-                    // Remove aria-hidden when modal is shown to fix accessibility warning
-                    setTimeout(() => {
-                        this.removeAttribute('aria-hidden');
-                    }, 100);
+                    // Remove aria-hidden immediately during the show phase
+                    this.removeAttribute('aria-hidden');
+                    console.log('aria-hidden removed during modal show phase');
                 });
                 
+                // Also handle immediately after it's shown
+                profileModal.addEventListener('shown.bs.modal', function() {
+                    // Ensure aria-hidden is removed when modal is fully shown
+                    this.removeAttribute('aria-hidden');
+                    console.log('aria-hidden removed after modal is shown');
+                    
+                    // Move focus inside modal to a non-interactive element first
+                    const modalTitle = this.querySelector('.modal-title');
+                    if (modalTitle) {
+                        modalTitle.setAttribute('tabindex', '-1');
+                        modalTitle.focus();
+                    }
+                });
+                
+                // Handle hide event
+                profileModal.addEventListener('hide.bs.modal', function() {
+                    // No need to add aria-hidden during hide, Bootstrap will do it
+                    console.log('Modal is being hidden');
+                });
+                
+                // Handle after modal is hidden
                 profileModal.addEventListener('hidden.bs.modal', function() {
-                    // Restore aria-hidden when modal is hidden
+                    // Restore aria-hidden when modal is fully hidden
                     this.setAttribute('aria-hidden', 'true');
+                    console.log('aria-hidden restored after modal is hidden');
+                    
+                    // Return focus to the element that opened the modal
+                    const openButton = document.getElementById('profileLink');
+                    if (openButton) {
+                        openButton.focus();
+                    }
                 });
             }
             

@@ -506,4 +506,68 @@ function setupLogoutButtons() {
 // Initialize on DOM content loaded
 document.addEventListener('DOMContentLoaded', function() {
     setupLogoutButtons();
+});
+
+/**
+ * Fix accessibility issues with aria-hidden on modals
+ * This ensures modals don't have aria-hidden="true" when they're visible
+ * and contain focused elements.
+ */
+function setupModalAccessibility() {
+    console.log('Setting up modal accessibility fixes');
+    
+    // Handle all modals on the page
+    document.querySelectorAll('.modal').forEach(modal => {
+        // Skip if already initialized
+        if (modal.hasAttribute('data-a11y-fixed')) {
+            return;
+        }
+        
+        console.log(`Setting up accessibility fixes for modal: ${modal.id || 'unnamed'}`);
+        modal.setAttribute('data-a11y-fixed', 'true');
+        
+        // Remove aria-hidden when modal begins to show
+        modal.addEventListener('show.bs.modal', function() {
+            this.removeAttribute('aria-hidden');
+            console.log(`Modal ${this.id}: aria-hidden removed during show phase`);
+        });
+        
+        // Ensure aria-hidden is removed after modal is fully shown
+        modal.addEventListener('shown.bs.modal', function() {
+            this.removeAttribute('aria-hidden');
+            console.log(`Modal ${this.id}: aria-hidden removed after shown`);
+            
+            // Move focus to first form element or modal title
+            const firstInput = this.querySelector('input, select, textarea, button:not([data-bs-dismiss="modal"])');
+            if (firstInput) {
+                firstInput.focus();
+            } else {
+                const modalTitle = this.querySelector('.modal-title');
+                if (modalTitle) {
+                    modalTitle.setAttribute('tabindex', '-1');
+                    modalTitle.focus();
+                }
+            }
+        });
+        
+        // Restore aria-hidden when modal is fully hidden
+        modal.addEventListener('hidden.bs.modal', function() {
+            this.setAttribute('aria-hidden', 'true');
+            console.log(`Modal ${this.id}: aria-hidden restored after hidden`);
+            
+            // Find the element that opened the modal
+            const modalTrigger = document.querySelector(`[data-bs-target="#${this.id}"], [href="#${this.id}"]`);
+            if (modalTrigger) {
+                modalTrigger.focus();
+            }
+        });
+    });
+}
+
+// Set up accessibility fixes when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    setupModalAccessibility();
+    
+    // Also call it after dynamic content is loaded
+    document.addEventListener('contentLoaded', setupModalAccessibility);
 }); 
