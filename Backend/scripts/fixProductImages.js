@@ -9,8 +9,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
+// Validate Cloudinary cloud name
+if (!process.env.CLOUDINARY_CLOUD_NAME) {
+  console.warn('⚠️ CLOUDINARY_CLOUD_NAME environment variable is missing');
+}
+
 // Default placeholder URL
-const DEFAULT_PLACEHOLDER = 'https://res.cloudinary.com/dopvs93sl/image/upload/v1650052235/tshirt-customizer/placeholder-product.jpg';
+const DEFAULT_PLACEHOLDER = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'placeholder'}/image/upload/v1650052235/tshirt-customizer/placeholder-product.jpg`;
 
 // Function to fix product images
 async function fixProductImages() {

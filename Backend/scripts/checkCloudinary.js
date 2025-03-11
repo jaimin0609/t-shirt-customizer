@@ -1,5 +1,5 @@
 // Plain script to check Cloudinary credentials
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,37 +31,48 @@ cloudinary.config({
 });
 
 // Try a simple upload to test the credentials
-async function testUpload() {
-  try {
-    // Create a simple SVG image to upload
-    const svgContent = `
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
-      </svg>
-    `;
-    
-    // Write SVG to a temp file
-    const tempFilePath = path.join(__dirname, 'temp-test.svg');
-    fs.writeFileSync(tempFilePath, svgContent);
-    
-    console.log('Uploading test image to Cloudinary...');
-    
-    // Upload the file
-    const uploadResult = await cloudinary.uploader.upload(tempFilePath, {
-      folder: 'test',
-      public_id: 'test-' + Date.now(),
-      resource_type: 'image'
-    });
+function testUpload() {
+  // Create a simple SVG image to upload
+  const svgContent = `
+    <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+    </svg>
+  `;
+  
+  // Write SVG to a temp file
+  const tempFilePath = path.join(__dirname, 'temp-test.svg');
+  fs.writeFileSync(tempFilePath, svgContent);
+  
+  console.log('Uploading test image to Cloudinary...');
+  
+  // Upload the file
+  cloudinary.uploader.upload(tempFilePath, (error, uploadResult) => {
+    if (error) {
+      console.error('Error testing Cloudinary upload:', error);
+      // Still clean up temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (e) {
+        console.error('Error removing temp file:', e);
+      }
+      return;
+    }
     
     console.log('Upload successful!');
     console.log('Secure URL:', uploadResult.secure_url);
     
     // Clean up temp file
-    fs.unlinkSync(tempFilePath);
-    console.log('Cloudinary credentials are working correctly!');
-  } catch (error) {
-    console.error('Error testing Cloudinary upload:', error);
-  }
+    try {
+      fs.unlinkSync(tempFilePath);
+      console.log('Cloudinary credentials are working correctly!');
+    } catch (e) {
+      console.error('Error removing temp file:', e);
+    }
+  }, {
+    folder: 'test',
+    public_id: 'test-' + Date.now(),
+    resource_type: 'image'
+  });
 }
 
 testUpload(); 

@@ -43,6 +43,56 @@ const upload = multer({
     }
 });
 
+// Test endpoint for Cloudinary uploads
+router.post('/test-cloudinary', auth, isAdmin, upload.single('image'), async (req, res) => {
+    try {
+        console.log('=== Testing Cloudinary Upload ===');
+        console.log('Cloudinary config:', {
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
+            api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : 'not set'
+        });
+        
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'No image file provided' 
+            });
+        }
+        
+        console.log('File received:', {
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            path: req.file.path // This should be the Cloudinary URL if upload succeeded
+        });
+        
+        // Check if the file was uploaded to Cloudinary
+        if (req.file.path && req.file.path.includes('cloudinary.com')) {
+            console.log('✅ Image successfully uploaded to Cloudinary');
+            return res.status(200).json({
+                success: true,
+                message: 'Image uploaded to Cloudinary successfully',
+                imageUrl: req.file.path
+            });
+        } else {
+            console.log('❌ Image not uploaded to Cloudinary');
+            return res.status(500).json({
+                success: false,
+                message: 'Image was not uploaded to Cloudinary',
+                localPath: req.file.path
+            });
+        }
+    } catch (error) {
+        console.error('Error testing Cloudinary upload:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error testing Cloudinary upload',
+            error: error.message
+        });
+    }
+});
+
 // Get all products - Removed auth middleware to make it public
 router.get('/', async (req, res) => {
     try {

@@ -2,11 +2,29 @@
 import https from 'https';
 import crypto from 'crypto';
 import querystring from 'querystring';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// Cloudinary credentials
-const cloudName = 'dopvs93sl';
-const apiKey = '718734228757155';
-const apiSecret = 'yXiUCqjRnc7zBk1kqlJHpc8e8qA';
+// Initialize environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
+
+// Cloudinary credentials from environment variables
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+// Validate credentials
+if (!cloudName || !apiKey || !apiSecret) {
+  console.error('❌ Missing Cloudinary credentials in environment variables:');
+  if (!cloudName) console.error('- CLOUDINARY_CLOUD_NAME is missing');
+  if (!apiKey) console.error('- CLOUDINARY_API_KEY is missing');
+  if (!apiSecret) console.error('- CLOUDINARY_API_SECRET is missing');
+  console.error('Please check your .env file and try again.');
+  process.exit(1);
+}
 
 console.log('Testing Cloudinary credentials:');
 console.log('Cloud name:', cloudName);

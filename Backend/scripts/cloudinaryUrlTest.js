@@ -1,8 +1,26 @@
 // Test Cloudinary using the URL string approach
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from 'cloudinary';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// The URL from the Cloudinary dashboard
-const cloudinaryUrl = 'cloudinary://718734228757155:yXiUCqjRnc7zBk1kqlJHpc8e8qA@dopvs93sl';
+// Initialize environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
+
+// Validate environment variables
+const requiredVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.error('Please check your .env file');
+  process.exit(1);
+}
+
+// Construct URL from environment variables
+const cloudinaryUrl = `cloudinary://${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}@${process.env.CLOUDINARY_CLOUD_NAME}`;
 
 // Extract parameters from the URL
 const match = cloudinaryUrl.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
@@ -24,29 +42,31 @@ if (match) {
         api_secret: apiSecret
     });
     
-    async function testCloudinary() {
-        try {
-            console.log('\nTesting Cloudinary connection...');
+    function testCloudinary() {
+        console.log('\nTesting Cloudinary connection...');
+        
+        // Try a simple ping test first
+        console.log('Checking API connection...');
+        cloudinary.api.ping((error, pingResult) => {
+            if (error) {
+                console.error('Cloudinary ping failed:', error);
+                return;
+            }
             
-            // Try a simple ping test first
-            console.log('Checking API connection...');
-            const pingResult = await cloudinary.api.ping();
             console.log('Ping result:', pingResult);
             
             // Try to list resource types
             console.log('\nListing resource types...');
-            const resourceTypes = await cloudinary.api.resource_types();
-            console.log('Resource types:', resourceTypes);
-            
-            console.log('\nCloudinary connection successful!');
-        } catch (error) {
-            console.error('Cloudinary test failed:', error);
-            
-            // Log detailed error information
-            if (error.error && error.error.message) {
-                console.error('Error message:', error.error.message);
-            }
-        }
+            cloudinary.api.resource_types((error, resourceTypes) => {
+                if (error) {
+                    console.error('Cloudinary resource types failed:', error);
+                    return;
+                }
+                
+                console.log('Resource types:', resourceTypes);
+                console.log('\nCloudinary connection successful!');
+            });
+        });
     }
     
     testCloudinary();

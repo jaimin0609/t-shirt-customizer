@@ -10,7 +10,8 @@
     "create-admin": "node scripts/createAdmin.js",
     "reset-admin": "node scripts/resetAdminCredentials.js",
     "check-admins": "node scripts/checkAdminUsers.js",
-    "coupon-manager": "node scripts/couponManager.js"
+    "coupon-manager": "node scripts/couponManager.js",
+    "install": "npm install --legacy-peer-deps"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +21,7 @@
     "@react-three/fiber": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "chalk": "^5.4.1",
-    "cloudinary": "^2.5.1",
+    "cloudinary": "^1.41.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -48,5 +49,11 @@
     "nodemon": "^2.0.22",
     "sequelize-cli": "^6.6.2",
     "typescript": "^5.8.2"
+  },
+  "overrides": {
+    "cloudinary": "^1.41.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

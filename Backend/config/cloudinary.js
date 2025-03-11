@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -9,11 +9,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
+// Validate required environment variables
+const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(`⚠️ Missing required Cloudinary environment variables: ${missingEnvVars.join(', ')}`);
+  console.warn('Cloudinary functionality may not work correctly');
+}
+
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl', 
-  api_key: process.env.CLOUDINARY_API_KEY || '718734228757155', 
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'yXiUCqjRnc7zBk1kqlJHpc8e8qA',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
 
@@ -29,18 +38,28 @@ const storage = new CloudinaryStorage({
 
 // Function to get Cloudinary credentials for frontend
 const getCloudinaryConfig = () => {
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+    console.warn('Missing Cloudinary configuration for frontend');
+    return null;
+  }
+  
   return {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl',
-    apiKey: process.env.CLOUDINARY_API_KEY || '718734228757155',
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
     uploadPreset: 'ml_default' // You can create a custom upload preset in your Cloudinary dashboard
   };
 };
 
 // Function to handle Cloudinary URLs - either returning existing URLs or placeholder
 const getCloudinaryUrl = (imagePath) => {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.warn('Missing CLOUDINARY_CLOUD_NAME environment variable');
+    return imagePath || '/default-placeholder.jpg';
+  }
+  
   // If no path provided, return a placeholder
   if (!imagePath) {
-    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
+    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
   }
   
   // If it's already a Cloudinary URL, return it
@@ -49,7 +68,7 @@ const getCloudinaryUrl = (imagePath) => {
   }
   
   // If it's a local path, convert to a placeholder Cloudinary URL
-  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
+  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder.jpg`;
 };
 
 // Function to get image URL for a public ID
