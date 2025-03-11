@@ -593,7 +593,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 }
             }
             
-            product = await Product.create({
+            // Prepare product data
+            const productData = {
                 name: req.body.name,
                 description: req.body.description,
                 price: parsedPrice,
@@ -603,10 +604,19 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 stock: parsedStock,
                 status: req.body.status || 'active',
                 featured: req.body.featured === 'true',
-                images: imageUrls,
+                // Convert images array to the correct format for the database
+                // PostgreSQL needs a JSON string, MySQL can handle arrays directly
+                images: process.env.DATABASE_URL ? JSON.stringify(imageUrls) : imageUrls,
                 customizationOptions: processedCustomOptions,
                 tags: processedTags
-            });
+            };
+            
+            // Add a single image field for backward compatibility
+            if (imageUrls.length > 0) {
+                productData.image = imageUrls[0];
+            }
+            
+            product = await Product.create(productData);
             console.log('Product created successfully, ID:', product.id);
         } catch (productError) {
             console.error('Error creating product in database:', productError);

@@ -4,15 +4,18 @@ import Product from './Product.js';
 import Cart from './Cart.js';
 import CartItem from './CartItem.js';
 import Order from './Order.js';
-import User from './user.js';
+import User from './User.js';
 import OrderItem from './OrderItem.js';
 import Customer from './Customer.js';
 import Coupon from './Coupon.js';
 import Promotion from './Promotion.js';
 import ProductVariant from './ProductVariant.js';
 import Analytics from './Analytics.js';
-// Import Product model patch
-import { applyProductModelPatch } from './ProductPatch.js';
+import Category from './Category.js';
+import Review from './Review.js';
+import ShippingAddress from './ShippingAddress.js';
+import CouponCode from './CouponCode.js';
+import applyProductPatches from './ProductPatch.js';
 
 // Initialize models with sequelize instance
 const models = {
@@ -28,11 +31,15 @@ const models = {
     ProductVariant,
     Analytics,
     sequelize,
-    Sequelize
+    Sequelize,
+    Category,
+    Review,
+    ShippingAddress,
+    CouponCode
 };
 
-// Apply patch to handle image/images compatibility
-applyProductModelPatch(Product);
+// Apply Product model patch for backward compatibility
+const PatchedProduct = applyProductPatches(Product);
 
 // Explicitly define Product-ProductVariant association
 Product.hasMany(ProductVariant, {
@@ -175,7 +182,11 @@ export {
     Coupon,
     Promotion,
     ProductVariant,
-    Analytics
+    Analytics,
+    Category,
+    Review,
+    ShippingAddress,
+    CouponCode
 };
 
 // No additional exports needed - we already exported User above 

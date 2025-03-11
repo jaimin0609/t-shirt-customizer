@@ -209,3 +209,122 @@ export function applyProductModelPatch(Product) {
 if (import.meta.url === `file://${process.argv[1]}`) {
     fixProductImagesColumn();
 } 
+
+// Function to check and fix images for PostgreSQL
+const fixProductImagesColumnPG = async () => {
+  try {
+    console.log('Checking if images column exists in Products table...');
+    const tableInfo = await sequelize.getQueryInterface().describeTable('Products');
+    console.log('Products table exists and accessible');
+    
+    if (tableInfo.images) {
+      console.log('Images column already exists in Products table.');
+      
+      // Count products that need migration - use JSON_ARRAY_LENGTH for MySQL or jsonb_array_length for PostgreSQL
+      console.log('Counting products that need image data migration...');
+      
+      let countQuery;
+      if (process.env.DATABASE_URL) {
+        // PostgreSQL query
+        countQuery = `
+          SELECT COUNT(*) as count 
+          FROM "Products" 
+          WHERE image IS NOT NULL AND (images IS NULL OR images = '[]' OR images = '""')
+        `;
+      } else {
+        // MySQL query
+        countQuery = `
+          SELECT COUNT(*) as count 
+          FROM Products 
+          WHERE image IS NOT NULL AND (images IS NULL OR JSON_LENGTH(images) = 0)
+        `;
+      }
+      
+      const [countResult] = await sequelize.query(countQuery);
+      const count = countResult[0].count;
+      console.log(`Found ${count} products that need image data migration`);
+      
+      if (count > 0) {
+        // Migrate data
+        console.log('Migrating image data to images array...');
+        
+        let updateQuery;
+        if (process.env.DATABASE_URL) {
+          // PostgreSQL query
+          updateQuery = `
+            UPDATE "Products"
+            SET images = jsonb_build_array(image)
+            WHERE image IS NOT NULL AND (images IS NULL OR images = '[]' OR images = '""')
+          `;
+        } else {
+          // MySQL query
+          updateQuery = `
+            UPDATE Products
+            SET images = JSON_ARRAY(image)
+            WHERE image IS NOT NULL AND (images IS NULL OR JSON_LENGTH(images) = 0)
+          `;
+        }
+        
+        await sequelize.query(updateQuery);
+        console.log('Migration complete');
+      }
+      
+      // Verify migration
+      console.log('Verifying migration...');
+      
+      let verifyQuery;
+      if (process.env.DATABASE_URL) {
+        // PostgreSQL query
+        verifyQuery = `
+          SELECT COUNT(*) as count 
+          FROM "Products" 
+          WHERE images IS NOT NULL AND images != '[]' AND images != '""'
+        `;
+      } else {
+        // MySQL query
+        verifyQuery = `
+          SELECT COUNT(*) as count 
+          FROM Products 
+          WHERE images IS NOT NULL AND JSON_LENGTH(images) > 0
+        `;
+      }
+      
+      const [verifyResult] = await sequelize.query(verifyQuery);
+      const verifiedCount = verifyResult[0].count;
+      console.log(`Verification complete. ${verifiedCount} products now have non-empty images array.`);
+      
+      // Create ProductPatch.js file
+      // ... rest of existing code ...
+  } catch (error) {
+    console.error('Error in fix script:', error);
+  } finally {
+    await sequelize.close();
+  }
+}; 
+
+// Main function
+const fixDatabaseSchema = async () => {
+  try {
+    console.log('Fixing database schema and data...');
+    
+    // Test connection
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
+    
+    // Check if we're using PostgreSQL (on Render.com) or MySQL (local development)
+    if (process.env.DATABASE_URL) {
+      console.log('Using PostgreSQL database - applying PostgreSQL-specific fixes');
+      await fixProductImagesColumnPG();
+    } else {
+      console.log('Using MySQL database - applying MySQL-specific fixes');
+      await fixProductImagesColumn();
+    }
+    
+    console.log('Database fixes completed successfully.');
+  } catch (error) {
+    console.error('Error during database fixes:', error);
+  }
+};
+
+// Run the fixes
+fixDatabaseSchema(); 
