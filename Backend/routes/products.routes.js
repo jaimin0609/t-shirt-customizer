@@ -965,62 +965,86 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
         }
 
         // Now proceed with image deletion
-        console.log('Deleting product images...');
+        console.log('Handling product images...');
         
-        // Handle the 'images' array field
-        if (product.images && Array.isArray(product.images)) {
-            console.log(`Processing ${product.images.length} images from images array`);
-            for (const imgPath of product.images) {
-                if (typeof imgPath === 'string') {
-                    const fullPath = path.join(__dirname, '../public', imgPath);
-                    console.log(`Checking image at: ${fullPath}`);
-                    if (fs.existsSync(fullPath)) {
-                        console.log(`Deleting image: ${fullPath}`);
-                        fs.unlinkSync(fullPath);
-                    } else {
-                        console.log(`Image not found at: ${fullPath}`);
+        // Handle Cloudinary images (don't attempt to delete local files for Cloudinary URLs)
+        try {
+            // Handle the 'images' array field
+            if (product.images) {
+                let imagesArray = product.images;
+                
+                // If it's a string (JSON), parse it
+                if (typeof imagesArray === 'string') {
+                    try {
+                        imagesArray = JSON.parse(imagesArray);
+                    } catch (e) {
+                        console.warn(`Failed to parse images JSON: ${e.message}`);
+                        imagesArray = [];
+                    }
+                }
+                
+                if (Array.isArray(imagesArray)) {
+                    console.log(`Processing ${imagesArray.length} images from images array`);
+                    for (const imgPath of imagesArray) {
+                        if (typeof imgPath === 'string') {
+                            // Skip Cloudinary URLs for local file deletion
+                            if (imgPath.includes('cloudinary.com')) {
+                                console.log(`Skipping Cloudinary image: ${imgPath}`);
+                                continue;
+                            }
+                            
+                            // Only try to delete local files
+                            if (imgPath.startsWith('/')) {
+                                const fullPath = path.join(__dirname, '../public', imgPath);
+                                console.log(`Checking local image at: ${fullPath}`);
+                                if (fs.existsSync(fullPath)) {
+                                    console.log(`Deleting local image: ${fullPath}`);
+                                    fs.unlinkSync(fullPath);
+                                } else {
+                                    console.log(`Local image not found at: ${fullPath}`);
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        // Delete main image (legacy field)
-        if (product.image) {
-            const imagePath = path.join(__dirname, '../public', product.image);
-            console.log(`Checking main image at: ${imagePath}`);
-            if (fs.existsSync(imagePath)) {
-                console.log(`Deleting main image: ${imagePath}`);
-                fs.unlinkSync(imagePath);
-            } else {
-                console.log(`Main image not found at: ${imagePath}`);
-            }
-        }
-        
-        // Delete thumbnail
-        if (product.thumbnail && product.thumbnail !== product.image) {
-            const thumbnailPath = path.join(__dirname, '../public', product.thumbnail);
-            console.log(`Checking thumbnail at: ${thumbnailPath}`);
-            if (fs.existsSync(thumbnailPath)) {
-                console.log(`Deleting thumbnail: ${thumbnailPath}`);
-                fs.unlinkSync(thumbnailPath);
-            } else {
-                console.log(`Thumbnail not found at: ${thumbnailPath}`);
-            }
-        }
-        
-        // Delete additional images from metadata
-        if (product.imageMetadata && product.imageMetadata.additionalImages) {
-            console.log(`Processing additional images from metadata`);
-            product.imageMetadata.additionalImages.forEach(imgPath => {
-                const fullPath = path.join(__dirname, '../public', imgPath);
-                console.log(`Checking additional image at: ${fullPath}`);
-                if (fs.existsSync(fullPath)) {
-                    console.log(`Deleting additional image: ${fullPath}`);
-                    fs.unlinkSync(fullPath);
+            // Delete main image (legacy field)
+            if (product.image && typeof product.image === 'string') {
+                // Skip Cloudinary URLs
+                if (!product.image.includes('cloudinary.com') && product.image.startsWith('/')) {
+                    const imagePath = path.join(__dirname, '../public', product.image);
+                    console.log(`Checking main image at: ${imagePath}`);
+                    if (fs.existsSync(imagePath)) {
+                        console.log(`Deleting main image: ${imagePath}`);
+                        fs.unlinkSync(imagePath);
+                    } else {
+                        console.log(`Main image not found at: ${imagePath}`);
+                    }
                 } else {
-                    console.log(`Additional image not found at: ${fullPath}`);
+                    console.log(`Skipping Cloudinary main image: ${product.image}`);
                 }
-            });
+            }
+            
+            // Delete thumbnail
+            if (product.thumbnail && product.thumbnail !== product.image && typeof product.thumbnail === 'string') {
+                // Skip Cloudinary URLs
+                if (!product.thumbnail.includes('cloudinary.com') && product.thumbnail.startsWith('/')) {
+                    const thumbnailPath = path.join(__dirname, '../public', product.thumbnail);
+                    console.log(`Checking thumbnail at: ${thumbnailPath}`);
+                    if (fs.existsSync(thumbnailPath)) {
+                        console.log(`Deleting thumbnail: ${thumbnailPath}`);
+                        fs.unlinkSync(thumbnailPath);
+                    } else {
+                        console.log(`Thumbnail not found at: ${thumbnailPath}`);
+                    }
+                } else {
+                    console.log(`Skipping Cloudinary thumbnail: ${product.thumbnail}`);
+                }
+            }
+        } catch (imageError) {
+            // Log error but continue with product deletion
+            console.error('Error handling product images during deletion:', imageError);
         }
 
         // Finally delete the product
@@ -1028,7 +1052,7 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
         await product.destroy();
         console.log(`Product successfully deleted`);
         
-        res.status(204).send();
+        res.status(200).json({ message: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error deleting product:', error);
         

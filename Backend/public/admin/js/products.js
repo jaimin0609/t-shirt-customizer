@@ -237,42 +237,55 @@ async function saveProduct() {
 
         // First check if the response is JSON
         const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            const data = await response.json();
+        
+        // Check for error response
+        if (!response.ok) {
+            let errorMessage = 'Failed to save product';
             
-            if (!response.ok) {
-                console.error('Error response data:', data);
-                throw new Error(data.message || 'Failed to save product');
+            // Try to get detailed error from JSON response
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+                console.error('Server error:', errorData);
+            } else {
+                // If not JSON, try to get text
+                const errorText = await response.text();
+                console.error('Server response:', errorText);
             }
             
-            console.log('Product saved successfully:', data);
-            
-            showToast('success', `Product ${editingProductId ? 'updated' : 'added'} successfully`);
-            
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
-            if (modal) {
-                modal.hide();
+            // Handle specific HTTP status codes
+            if (response.status === 401 || response.status === 403) {
+                errorMessage = 'You do not have permission to perform this action';
+            } else if (response.status === 400) {
+                errorMessage = 'Invalid product data. Please check your inputs.';
+            } else if (response.status === 500) {
+                errorMessage = 'Server error while saving product. Try again later.';
             }
             
-            // Reset form and editingProductId
-            form.reset();
-            editingProductId = null;
-            document.getElementById('productModalTitle').textContent = 'Add Product';
-            document.getElementById('imagePreview').style.display = 'none';
-            
-            // Reload products list
-            console.log('Reloading products after save...');
-            await loadProducts();
-            console.log('Products reloaded after save');
-            
-            return data;
-        } else {
-            // Handle non-JSON response
-            const text = await response.text();
-            console.error('Non-JSON response:', text);
-            throw new Error('Server returned non-JSON response: ' + text);
+            throw new Error(errorMessage);
         }
+
+        // Get the response data
+        let data = {};
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            try {
+                data = await response.json();
+                console.log('Save response data:', data);
+            } catch (e) {
+                console.warn('Could not parse JSON response:', e);
+            }
+        }
+
+        // Show success message
+        const message = editingProductId ? 'Product updated successfully' : 'Product added successfully';
+        showToast('success', message);
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+        modal.hide();
+        
+        // Reload products
+        loadProducts();
     } catch (error) {
         console.error('Error saving product:', error);
         showToast('error', error.message || 'Failed to save product');
@@ -297,19 +310,51 @@ async function deleteProduct(productId) {
         const response = await fetch(`${window.API_URL}/products/${productId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
             }
         });
         
+        // Check response status
+        console.log('Delete response status:', response.status);
+        
+        // Try to parse error message from response when available
+        let errorMessage = 'Failed to delete product';
+        
+        // Handle different error cases
         if (!response.ok) {
-            throw new Error('Failed to delete product');
+            // Try to get detailed error from JSON response
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+                console.error('Server error:', errorData);
+            } catch (parseError) {
+                // If not JSON, try to get text
+                try {
+                    const errorText = await response.text();
+                    console.error('Server response:', errorText);
+                } catch (textError) {
+                    console.error('Could not parse error response');
+                }
+            }
+            
+            // Handle specific HTTP status codes
+            if (response.status === 401 || response.status === 403) {
+                errorMessage = 'You do not have permission to delete this product';
+            } else if (response.status === 404) {
+                errorMessage = 'Product not found. It may have been already deleted.';
+            } else if (response.status === 500) {
+                errorMessage = 'Server error while deleting product. Try again later.';
+            }
+            
+            throw new Error(errorMessage);
         }
         
         showToast('success', 'Product deleted successfully');
         loadProducts(); // Reload the table
     } catch (error) {
         console.error('Error deleting product:', error);
-        showToast('error', 'Failed to delete product');
+        showToast('error', error.message || 'Failed to delete product');
     }
 }
 
