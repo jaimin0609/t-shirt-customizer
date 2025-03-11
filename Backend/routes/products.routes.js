@@ -459,6 +459,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         
         // Log request details
         console.log('Request from:', req.ip);
+        console.log('User:', req.user ? req.user.email : 'Unknown');
+        console.log('Origin:', req.get('origin') || 'No origin header');
         console.log('Files received:', req.files ? req.files.length : 0);
         
         // Log detailed information about received files
@@ -499,43 +501,59 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 // With Cloudinary, the secure URL is in file.path
                 if (cloudinaryEnabled) {
                     console.log('Using Cloudinary for image URLs');
-                    imageUrls = req.files.map(file => {
-                        // Debug each file
-                        console.log(`Processing file for URL: ${file.originalname}`);
-                        
-                        // Check all possible properties where Cloudinary URL might be stored
-                        if (!file.path) {
-                            console.warn(`Missing path for file ${file.originalname}, checking for cloudinary data`);
-                            // Try to find cloudinary URL in any available field
-                            if (file.cloudinaryUrl) return file.cloudinaryUrl;
-                            if (file.secure_url) return file.secure_url;
-                            if (file.url) return file.url;
-                            
-                            // If none of the standard properties work, try multer-storage-cloudinary specific properties
-                            if (file.cloudinary && file.cloudinary.secure_url) {
-                                console.log('Found URL in file.cloudinary:', file.cloudinary.secure_url);
-                                return file.cloudinary.secure_url;
-                            }
-                            
-                            // If still not found, handle the file manually as a fallback
-                            console.error('No valid URL found for uploaded file:', file.originalname);
-                            
-                            // In case the file was uploaded but the URL wasn't captured correctly,
-                            // construct a Cloudinary URL format
-                            if (file.filename) {
-                                const cloudUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/${file.filename}`;
-                                console.log('Constructed Cloudinary URL:', cloudUrl);
-                                return cloudUrl;
-                            }
-                            
-                            return null;
-                        }
-                        
-                        console.log(`Using path: ${file.path}`);
-                        return file.path;
-                    }).filter(url => url !== null);
                     
-                    console.log('Cloudinary image URLs:', imageUrls);
+                    // Validate Cloudinary configuration
+                    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+                        console.error('⚠️ Missing Cloudinary credentials. Check environment variables.');
+                    }
+                    
+                    try {
+                        imageUrls = req.files.map(file => {
+                            // Debug each file
+                            console.log(`Processing file for URL: ${file.originalname}`);
+                            
+                            // Check all possible properties where Cloudinary URL might be stored
+                            if (!file.path) {
+                                console.warn(`Missing path for file ${file.originalname}, checking for cloudinary data`);
+                                // Try to find cloudinary URL in any available field
+                                if (file.cloudinaryUrl) return file.cloudinaryUrl;
+                                if (file.secure_url) return file.secure_url;
+                                if (file.url) return file.url;
+                                
+                                // If none of the standard properties work, try multer-storage-cloudinary specific properties
+                                if (file.cloudinary && file.cloudinary.secure_url) {
+                                    console.log('Found URL in file.cloudinary:', file.cloudinary.secure_url);
+                                    return file.cloudinary.secure_url;
+                                }
+                                
+                                // If still not found, handle the file manually as a fallback
+                                console.error('No valid URL found for uploaded file:', file.originalname);
+                                
+                                // In case the file was uploaded but the URL wasn't captured correctly,
+                                // construct a Cloudinary URL format
+                                if (file.filename) {
+                                    const cloudUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/${file.filename}`;
+                                    console.log('Constructed Cloudinary URL:', cloudUrl);
+                                    return cloudUrl;
+                                }
+                                
+                                return null;
+                            }
+                            
+                            console.log(`Using path: ${file.path}`);
+                            return file.path;
+                        }).filter(url => url !== null);
+                    } catch (cloudinaryErr) {
+                        console.error('Error processing Cloudinary URLs:', cloudinaryErr);
+                        // Fall back to local URLs if Cloudinary processing fails
+                        imageUrls = req.files.map(file => {
+                            const filename = file.filename || path.basename(file.path || '');
+                            if (!filename) return null;
+                            return `/uploads/products/${filename}`;
+                        }).filter(url => url !== null);
+                    }
+                    
+                    console.log('Final image URLs:', imageUrls);
                 } else {
                     // For local storage, construct the URL from the filename
                     console.log('Using local storage for image URLs');

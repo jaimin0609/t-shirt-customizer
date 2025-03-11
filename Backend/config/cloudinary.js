@@ -54,6 +54,10 @@ if (missingEnvVars.length > 0) {
       console.log('✅ Cloudinary connection successful!');
     }).catch(error => {
       console.error('❌ Cloudinary connection failed:', error);
+      console.error('Possible issues:');
+      console.error('- Incorrect API credentials');
+      console.error('- Network connectivity issues');
+      console.error('- CORS restrictions (check allowed origins in Cloudinary settings)');
       cloudinaryEnabled = false;
       console.warn('Falling back to local storage for file uploads');
     });
@@ -64,12 +68,22 @@ if (missingEnvVars.length > 0) {
   }
 }
 
+// Set up local storage directory
+const setupLocalStorage = () => {
+  const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'products');
+  if (!fs.existsSync(uploadDir)) {
+    try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log('Created local upload directory:', uploadDir);
+    } catch (err) {
+      console.error('Error creating upload directory:', err);
+    }
+  }
+  return uploadDir;
+};
+
 // Configure local storage as a fallback
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'products');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.log('Created local upload directory:', uploadDir);
-}
+const uploadDir = setupLocalStorage();
 
 const localStorage = multer.diskStorage({
   destination: function (req, file, cb) {

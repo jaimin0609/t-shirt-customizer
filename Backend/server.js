@@ -83,7 +83,9 @@ app.use(cors({
             // Add Vercel domains
             'https://uniqverse-five.vercel.app',
             'https://uniqverse-7a3cxn0ti-jaimin0609s-projects.vercel.app',
-            'https://*.vercel.app'  // Allow all Vercel subdomains
+            'https://*.vercel.app',  // Allow all Vercel subdomains
+            // Add Render backend domain
+            'https://t-shirt-customizer-backend.onrender.com'
         ];
         
         // Add FRONTEND_URL from environment if it exists

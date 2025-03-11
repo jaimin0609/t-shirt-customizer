@@ -195,9 +195,17 @@ async function editProduct(productId) {
 // Save Product
 async function saveProduct() {
     try {
+        // Show loading indicator
+        const saveButton = document.getElementById('saveProductBtn');
+        const originalButtonText = saveButton.textContent;
+        saveButton.textContent = 'Saving...';
+        saveButton.disabled = true;
+        
         const token = localStorage.getItem('token');
         if (!token) {
             showToast('error', 'Authentication required');
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
             return;
         }
 
@@ -207,8 +215,36 @@ async function saveProduct() {
         // Log form data contents
         console.log('Form data contents:');
         for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value instanceof File ? `File: ${value.name}` : value}`);
+            console.log(`${key}: ${value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value}`);
         }
+        
+        // Check if there are image files and validate them
+        const imageFiles = [];
+        for (let [key, value] of formData.entries()) {
+            if (key === 'images' && value instanceof File && value.size > 0) {
+                imageFiles.push(value);
+                
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validTypes.includes(value.type)) {
+                    showToast('error', `Invalid file type: ${value.name}. Only JPEG, PNG, GIF, and WebP are supported.`);
+                    saveButton.textContent = originalButtonText;
+                    saveButton.disabled = false;
+                    return;
+                }
+                
+                // Validate file size (max 5MB)
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                if (value.size > maxSize) {
+                    showToast('error', `File too large: ${value.name}. Maximum size is 5MB.`);
+                    saveButton.textContent = originalButtonText;
+                    saveButton.disabled = false;
+                    return;
+                }
+            }
+        }
+        
+        console.log(`Found ${imageFiles.length} image files to upload`);
         
         const url = editingProductId ? 
             `${window.API_URL}/products/${editingProductId}` : 
@@ -220,7 +256,8 @@ async function saveProduct() {
             url,
             method,
             editingProductId,
-            token: token.substring(0, 10) + '...'
+            token: token.substring(0, 10) + '...',
+            imageCount: imageFiles.length
         });
 
         const response = await fetch(url, {
@@ -258,8 +295,14 @@ async function saveProduct() {
                 errorMessage = 'You do not have permission to perform this action';
             } else if (response.status === 400) {
                 errorMessage = 'Invalid product data. Please check your inputs.';
+            } else if (response.status === 413) {
+                errorMessage = 'Image file too large. Maximum total size is 10MB.';
+            } else if (response.status === 415) {
+                errorMessage = 'Unsupported file type. Use JPG, PNG, GIF, or WebP images.';
             } else if (response.status === 500) {
                 errorMessage = 'Server error while saving product. Try again later.';
+            } else if (response.status === 0) {
+                errorMessage = 'Network error. Check your internet connection or CORS settings.';
             }
             
             throw new Error(errorMessage);
@@ -289,6 +332,11 @@ async function saveProduct() {
     } catch (error) {
         console.error('Error saving product:', error);
         showToast('error', error.message || 'Failed to save product');
+    } finally {
+        // Reset button state
+        const saveButton = document.getElementById('saveProductBtn');
+        saveButton.textContent = 'Save Product';
+        saveButton.disabled = false;
     }
 }
 
