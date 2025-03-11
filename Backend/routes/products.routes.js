@@ -8,7 +8,7 @@ import { optimizeProductImage } from '../middleware/imageOptimization.js';
 import { sequelize } from '../models/index.js';
 import { Sequelize } from 'sequelize';
 import { auth, isAdmin } from '../middleware/auth.js';
-import { storage, uploadImage, getCloudinaryUrl } from '../config/cloudinary.js';
+import { storage, uploadImage, getCloudinaryUrl, cloudinaryEnabled } from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -427,6 +427,16 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         delete logBody.images;
         console.log('Request body:', JSON.stringify(logBody, null, 2));
         console.log('Files received:', req.files ? req.files.length : 0);
+        
+        if (req.files && req.files.length > 0) {
+            console.log('File details:', req.files.map(f => ({
+                fieldname: f.fieldname,
+                originalname: f.originalname,
+                mimetype: f.mimetype,
+                size: f.size,
+                path: f.path || 'no path'
+            })));
+        }
 
         // Validate required fields
         if (!req.body.name || !req.body.description || !req.body.price || !req.body.category) {
@@ -437,9 +447,19 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
             try {
-                // With Cloudinary, the secure URL is in file.path
-                imageUrls = req.files.map(file => file.path);
-                console.log('Cloudinary image URLs:', imageUrls);
+                // Check if using Cloudinary or local storage
+                if (cloudinaryEnabled) {
+                    // With Cloudinary, the secure URL is in file.path
+                    imageUrls = req.files.map(file => file.path);
+                    console.log('Cloudinary image URLs:', imageUrls);
+                } else {
+                    // For local storage, construct the URL from the filename
+                    imageUrls = req.files.map(file => {
+                        const filename = file.filename || path.basename(file.path);
+                        return `/uploads/products/${filename}`;
+                    });
+                    console.log('Local image URLs:', imageUrls);
+                }
             } catch (error) {
                 console.error('Error processing uploaded images:', error);
                 return res.status(500).json({ message: 'Error processing images', error: error.message });
