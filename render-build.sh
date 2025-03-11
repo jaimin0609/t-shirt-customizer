@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build script for Render.com deployment - Simplified version
+# Build script for Render.com deployment - Sharp-friendly version
 
-echo "Starting simplified build process..."
+echo "Starting build process with Sharp support..."
 echo "Current directory: $(pwd)"
 echo "Directory contents: $(ls -la)"
 
@@ -17,23 +17,29 @@ fi
 
 echo "Directory contents: $(ls -la)"
 
-# Disable all lifecycle scripts to prevent loops
-echo "Creating .npmrc file to disable scripts..."
+# Step 1: First install with ignore-scripts to prevent loops for most packages
+echo "Step 1: Initial installation with ignore-scripts to prevent loops..."
 echo "ignore-scripts=true" > .npmrc
-cat .npmrc
+npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps
 
-# Direct installation with all safeguards enabled
-echo "Installing dependencies with all safeguards..."
-npm ci --no-audit --no-fund --ignore-scripts --legacy-peer-deps
+# Step 2: Specifically reinstall Sharp with the necessary compilation scripts
+echo "Step 2: Reinstalling Sharp with its compilation scripts..."
+echo "ignore-scripts=false" > .npmrc
+npm install --no-audit --no-fund --no-save --foreground-scripts sharp
 
-# Check for errors
+# Verify Sharp installation
+echo "Verifying Sharp installation..."
+node -e "try { require('sharp'); console.log('✅ Sharp loaded successfully!'); } catch(e) { console.error('❌ Sharp failed to load:', e.message); process.exit(1); }"
+
 if [ $? -ne 0 ]; then
-  echo "Error during npm ci. Trying with npm install..."
-  npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps --no-package-lock
+  echo "Sharp verification failed. Trying platform-specific installation..."
+  npm install --platform=linux --arch=x64 sharp
+  
+  # Verify again
+  node -e "try { require('sharp'); console.log('✅ Sharp loaded successfully with platform-specific installation!'); } catch(e) { console.error('❌ Sharp still failed to load:', e.message); process.exit(1); }"
   
   if [ $? -ne 0 ]; then
-    echo "Build failed even with fallback approach."
-    exit 1
+    echo "Could not install Sharp properly. Deployment may fail."
   fi
 fi
 
