@@ -22,7 +22,8 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Add a proper formatForDB helper at the top of the file
+// Helper function commented out as we're using direct JSON.stringify approach
+/*
 const formatForDB = (value) => {
     if (process.env.DATABASE_URL) { // PostgreSQL needs proper JSON strings
         if (value === null || value === undefined) {
@@ -45,6 +46,7 @@ const formatForDB = (value) => {
         return value;
     }
 };
+*/
 
 // Ensure uploads directory exists for local development fallback
 const uploadDir = path.join(__dirname, '../public/uploads/products');
@@ -446,38 +448,29 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new product - Updated to handle multiple images and variants
+// Create new product endpoint with better error handling
 router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {
         console.log('Creating new product...');
-        // Log request body (excluding binary data)
-        const logBody = { ...req.body };
-        delete logBody.images;
-        console.log('Request body:', JSON.stringify(logBody, null, 2));
+        
+        // Log request details
+        console.log('Request from:', req.ip);
         console.log('Files received:', req.files ? req.files.length : 0);
         
-        if (req.files && req.files.length > 0) {
-            console.log('File details:', req.files.map(f => ({
-                fieldname: f.fieldname,
-                originalname: f.originalname,
-                mimetype: f.mimetype,
-                size: f.size,
-                path: f.path || 'no path'
-            })));
-        }
-
         // Validate required fields
-        if (!req.body.name || !req.body.description || !req.body.price || !req.body.category) {
-            return res.status(400).json({ message: 'Name, description, price and category are required' });
+        if (!req.body.name || !req.body.price) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Name and price are required' 
+            });
         }
-
+        
         // Process uploaded images
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
             try {
-                // Check if using Cloudinary or local storage
+                // With Cloudinary, the secure URL is in file.path
                 if (cloudinaryEnabled) {
-                    // With Cloudinary, the secure URL is in file.path
                     imageUrls = req.files.map(file => file.path);
                     console.log('Cloudinary image URLs:', imageUrls);
                 } else {
@@ -493,238 +486,123 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 return res.status(500).json({ message: 'Error processing images', error: error.message });
             }
         }
-
-        // Ensure we have at least one image
-        if (imageUrls.length === 0) {
-            // Use a default placeholder image
-            const placeholderUrl = getCloudinaryUrl();
-            imageUrls = [placeholderUrl];
-            console.log('No images uploaded, using placeholder:', placeholderUrl);
-        }
-
-        // Validate price and stock
-        const parsedPrice = parseFloat(req.body.price);
-        const parsedStock = parseInt(req.body.stock);
         
-        if (isNaN(parsedPrice) || parsedPrice <= 0) {
-            console.log('Invalid price:', req.body.price);
-            return res.status(400).json({ message: 'Price must be a positive number' });
-        }
-        
-        if (isNaN(parsedStock) || parsedStock < 0) {
-            console.log('Invalid stock:', req.body.stock);
-            return res.status(400).json({ message: 'Stock must be a non-negative integer' });
-        }
-
-        // Log database connection status
-        try {
-            await sequelize.authenticate();
-            console.log('Database connection is OK before creating product');
-        } catch (dbError) {
-            console.error('Database connection error:', dbError);
-            return res.status(500).json({ message: 'Database connection error', error: dbError.message });
-        }
-
-        // Create product with detailed error handling
-        console.log('Creating product in database with fields:', {
-            name: req.body.name,
-            description: req.body.description,
-            price: parsedPrice,
-            category: req.body.category,
-            gender: req.body.gender || 'unisex',
-            ageGroup: req.body.ageGroup || 'adult',
-            stock: parsedStock,
-            status: req.body.status || 'active',
-            featured: req.body.featured === 'true',
-            imagesCount: imageUrls.length
-        });
-        
-        // Process tags - simplified approach for reliability
-        let processedTags = [];
-        if (req.body.tags) {
-            try {
-                // Handle string format (most common from form submissions)
-                if (typeof req.body.tags === 'string') {
-                    // Split by comma and clean up
-                    processedTags = req.body.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-                    console.log('Processed tags from string:', processedTags);
-                } 
-                // Handle array format
-                else if (Array.isArray(req.body.tags)) {
-                    processedTags = req.body.tags.map(tag => tag.trim()).filter(tag => tag);
-                    console.log('Processed tags from array:', processedTags);
-                }
-            } catch (tagError) {
-                console.error('Error processing tags:', tagError);
-                // Use empty array if there's an error
-                processedTags = [];
-            }
-        }
-        
-        // Process customization options - simplified
-        let processedCustomOptions = [];
-        if (req.body.customizationOptions) {
-            try {
-                if (typeof req.body.customizationOptions === 'string') {
-                    processedCustomOptions = JSON.parse(req.body.customizationOptions);
-                } else if (Array.isArray(req.body.customizationOptions)) {
-                    processedCustomOptions = req.body.customizationOptions;
-                }
-            } catch (error) {
-                console.error('Error processing customization options:', error);
-            }
-        }
-            
-        // Prepare product data with proper PostgreSQL JSON formatting
+        // Create product data
         const productData = {
             name: req.body.name,
-            description: req.body.description,
-            price: parsedPrice,
-            category: req.body.category,
+            description: req.body.description || '',
+            price: parseFloat(req.body.price),
+            category: req.body.category || 'Uncategorized',
             gender: req.body.gender || 'unisex',
             ageGroup: req.body.ageGroup || 'adult',
-            stock: parsedStock,
+            stock: parseInt(req.body.stock) || 0,
             status: req.body.status || 'active',
             featured: req.body.featured === 'true',
-            // Use the formatForDB helper to ensure proper JSON formatting
-            images: formatForDB(imageUrls),
-            customizationOptions: formatForDB(processedCustomOptions),
-            tags: formatForDB(processedTags)
+            
+            // Handle JSON data for PostgreSQL compatibility
+            image: imageUrls.length > 0 ? imageUrls[0] : null,
+            images: process.env.DATABASE_URL ? JSON.stringify(imageUrls) : imageUrls,
+            
+            // Process tags
+            tags: process.env.DATABASE_URL 
+                ? JSON.stringify(req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []) 
+                : (req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []),
+                
+            // Empty customization options
+            customizationOptions: process.env.DATABASE_URL ? '[]' : []
         };
         
-        // Add a single image field for backward compatibility
-        if (imageUrls.length > 0) {
-            productData.image = imageUrls[0];
-        }
+        // Create the product
+        const product = await Product.create(productData);
+        console.log('Base product created successfully, ID:', product.id);
         
-        console.log('Attempting to create product in database now...');
-        let product;
-        try {
-            product = await Product.create(productData);
-            console.log('Product created successfully, ID:', product.id);
-            
-            // Process variants with better error handling
-            if (req.body.hasVariants === 'true') {
-                try {
-                    console.log('Processing variants...');
-                    
-                    // Process color variants
-                    if (req.body.colorVariantsData) {
-                        try {
-                            let colorVariants;
+        // Process variants if present
+        let variantsAdded = 0;
+        if (req.body.hasVariants === 'true') {
+            try {
+                // Process color variants
+                if (req.body.colorVariantsData) {
+                    try {
+                        let colorVariants = typeof req.body.colorVariantsData === 'string' 
+                            ? JSON.parse(req.body.colorVariantsData) 
+                            : req.body.colorVariantsData;
                             
-                            // Parse safely
-                            if (typeof req.body.colorVariantsData === 'string') {
-                                try {
-                                    colorVariants = JSON.parse(req.body.colorVariantsData);
-                                } catch (e) {
-                                    console.error('Error parsing color variants JSON:', e);
-                                    colorVariants = [];
-                                }
-                            } else if (Array.isArray(req.body.colorVariantsData)) {
-                                colorVariants = req.body.colorVariantsData;
-                            } else {
-                                colorVariants = [];
-                            }
-                            
-                            // Create each variant with individual error handling
+                        if (Array.isArray(colorVariants)) {
                             for (const variant of colorVariants) {
                                 if (!variant) continue;
                                 
-                                try {
-                                    await ProductVariant.create({
-                                        productId: product.id,
-                                        type: 'color',
-                                        color: variant.color || 'Unknown',
-                                        colorCode: variant.colorCode || '#000000',
-                                        stock: parseInt(variant.stock) || 0,
-                                        priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                                        status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
-                                    });
-                                } catch (variantError) {
-                                    console.error('Error creating color variant:', variantError);
-                                    // Continue to next variant
-                                }
+                                await ProductVariant.create({
+                                    productId: product.id,
+                                    type: 'color',
+                                    color: variant.color || 'Unknown',
+                                    colorCode: variant.colorCode || '#000000',
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: 'active'
+                                });
+                                variantsAdded++;
                             }
-                        } catch (error) {
-                            console.error('Error processing color variants:', error);
                         }
+                    } catch (colorError) {
+                        console.error('Error processing color variants:', colorError);
                     }
-                    
-                    // Process size variants - similar pattern
-                    if (req.body.sizeVariantsData) {
-                        try {
-                            let sizeVariants;
+                }
+                
+                // Process size variants
+                if (req.body.sizeVariantsData) {
+                    try {
+                        let sizeVariants = typeof req.body.sizeVariantsData === 'string' 
+                            ? JSON.parse(req.body.sizeVariantsData) 
+                            : req.body.sizeVariantsData;
                             
-                            // Parse safely
-                            if (typeof req.body.sizeVariantsData === 'string') {
-                                try {
-                                    sizeVariants = JSON.parse(req.body.sizeVariantsData);
-                                } catch (e) {
-                                    console.error('Error parsing size variants JSON:', e);
-                                    sizeVariants = [];
-                                }
-                            } else if (Array.isArray(req.body.sizeVariantsData)) {
-                                sizeVariants = req.body.sizeVariantsData;
-                            } else {
-                                sizeVariants = [];
-                            }
-                            
-                            // Create each variant with individual error handling
+                        if (Array.isArray(sizeVariants)) {
                             for (const variant of sizeVariants) {
                                 if (!variant) continue;
                                 
-                                try {
-                                    await ProductVariant.create({
-                                        productId: product.id,
-                                        type: 'size',
-                                        size: variant.size || 'Unknown',
-                                        stock: parseInt(variant.stock) || 0,
-                                        priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                                        status: parseInt(variant.stock) > 0 ? 'active' : 'outOfStock'
-                                    });
-                                } catch (variantError) {
-                                    console.error('Error creating size variant:', variantError);
-                                    // Continue to next variant
-                                }
+                                await ProductVariant.create({
+                                    productId: product.id,
+                                    type: 'size',
+                                    size: variant.size || 'One Size',
+                                    stock: parseInt(variant.stock) || 0,
+                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
+                                    status: 'active'
+                                });
+                                variantsAdded++;
                             }
-                        } catch (error) {
-                            console.error('Error processing size variants:', error);
                         }
+                    } catch (sizeError) {
+                        console.error('Error processing size variants:', sizeError);
                     }
-                    
-                    // Update product to indicate it has variants
-                    await product.update({ hasVariants: true });
-                    
-                } catch (variantError) {
-                    console.error('Overall error in variant processing:', variantError);
-                    // Continue with product creation even if variants fail
                 }
+                
+                // Mark product as having variants
+                if (variantsAdded > 0) {
+                    await product.update({ hasVariants: true });
+                    console.log(`Updated product with ${variantsAdded} variants`);
+                }
+            } catch (variantError) {
+                console.error('Error processing variants:', variantError);
+                // Don't fail the product creation if variants fail
             }
-            
-            // Always return a response
-            console.log('Product creation completed successfully');
-            return res.status(201).json({
-                success: true,
-                product
-            });
-        } catch (productError) {
-            console.error('Error creating product in database:', productError);
-            console.error('Error name:', productError.name);
-            console.error('Error message:', productError.message);
-            
-            return res.status(500).json({ 
-                message: 'Failed to create product in database', 
-                error: productError.message
-            });
         }
+        
+        // Return success response
+        return res.status(201).json({
+            success: true,
+            message: 'Product created successfully',
+            product: {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                variants: variantsAdded
+            }
+        });
     } catch (error) {
-        console.error('Error creating product:', error.message);
-        console.error('Error stack:', error.stack);
+        console.error('Error creating product:', error);
         return res.status(500).json({ 
-            message: 'Server error', 
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            success: false,
+            message: 'Server error during product creation',
+            error: error.message
         });
     }
 });
