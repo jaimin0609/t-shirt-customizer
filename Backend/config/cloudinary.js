@@ -3,6 +3,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 // Initialize environment variables
 const __filename = fileURLToPath(import.meta.url);
@@ -35,6 +36,34 @@ const storage = new CloudinaryStorage({
     transformation: [{ width: 800, height: 800, crop: 'limit' }]
   }
 });
+
+// Function for uploading images to Cloudinary (compatible with v1)
+const uploadImage = (imagePath, options = {}) => {
+  return new Promise((resolve, reject) => {
+    // Default options
+    const uploadOptions = {
+      folder: 'tshirt-customizer',
+      ...options
+    };
+    
+    // Check if file exists (for local files)
+    if (imagePath && !imagePath.startsWith('http') && !fs.existsSync(imagePath)) {
+      console.warn(`File not found: ${imagePath}`);
+      return reject(new Error(`File not found: ${imagePath}`));
+    }
+    
+    // Upload to Cloudinary
+    cloudinary.uploader.upload(imagePath, (error, result) => {
+      if (error) {
+        console.error('Cloudinary upload error:', error);
+        reject(error);
+      } else {
+        console.log('Uploaded to Cloudinary:', result.secure_url);
+        resolve(result);
+      }
+    }, uploadOptions);
+  });
+};
 
 // Function to get Cloudinary credentials for frontend
 const getCloudinaryConfig = () => {
@@ -81,4 +110,4 @@ const getImageUrl = (publicId) => {
   });
 };
 
-export { cloudinary, storage, getCloudinaryConfig, getCloudinaryUrl, getImageUrl }; 
+export { cloudinary, storage, uploadImage, getCloudinaryConfig, getCloudinaryUrl, getImageUrl }; 
