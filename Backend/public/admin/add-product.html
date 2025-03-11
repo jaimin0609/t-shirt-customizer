@@ -225,7 +225,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="productCategory" class="form-label fw-bold">Category</label>
-                                        <select class="form-select form-select-lg" id="productCategory" name="category" required>
+                                        <select class="form-select form-select-lg" id="productCategory" name="category" required onchange="console.log('Category selected:', this.value)">
                                             <option value="">Select Category</option>
                                             <!-- Categories will be loaded dynamically -->
                                         </select>
@@ -553,6 +553,7 @@
                     <div class="d-flex flex-column gap-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="testCategoryLoading()">Test Category Loading</button>
                         <button class="btn btn-sm btn-outline-primary" onclick="testShowToast()">Test Show Toast</button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="debugCategoryDropdown()">Debug Category Dropdown</button>
                     </div>
                 </div>
             </div>
@@ -632,6 +633,66 @@
                 });
             }
         });
+    </script>
+
+    <!-- Debugging Scripts -->
+    <script>
+        function debugCategoryDropdown() {
+            const categorySelect = document.getElementById('productCategory');
+            if (!categorySelect) {
+                alert('Category select element not found!');
+                return;
+            }
+            
+            // Check if the dropdown is visually visible
+            const style = window.getComputedStyle(categorySelect);
+            const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
+            
+            // Get all options
+            const options = Array.from(categorySelect.options).map(opt => ({
+                value: opt.value,
+                text: opt.text,
+                selected: opt.selected
+            }));
+            
+            // Test if changing works programmatically
+            const randomIndex = Math.floor(Math.random() * categorySelect.options.length);
+            const originalIndex = categorySelect.selectedIndex;
+            
+            try {
+                // Try to select a different option
+                categorySelect.selectedIndex = randomIndex;
+                
+                // Create a debug report
+                const debugReport = {
+                    elementId: categorySelect.id,
+                    disabled: categorySelect.disabled,
+                    readOnly: categorySelect.readOnly,
+                    isVisible: isVisible,
+                    zIndex: style.zIndex,
+                    position: style.position,
+                    optionsCount: options.length,
+                    options: options,
+                    selectedBeforeTest: originalIndex,
+                    selectedAfterTest: categorySelect.selectedIndex,
+                    testSuccessful: categorySelect.selectedIndex === randomIndex
+                };
+                
+                console.log('Category Dropdown Debug Report:', debugReport);
+                
+                // Show toast with results
+                showToast(
+                    debugReport.testSuccessful ? 'success' : 'error',
+                    `Dropdown test ${debugReport.testSuccessful ? 'successful' : 'failed'}. See console for details.`
+                );
+                
+                // Reset to original selection
+                categorySelect.selectedIndex = originalIndex;
+            } catch (error) {
+                console.error('Error during dropdown test:', error);
+                alert('Error testing dropdown: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html> 

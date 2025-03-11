@@ -103,17 +103,42 @@ function initializeForm() {
  */
 function loadCategories() {
     console.log('Loading categories...');
+    const categorySelect = document.getElementById('productCategory');
     
-    // First try to load from the API
-    fetch(`${window.API_URL}/products/categories/all`)
+    if (!categorySelect) {
+        console.error('Category select element not found!');
+        return;
+    }
+    
+    // Add initial loading state
+    categorySelect.innerHTML = '<option value="">Loading categories...</option>';
+    categorySelect.disabled = true;
+    
+    // Try fetching from API but have a short timeout to fail gracefully
+    const fetchPromise = fetch(`${window.API_URL}/products/categories/all`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('Failed to fetch categories');
+                throw new Error(`Failed to fetch categories (${response.status})`);
             }
             return response.json();
-        })
+        });
+    
+    // Set a timeout to avoid hanging if the API is unavailable
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Categories fetch timeout")), 5000);
+    });
+    
+    // Use the faster of the two - successful API call or timeout
+    Promise.race([fetchPromise, timeoutPromise])
         .then(categories => {
             console.log('Categories loaded from API:', categories);
+            
+            // Check if we have valid data
+            if (!Array.isArray(categories)) {
+                throw new Error('Invalid categories data format');
+            }
+            
+            // Populate the dropdown
             populateCategoriesDropdown(categories);
         })
         .catch(error => {
@@ -124,12 +149,33 @@ function loadCategories() {
             const sampleCategories = [
                 { id: 1, name: 'T-Shirts' },
                 { id: 2, name: 'Hoodies' },
-                { id: 3, name: 'Accessories' },
-                { id: 4, name: 'Caps' },
-                { id: 5, name: 'Mugs' }
+                { id: 3, name: 'Sweatshirts' },
+                { id: 4, name: 'Tank Tops' },
+                { id: 5, name: 'Polo Shirts' },
+                { id: 6, name: 'Long Sleeves' },
+                { id: 7, name: 'Accessories' },
+                { id: 8, name: 'Hats & Caps' },
+                { id: 9, name: 'Mugs' }
             ];
             
             populateCategoriesDropdown(sampleCategories);
+        })
+        .finally(() => {
+            // Make sure dropdown is enabled
+            categorySelect.disabled = false;
+            
+            // Add an event listener to check if it works after being populated
+            categorySelect.addEventListener('change', function() {
+                console.log('Category selected:', this.value);
+            });
+            
+            // Force browser to refresh the dropdown rendering
+            setTimeout(() => {
+                categorySelect.style.display = 'none';
+                setTimeout(() => {
+                    categorySelect.style.display = 'block';
+                }, 10);
+            }, 100);
         });
 }
 
@@ -143,16 +189,37 @@ function populateCategoriesDropdown(categories) {
         return;
     }
     
-    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    // Clear existing options
+    categorySelect.innerHTML = '';
     
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Select Category';
+    categorySelect.appendChild(defaultOption);
+    
+    // Sort categories alphabetically
+    categories.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Add category options
     categories.forEach(category => {
+        if (!category.name) {
+            console.warn('Skipping category with empty name:', category);
+            return;
+        }
+        
         const option = document.createElement('option');
-        option.value = category.name;
+        option.value = category.id || category.name;
         option.textContent = category.name;
         categorySelect.appendChild(option);
+        
+        console.log(`Added category option: ${category.name} (${option.value})`);
     });
     
     console.log('Categories dropdown populated with', categories.length, 'items');
+    
+    // Debug: Log the HTML content of the dropdown
+    console.log('Dropdown HTML:', categorySelect.outerHTML);
 }
 
 /**
