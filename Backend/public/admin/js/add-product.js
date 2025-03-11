@@ -269,18 +269,66 @@ function setupImageUpload() {
         return;
     }
     
-    // Make sure dropzone is clickable
-    dropzoneContainer.onclick = function(e) {
+    // Fix: Make sure the click event is properly handled
+    dropzoneContainer.addEventListener('click', function(e) {
         console.log('Dropzone clicked');
+        // Prevent the event from being triggered twice
+        e.preventDefault();
+        e.stopPropagation();
+        // Directly trigger file selection
         productImages.click();
-    };
+    });
     
-    // Handle file selection
-    productImages.onchange = function(e) {
-        console.log('Files selected:', this.files?.length || 0);
+    // Add drag and drop visual feedback
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzoneContainer.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // Add visual feedback for drag operations
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzoneContainer.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzoneContainer.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        dropzoneContainer.classList.add('border-primary');
+    }
+    
+    function unhighlight() {
+        dropzoneContainer.classList.remove('border-primary');
+    }
+    
+    // Handle actual drop
+    dropzoneContainer.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        productImages.files = files; // This might not work directly due to security
+        handleFiles(files);
+    }
+    
+    // Handle file selection - with improved error handling
+    productImages.addEventListener('change', function(e) {
+        console.log('Files selected via input:', this.files?.length || 0);
+        if (this.files && this.files.length > 0) {
+            handleFiles(this.files);
+        }
+    });
+    
+    function handleFiles(files) {
+        console.log('Processing files:', files.length);
         previewsContainer.innerHTML = '';
         
-        if (!this.files || this.files.length === 0) {
+        if (!files || files.length === 0) {
             dropzoneMessage.style.display = 'block';
             return;
         }
@@ -289,10 +337,17 @@ function setupImageUpload() {
         dropzoneMessage.style.display = 'none';
         
         // Process each file (up to 5)
-        Array.from(this.files).slice(0, 5).forEach((file, index) => {
+        Array.from(files).slice(0, 5).forEach((file, index) => {
             console.log(`Processing file ${index + 1}:`, file.name);
             
             const reader = new FileReader();
+            
+            // Add error handling for FileReader
+            reader.onerror = function() {
+                console.error(`Error reading file ${file.name}`);
+                showToast('error', `Failed to read file: ${file.name}`);
+            };
+            
             reader.onload = function(e) {
                 // Create preview card
                 const previewCol = document.createElement('div');
@@ -307,6 +362,12 @@ function setupImageUpload() {
                 previewImg.style.height = '150px';
                 previewImg.style.objectFit = 'cover';
                 
+                // Add error handling for image loading
+                previewImg.onerror = function() {
+                    previewImg.src = '/admin/img/image-placeholder.png'; // Fallback image
+                    console.error(`Failed to load image preview for ${file.name}`);
+                };
+                
                 const cardBody = document.createElement('div');
                 cardBody.className = 'card-body p-2';
                 
@@ -320,6 +381,10 @@ function setupImageUpload() {
                 removeBtn.innerHTML = '<i class="bi bi-x"></i>';
                 removeBtn.onclick = function() {
                     previewCol.remove();
+                    // Show dropzone message if no previews left
+                    if (previewsContainer.children.length === 0) {
+                        dropzoneMessage.style.display = 'block';
+                    }
                 };
                 
                 // Assemble the preview card
@@ -333,7 +398,7 @@ function setupImageUpload() {
             
             reader.readAsDataURL(file);
         });
-    };
+    }
     
     console.log('Image upload setup complete');
 }
@@ -395,7 +460,13 @@ async function handleFormSubmit(e) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
     
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
+    });
+    
     try {
+        console.log('Starting product submission...');
         showLoading();
         
         const formData = new FormData(e.target);
@@ -467,18 +538,41 @@ async function handleFormSubmit(e) {
             formData.append('tags', tags.join(','));
         }
         
+        // Validate required fields
+        const requiredFields = ['name', 'price', 'category'];
+        const missingFields = [];
+        
+        requiredFields.forEach(field => {
+            if (!formData.get(field)) {
+                missingFields.push(field);
+            }
+        });
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
+        // Validate that at least one image is selected
+        const imageInput = document.getElementById('productImages');
+        if (imageInput && (!imageInput.files || imageInput.files.length === 0)) {
+            console.warn('No images selected for product');
+            // Continue without images - it's a warning, not an error
+        }
+        
         // Log the form data for debugging
         console.log("Form data being sent:");
         for (let [key, value] of formData.entries()) {
             if (key !== 'images') {
                 console.log(key, value);
             } else {
-                console.log(key, "File object");
+                console.log(key, "File object", value instanceof File ? `(${value.name}, ${value.size} bytes)` : 'Not a file');
             }
         }
         
-        // Make the API request to create the product
-        const response = await fetch(`${window.API_URL}/products`, {
+        // Make the API request to create the product with timeout protection
+        console.log('Sending product data to API:', window.API_URL);
+        
+        const fetchPromise = fetch(`${window.API_URL}/products`, {
             method: 'POST',
             body: formData,
             // No need to set Content-Type with FormData, it's set automatically with proper boundary
@@ -486,6 +580,10 @@ async function handleFormSubmit(e) {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
+        
+        // Race between the fetch and the timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        console.log('Received response from server with status:', response.status);
         
         // Parse the JSON response
         let result;
@@ -516,6 +614,11 @@ async function handleFormSubmit(e) {
     } catch (error) {
         console.error('Error creating product:', error);
         showNotification(`Failed to add product: ${error.message}`, 'danger');
+        
+        // Log extra diagnostic information for specific errors
+        if (error.message.includes('timeout')) {
+            console.error('Request timed out. This might indicate a server-side issue or large file uploads.');
+        }
     } finally {
         // Reset button state
         submitBtn.disabled = false;
