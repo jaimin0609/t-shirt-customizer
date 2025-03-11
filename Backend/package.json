@@ -10,8 +10,7 @@
     "create-admin": "node scripts/createAdmin.js",
     "reset-admin": "node scripts/resetAdminCredentials.js",
     "check-admins": "node scripts/checkAdminUsers.js",
-    "coupon-manager": "node scripts/couponManager.js",
-    "install": "npm install --legacy-peer-deps"
+    "coupon-manager": "node scripts/couponManager.js"
   },
   "keywords": [],
   "author": "",
