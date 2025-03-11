@@ -17,8 +17,8 @@ import { Op } from 'sequelize';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define operators 
-const Op = Sequelize.Op;
+// Define operators - removing duplicate declaration
+// const Op = Sequelize.Op; 
 
 const router = express.Router();
 
