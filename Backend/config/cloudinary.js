@@ -120,6 +120,29 @@ const uploadImage = (imagePath, options = {}) => {
       return reject(new Error(`File not found: ${imagePath}`));
     }
     
+    // Security: Validate file extension for files before upload
+    if (imagePath && !imagePath.startsWith('http')) {
+      const ext = path.extname(imagePath).toLowerCase();
+      const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      
+      if (!validExtensions.includes(ext)) {
+        console.error(`Security: Invalid file extension: ${ext}`);
+        return reject(new Error('Invalid file type'));
+      }
+      
+      // Optional: Add size check for local files
+      try {
+        const stats = fs.statSync(imagePath);
+        const fileSizeInMB = stats.size / (1024 * 1024);
+        if (fileSizeInMB > 5) { // Limit file size to 5MB
+          console.error(`Security: File too large: ${fileSizeInMB}MB`);
+          return reject(new Error('File too large (max 5MB)'));
+        }
+      } catch (err) {
+        console.warn('Could not check file size:', err.message);
+      }
+    }
+    
     // Upload to Cloudinary
     cloudinary.uploader.upload(imagePath, (error, result) => {
       if (error) {

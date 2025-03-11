@@ -2,6 +2,30 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// URL validation helper to prevent SSRF attacks
+const validateUrl = (url) => {
+    try {
+        const parsedUrl = new URL(url);
+        const allowedHosts = [
+            new URL(API_URL).hostname,
+            'localhost',
+            '127.0.0.1'
+        ];
+        
+        // Only allow URLs from our API or localhost
+        if (!allowedHosts.includes(parsedUrl.hostname)) {
+            console.error('Security: Blocked request to unauthorized host:', parsedUrl.hostname);
+            throw new Error('URL not allowed');
+        }
+        
+        return url;
+    } catch (error) {
+        // If the URL is malformed or not allowed, default to the API URL
+        console.error('Invalid URL detected, using safe default');
+        return API_URL;
+    }
+};
+
 class AuthService {
     constructor() {
         this.token = localStorage.getItem('token');
@@ -24,7 +48,7 @@ class AuthService {
             axios.interceptors.response.eject(this.responseInterceptor);
         }
         
-        // Add token to all requests if it exists
+        // Add token to all requests if it exists and validate URLs
         this.requestInterceptor = axios.interceptors.request.use(
             (config) => {
                 // Get the latest token from localStorage (not from instance variable)
@@ -32,6 +56,12 @@ class AuthService {
                 if (currentToken) {
                     config.headers.Authorization = `Bearer ${currentToken}`;
                 }
+                
+                // Validate URL to prevent SSRF
+                if (config.url && !config.url.startsWith('/')) {
+                    config.url = validateUrl(config.url);
+                }
+                
                 return config;
             },
             (error) => {

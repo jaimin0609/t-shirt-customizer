@@ -121,3 +121,30 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Three.js for 3D rendering capabilities
 - Tailwind CSS for the UI framework
 - All open-source libraries used in this project 
+
+## Security Updates
+
+The following security improvements have been implemented:
+
+### Dependency Updates
+- Updated `sharp` to version 0.33.2 to fix CVE-2023-4863 vulnerability
+- Added `lodash` override (^4.17.21) to fix prototype pollution vulnerability
+- Added `glob-parent` override (^5.1.2) to fix security issues
+
+### Authentication & Authorization
+- Removed hardcoded JWT fallback secrets
+- Improved JWT token validation
+- Added proper error handling for missing JWT secrets
+
+### API Security
+- Added URL validation to prevent SSRF attacks in axios requests
+- Improved CORS configuration with stricter origin checks in production
+- Enhanced Content Security Policy (CSP) headers
+- Added file type validation for uploads
+
+### Development Environment
+- Restricted Vite development server to localhost only
+- Added security headers to development server
+- Removed unused and duplicate files
+
+For more details on security best practices, see [SECURITY.md](SECURITY.md). 

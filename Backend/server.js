@@ -106,16 +106,31 @@ app.use(cors({
             console.log('Allowed origins:', allowedOrigins);
         }
         
-        // In production, be more permissive initially to avoid deployment issues
+        // Production security check
         if (process.env.NODE_ENV === 'production') {
-            return callback(null, true); // Allow all origins in production temporarily
+            // Check if the origin is in our allowed list
+            if (allowedOrigins.includes(origin) || 
+                // Check for wildcard domains
+                allowedOrigins.some(allowed => {
+                    if (allowed.includes('*')) {
+                        const wildcardDomain = allowed.replace('*', '').replace('https://*.', '');
+                        return origin.includes(wildcardDomain);
+                    }
+                    return false;
+                })) {
+                return callback(null, true);
+            }
+            
+            console.warn('CORS blocked production request from:', origin);
+            return callback(new Error('CORS not allowed'), false);
         }
         
+        // More permissive in development
         if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
             callback(null, true);
         } else {
-            console.log('CORS blocked request from:', origin);
-            callback(null, true); // Allow all origins temporarily for debugging
+            console.log('CORS blocked development request from:', origin);
+            callback(null, true); // Allow all origins in development
         }
     },
     credentials: true,
@@ -133,13 +148,14 @@ if (process.env.NODE_ENV === 'production') {
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-                imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://img.icons8.com", "http://localhost:5173", "http://localhost:5002", "*"],
-                connectSrc: ["'self'", "https://api.stripe.com", "http://localhost:5002", "*"],
+                imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://img.icons8.com", "https://res.cloudinary.com"],
+                connectSrc: ["'self'", "https://api.stripe.com"],
                 fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
                 frameSrc: ["'self'", "https://js.stripe.com"],
-                scriptSrcAttr: ["'unsafe-inline'"]
+                scriptSrcAttr: ["'unsafe-inline'"],
+                upgradeInsecureRequests: []
             },
         },
         crossOriginEmbedderPolicy: false,
