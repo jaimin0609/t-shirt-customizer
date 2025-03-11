@@ -4,42 +4,72 @@ function debug(message, data) {
     console.log(`[${timestamp}] ${message}`, data || '');
 }
 
-// Log initial setup
-debug('Analytics dashboard initializing');
-
-// Use the global API_URL if already defined, otherwise set a default
-if (typeof window.API_URL === 'undefined') {
-    console.log('API_URL not defined in window, setting default value in main.js');
-    window.API_URL = '/api';
-} else {
-    console.log('Using existing API_URL:', window.API_URL);
-}
-
-// Global chart variables
-let sessionsChart = null;
-let pageviewsChart = null;
-
-// Current selected date range
-let currentDateRange = '7days';
-
-// Initialize charts and dashboard functionality
+// Initialize the dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[' + new Date().toLocaleTimeString() + '] Analytics dashboard initializing');
+    
+    // Ensure we have the API URL
+    if (typeof window.API_URL === 'undefined') {
+        window.API_URL = '/api';
+    }
+    console.log('Using existing API_URL:', window.API_URL);
+    
+    // Initialize UI components
     initializeSidebar();
-    initializeCharts();
     initializeDropdowns();
     initializeDateRangeButtons();
-    loadAnalyticsData(currentDateRange);
     
-    const avatarInput = document.getElementById('avatarInput');
-    if (avatarInput) {
-        avatarInput.addEventListener('change', handleProfileImageUpload);
+    // Force destroy any existing charts to prevent the "already in use" error
+    destroyAllCharts();
+    
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        console.error('No authentication token found. Redirecting to login.');
+        window.location.href = '/admin/login.html';
+        return;
     }
     
-    const profileForm = document.getElementById('profileForm');
-    if (profileForm) {
-        profileForm.addEventListener('submit', updateProfile);
-    }
+    // Fetch initial analytics data
+    loadAnalyticsData('7days');
 });
+
+// Global variables for chart instances
+window.sessionsChart = null;
+window.pageviewsChart = null;
+window.currentDateRange = '7days';
+
+/**
+ * Destroy all charts to prevent "Canvas is already in use" errors
+ */
+function destroyAllCharts() {
+    try {
+        // Find all canvas elements for charts
+        const canvases = document.querySelectorAll('canvas');
+        canvases.forEach(canvas => {
+            // Get the chart instance if it exists
+            const chartInstance = Chart.getChart(canvas);
+            if (chartInstance) {
+                console.log('Destroying existing chart on canvas:', canvas.id);
+                chartInstance.destroy();
+            }
+        });
+        
+        // Also reset our global variables
+        if (window.sessionsChart) {
+            window.sessionsChart.destroy();
+            window.sessionsChart = null;
+        }
+        
+        if (window.pageviewsChart) {
+            window.pageviewsChart.destroy();
+            window.pageviewsChart = null;
+        }
+    } catch (e) {
+        console.error('Error destroying charts:', e);
+    }
+}
 
 // Sidebar Toggle
 function initializeSidebar() {
@@ -167,130 +197,85 @@ function initializeCharts() {
 }
 
 /**
- * Load analytics data from the API
+ * Load analytics data from the server
  * @param {string} range - The date range to load (7days, 14days, 30days)
  */
 async function loadAnalyticsData(range = '7days') {
-    debug('Loading analytics data for range:', range);
+    console.log(`Loading analytics data for range: ${range}`);
     
-    // Track loading time for better UX
-    const loadingStart = performance.now();
+    // Show loading state
+    document.querySelectorAll('.stat-card').forEach(card => {
+        card.querySelector('.stat-value').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+        card.querySelector('.stat-change').textContent = '';
+    });
+    
+    // Show loading overlay on charts
+    document.querySelectorAll('.chart-container').forEach(container => {
+        container.classList.add('loading');
+        const loader = document.createElement('div');
+        loader.className = 'chart-loader';
+        loader.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+        container.appendChild(loader);
+    });
+    
+    // Get authentication token
+    const token = localStorage.getItem('token');
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
     
     try {
-        // Add loading state to all stat cards
-        document.querySelectorAll('.stat-card').forEach(card => {
-            card.classList.add('loading');
-            
-            // Add loading overlay to charts if not present
-            if (card.querySelector('.chart-container')) {
-                const parent = card.querySelector('.chart-container');
-                if (!parent.querySelector('.chart-loading')) {
-                    const loadingDiv = document.createElement('div');
-                    loadingDiv.className = 'chart-loading position-absolute w-100 h-100 d-flex align-items-center justify-content-center';
-                    loadingDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-                    loadingDiv.style.top = '0';
-                    loadingDiv.style.left = '0';
-                    loadingDiv.style.width = '100%';
-                    loadingDiv.style.height = '100%';
-                    loadingDiv.style.display = 'flex';
-                    loadingDiv.style.alignItems = 'center';
-                    loadingDiv.style.justifyContent = 'center';
-                    loadingDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-                    loadingDiv.style.zIndex = '1';
-                    parent.style.position = 'relative';
-                    parent.appendChild(loadingDiv);
-                }
-            }
-        });
-        
-        // Get the authentication token
-        const token = localStorage.getItem('token');
-        if (!token) {
-            debug('No authentication token found');
-            throw new Error('Authentication required');
-        }
-        
-        debug('Making analytics request with token', { range, tokenExists: !!token });
-        
-        // Fetch analytics data with the selected date range and authentication
+        // Make the API request with proper authentication
         const response = await fetch(`${window.API_URL}/analytics?range=${range}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
                 'Accept': 'application/json'
             }
         });
         
+        // Handle HTTP errors
         if (!response.ok) {
-            debug('Analytics API error', { status: response.status });
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        // Parse the response
         const data = await response.json();
-        debug('Analytics data received', data);
+        console.log('Analytics data loaded:', data);
         
-        // Ensure minimum loading time of 500ms for better UX
-        const loadingTime = performance.now() - loadingStart;
-        if (loadingTime < 500) {
-            await new Promise(resolve => setTimeout(resolve, 500 - loadingTime));
-        }
-        
-        // Update the analytics data display
+        // Update UI with the loaded data
         updateAnalyticsCards(data);
+        
+        // Remove loading overlays
+        document.querySelectorAll('.chart-container').forEach(container => {
+            container.classList.remove('loading');
+            const loader = container.querySelector('.chart-loader');
+            if (loader) {
+                loader.remove();
+            }
+        });
+        
+        // Update charts with new data
+        destroyAllCharts(); // Ensure charts are destroyed before creating new ones
         updateCharts(data);
-        
-        // Remove loading states
-        document.querySelectorAll('.stat-card').forEach(card => {
-            card.classList.remove('loading');
-        });
-        
-        document.querySelectorAll('.chart-loading').forEach(loading => {
-            loading.remove();
-        });
         
     } catch (error) {
         console.error('Error loading analytics data:', error);
         
-        // Use fallback data if API fails
-        const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const fallbackData = {
-            pageviews: { 
-                value: '125.4K', 
-                change: 15, 
-                data: [1200, 1500, 2000, 1700, 1900, 2200, 1800],
-                labels: labels
-            },
-            avgSession: { 
-                value: '1m 12s', 
-                change: -3,
-                data: [75, 85, 70, 90, 80, 95, 72],
-                labels: labels
-            },
-            visitors: { 
-                value: '10.2K', 
-                change: 8,
-                data: [450, 550, 600, 500, 620, 580, 650],
-                labels: labels
-            },
-            bounceRate: { 
-                value: '49.7%', 
-                change: -5,
-                data: [52, 48, 45, 50, 47, 46, 49],
-                labels: labels
-            }
-        };
-        
-        // Use fallback data for the display
-        updateAnalyticsCards(fallbackData);
-        updateCharts(fallbackData);
-        
-        // Remove loading states
+        // Show error state in UI
         document.querySelectorAll('.stat-card').forEach(card => {
-            card.classList.remove('loading');
+            card.querySelector('.stat-value').textContent = 'N/A';
+            card.querySelector('.stat-change').textContent = 'Error loading data';
         });
         
-        document.querySelectorAll('.chart-loading').forEach(loading => {
-            loading.remove();
+        // Remove loading overlays
+        document.querySelectorAll('.chart-container').forEach(container => {
+            container.classList.remove('loading');
+            const loader = container.querySelector('.chart-loader');
+            if (loader) {
+                loader.remove();
+            }
         });
     }
 }
@@ -353,160 +338,148 @@ function updateCard(type, value, change) {
 }
 
 /**
- * Update charts with new data
- * @param {Object} data - The analytics data
+ * Update chart displays with analytics data
+ * @param {Object} data - Analytics data from API
  */
 function updateCharts(data) {
-    debug('Updating charts with data', data);
-    
-    // Default labels if none provided
-    const labels = data.pageviews?.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    // Check if the sessions chart element exists
-    const sessionsElement = document.getElementById('sessionsChart');
-    if (sessionsElement) {
-        try {
-            // IMPORTANT: Destroy the previous chart instance to prevent the "Canvas is already in use" error
-            if (window.sessionsChart) {
-                window.sessionsChart.destroy();
-            }
-            
-            // Get sessions data from the API response
-            const sessionsData = data.avgSession?.data || [];
-            debug('Sessions data for chart:', sessionsData);
-            
-            // Create new chart
-            const sessionsCtx = sessionsElement.getContext('2d');
-            window.sessionsChart = new Chart(sessionsCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Sessions',
-                        data: sessionsData,
-                        backgroundColor: 'rgba(66, 133, 244, 0.2)',
-                        borderColor: 'rgba(66, 133, 244, 1)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        pointBackgroundColor: 'rgba(66, 133, 244, 1)',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y + ' sessions';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                borderDash: [3, 3],
-                                drawBorder: false
-                            },
-                            ticks: {
-                                stepSize: 25
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            }
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error creating sessions chart:', error);
+    // Update Sessions Chart
+    try {
+        const sessionsCanvas = document.getElementById('sessionsChart');
+        if (!sessionsCanvas) {
+            console.warn('Sessions chart canvas not found');
+            return;
         }
-    }
-    
-    // Check if the pageviews chart element exists
-    const pageviewsElement = document.getElementById('pageviewsChart');
-    if (pageviewsElement) {
-        try {
-            // IMPORTANT: Destroy the previous chart instance to prevent the "Canvas is already in use" error
-            if (window.pageviewsChart) {
-                window.pageviewsChart.destroy();
-            }
-            
-            // Get pageviews data from the API response
-            const pageviewsData = data.pageviews?.data || [];
-            debug('Pageviews data for chart:', pageviewsData);
-            
-            // Create new chart
-            const pageviewsCtx = pageviewsElement.getContext('2d');
-            window.pageviewsChart = new Chart(pageviewsCtx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Pageviews',
-                        data: pageviewsData,
-                        backgroundColor: 'rgba(66, 133, 244, 0.2)',
-                        borderColor: 'rgba(66, 133, 244, 1)',
+
+        console.log('Sessions data for chart:', data.sessions?.data || []);
+        
+        // Create Sessions Chart
+        const sessionsCtx = sessionsCanvas.getContext('2d');
+        
+        // Create the chart
+        window.sessionsChart = new Chart(sessionsCtx, {
+            type: 'line',
+            data: {
+                labels: data.sessions?.labels || [],
+                datasets: [{
+                    label: 'Sessions',
+                    data: data.sessions?.data || [],
+                    borderColor: '#4e73df',
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    pointBackgroundColor: '#4e73df',
+                    pointBorderColor: '#fff',
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#5a5c69',
+                        bodyColor: '#858796',
+                        borderColor: '#dddfeb',
                         borderWidth: 1,
-                        borderRadius: 4,
-                        maxBarThickness: 25
-                    }]
+                        titleMarginBottom: 10,
+                        displayColors: false
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y.toLocaleString() + ' pageviews';
-                                }
-                            }
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                borderDash: [3, 3],
-                                drawBorder: false
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    if (value >= 1000) {
-                                        return (value / 1000) + 'k';
-                                    }
-                                    return value;
-                                }
-                            }
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [2],
+                            drawBorder: false
                         },
-                        x: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            }
+                        ticks: {
+                            precision: 0
                         }
                     }
                 }
-            });
-        } catch (error) {
-            console.error('Error creating pageviews chart:', error);
+            }
+        });
+    } catch (error) {
+        console.error('Error creating sessions chart:', error);
+    }
+
+    // Update Pageviews Chart
+    try {
+        const pageviewsCanvas = document.getElementById('pageviewsChart');
+        if (!pageviewsCanvas) {
+            console.warn('Pageviews chart canvas not found');
+            return;
         }
+
+        console.log('Pageviews data for chart:', data.pageviews?.data || []);
+        
+        // Create Pageviews Chart
+        const pageviewsCtx = pageviewsCanvas.getContext('2d');
+        
+        // Create the chart
+        window.pageviewsChart = new Chart(pageviewsCtx, {
+            type: 'bar',
+            data: {
+                labels: data.pageviews?.labels || [],
+                datasets: [{
+                    label: 'Pageviews',
+                    data: data.pageviews?.data || [],
+                    backgroundColor: '#36b9cc',
+                    borderWidth: 0,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#5a5c69',
+                        bodyColor: '#858796',
+                        borderColor: '#dddfeb',
+                        borderWidth: 1,
+                        titleMarginBottom: 10,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [2],
+                            drawBorder: false
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error creating pageviews chart:', error);
     }
 }
 
@@ -596,7 +569,7 @@ function initializeDateRangeButtons() {
                 
                 // Get the range from button ID
                 const range = this.id.replace('btn', '').toLowerCase();
-                currentDateRange = range;
+                window.currentDateRange = range;
                 console.log('Selected range:', range);
                 
                 // Load data for selected range

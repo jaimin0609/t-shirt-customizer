@@ -52,39 +52,96 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the profile modal
         setTimeout(() => showProfileModal(), 500);
     }
+
+    // Set up error handling for avatar images
+    setupAvatarErrorHandling();
 });
 
 /**
- * Get the proper URL for an image path that might be local or remote
+ * Get the correctly formatted URL for an image
  * @param {string} imagePath - The image path from the server
- * @returns {string} - The proper URL to use in src attributes
+ * @returns {string} - The formatted image URL
  */
 function getImageUrl(imagePath) {
-    // Default avatar if no image path is provided
+    // If no image path provided, return default avatar
     if (!imagePath) {
-        console.log('No profile image path provided, using default avatar');
-        return '/admin/img/default-avatar.png';
+        console.log("No profile image path provided, using default avatar");
+        return '/admin/assets/img/avatar-default.png';
     }
     
-    // If it's already a full URL (Cloudinary or other external source)
+    // Check if it's already a full URL 
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        // For production URLs that might have changed deployment locations
+        // Handle specifically the render.com domain
         if (imagePath.includes('t-shirt-customizer-backend.onrender.com')) {
-            // Extract just the filename from the path
-            const filename = imagePath.split('/').pop();
-            console.log('Converting remote URL to local path:', filename);
+            // Extract just the filename part
+            const parts = imagePath.split('/');
+            const filename = parts[parts.length - 1];
+            console.log("Converting remote render.com URL to local path, filename:", filename);
             
-            // Use the current origin instead
-            return `/uploads/profiles/${filename}`;
+            // For profile images
+            if (filename.startsWith('profile-')) {
+                return `/uploads/profiles/${filename}`;
+            }
+            // For other uploads
+            return `/uploads/${filename}`;
         }
+        // It's a full URL from another source, use as is
         return imagePath;
     }
     
-    // For relative URLs, use current origin to make them absolute
-    return `${window.location.origin}${imagePath}`;
+    // If it starts with a slash, it's a relative path from the root
+    if (imagePath.startsWith('/')) {
+        // Make the URL absolute by appending the current origin
+        return window.location.origin + imagePath;
+    }
+    
+    // Otherwise, assume it's a relative path from the current directory
+    return imagePath;
 }
 
-// Load user profile data
+/**
+ * Set up error handling for all avatar images
+ */
+function setupAvatarErrorHandling() {
+    // Select all avatar images in the document
+    const avatarImages = document.querySelectorAll('img.avatar-img, img.profile-img');
+    
+    avatarImages.forEach(img => {
+        if (!img.hasAttribute('data-error-handled')) {
+            img.setAttribute('data-error-handled', 'true');
+            
+            img.onerror = function() {
+                console.warn(`Avatar image failed to load: ${this.src}`);
+                
+                // If this is already the default avatar, don't try to replace it
+                if (this.src.includes('avatar-default.png')) {
+                    console.log('Already using default avatar, not replacing');
+                    return;
+                }
+                
+                // If the URL is from render.com, try to load a local version
+                if (this.src.includes('t-shirt-customizer-backend.onrender.com')) {
+                    const parts = this.src.split('/');
+                    const filename = parts[parts.length - 1];
+                    console.log(`Trying local path for: ${filename}`);
+                    this.src = `/uploads/profiles/${filename}`;
+                    return;
+                }
+                
+                // Set default avatar as fallback
+                console.log('Setting default avatar as fallback');
+                this.src = '/admin/assets/img/avatar-default.png';
+                
+                // Remove error handler to prevent loops
+                this.onerror = null;
+            };
+        }
+    });
+}
+
+/**
+ * Load user profile data
+ */
 async function loadUserProfile() {
     try {
         const token = localStorage.getItem('token');
@@ -107,58 +164,32 @@ async function loadUserProfile() {
         const userData = await response.json();
         console.log('User profile data:', userData);
         
-        // Update UI with user data
+        // Update user info in the profile modal if it exists
         const userNameElement = document.getElementById('userName');
         if (userNameElement) {
             userNameElement.textContent = userData.name || 'Admin';
         }
         
-        // If user has a profile image, update the avatar
-        if (userData.profileImage) {
-            const avatarUrl = getImageUrl(userData.profileImage);
-            console.log('Setting avatar image to:', avatarUrl);
-            
-            // Update all avatar instances in the UI
-            const avatars = document.querySelectorAll('.avatar, #userAvatar, .rounded-circle');
-            avatars.forEach(avatar => {
-                // Only update if it's an image element
-                if (avatar.tagName.toLowerCase() === 'img') {
-                    // Set default before loading new image
-                    if (!avatar.getAttribute('data-default-set')) {
-                        avatar.setAttribute('data-default-src', '/admin/img/default-avatar.png');
-                        avatar.setAttribute('data-default-set', 'true');
-                    }
-                    
-                    // Add error handler before setting src
-                    avatar.onerror = function() {
-                        console.warn('Profile image failed to load, using default avatar');
-                        
-                        // Try local path if URL failed
-                        if (this.src.startsWith('http')) {
-                            // Extract filename and try local path
-                            const filename = this.src.split('/').pop();
-                            const localUrl = `/uploads/profiles/${filename}`;
-                            console.log('Trying local path instead:', localUrl);
-                            
-                            // Keep original error handler but set a flag to prevent infinite loops
-                            if (!this.getAttribute('data-tried-local')) {
-                                this.setAttribute('data-tried-local', 'true');
-                                this.src = localUrl;
-                                return;
-                            }
-                        }
-                        
-                        // If we get here, both remote and local paths failed
-                        this.src = this.getAttribute('data-default-src') || '/admin/img/default-avatar.png';
-                        // Remove the error handler to prevent infinite loops
-                        this.onerror = null;
-                    };
-                    
-                    // Set the image src after setting up error handler
-                    avatar.src = avatarUrl;
-                }
-            });
+        const userEmailElement = document.getElementById('userEmail');
+        if (userEmailElement) {
+            userEmailElement.textContent = userData.email || '';
         }
+        
+        const userRoleElement = document.getElementById('userRole');
+        if (userRoleElement) {
+            userRoleElement.textContent = userData.role ? userData.role.charAt(0).toUpperCase() + userData.role.slice(1) : 'User';
+        }
+        
+        // Update all avatar images with the user's profile image
+        const avatarUrl = getImageUrl(userData.profileImage);
+        console.log('Setting avatar image to:', avatarUrl);
+        
+        document.querySelectorAll('img.avatar-img, img.profile-img').forEach(img => {
+            img.src = avatarUrl;
+        });
+        
+        // Set up error handling for all avatar images
+        setupAvatarErrorHandling();
         
         return userData;
     } catch (error) {
@@ -249,9 +280,8 @@ async function saveProfile() {
             const avatarUrl = getImageUrl(updatedUser.profileImage);
             console.log('Updated avatar image to:', avatarUrl);
             
-            const avatars = document.querySelectorAll('.avatar, #userAvatar, .rounded-circle');
-            avatars.forEach(avatar => {
-                avatar.src = avatarUrl;
+            document.querySelectorAll('img.avatar-img, img.profile-img').forEach(img => {
+                img.src = avatarUrl;
             });
         }
         

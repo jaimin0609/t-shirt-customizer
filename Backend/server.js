@@ -157,7 +157,7 @@ if (process.env.NODE_ENV === 'production') {
                     "http://localhost:5002",
                     "https://t-shirt-customizer-backend.onrender.com"
                 ],
-                connectSrc: ["'self'", "https://api.cloudinary.com"],
+                connectSrc: ["'self'", "https://api.cloudinary.com", "*"],
                 fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
