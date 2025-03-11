@@ -936,13 +936,30 @@ router.put('/:id', auth, isAdmin, upload.array('images', 5), async (req, res) =>
 router.delete('/:id', auth, isAdmin, async (req, res) => {
     try {
         console.log(`Attempting to delete product with ID: ${req.params.id}`);
+        console.log('User:', req.user ? `ID: ${req.user.id}, Role: ${req.user.role}` : 'Not authenticated');
         
-        const product = await Product.findByPk(req.params.id);
+        // Verify user has admin rights
+        if (!req.user || req.user.role !== 'admin') {
+            console.log('User is not an admin');
+            return res.status(403).json({ message: 'Not authorized to delete products' });
+        }
         
+        // Find the product with explicit error handling
+        let product;
+        try {
+            product = await Product.findByPk(req.params.id);
+        } catch (findError) {
+            console.error('Database error finding product:', findError);
+            return res.status(500).json({ message: 'Database error', error: findError.message });
+        }
+        
+        // Check if product exists
         if (!product) {
             console.log(`Product with ID ${req.params.id} not found`);
             return res.status(404).json({ message: 'Product not found' });
         }
+        
+        console.log(`Found product: ${product.name} (ID: ${product.id})`);
 
         // First, check if product has variants
         if (product.hasVariants) {
@@ -964,11 +981,10 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
             }
         }
 
-        // Now proceed with image deletion
-        console.log('Handling product images...');
-        
-        // Handle Cloudinary images (don't attempt to delete local files for Cloudinary URLs)
+        // Handle image processing in a try/catch block to prevent it from aborting the delete
         try {
+            console.log('Processing product images...');
+            
             // Handle the 'images' array field
             if (product.images) {
                 let imagesArray = product.images;
@@ -985,94 +1001,48 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
                 
                 if (Array.isArray(imagesArray)) {
                     console.log(`Processing ${imagesArray.length} images from images array`);
-                    for (const imgPath of imagesArray) {
-                        if (typeof imgPath === 'string') {
-                            // Skip Cloudinary URLs for local file deletion
-                            if (imgPath.includes('cloudinary.com')) {
-                                console.log(`Skipping Cloudinary image: ${imgPath}`);
-                                continue;
-                            }
-                            
-                            // Only try to delete local files
-                            if (imgPath.startsWith('/')) {
-                                const fullPath = path.join(__dirname, '../public', imgPath);
-                                console.log(`Checking local image at: ${fullPath}`);
-                                if (fs.existsSync(fullPath)) {
-                                    console.log(`Deleting local image: ${fullPath}`);
-                                    fs.unlinkSync(fullPath);
-                                } else {
-                                    console.log(`Local image not found at: ${fullPath}`);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Delete main image (legacy field)
-            if (product.image && typeof product.image === 'string') {
-                // Skip Cloudinary URLs
-                if (!product.image.includes('cloudinary.com') && product.image.startsWith('/')) {
-                    const imagePath = path.join(__dirname, '../public', product.image);
-                    console.log(`Checking main image at: ${imagePath}`);
-                    if (fs.existsSync(imagePath)) {
-                        console.log(`Deleting main image: ${imagePath}`);
-                        fs.unlinkSync(imagePath);
-                    } else {
-                        console.log(`Main image not found at: ${imagePath}`);
-                    }
-                } else {
-                    console.log(`Skipping Cloudinary main image: ${product.image}`);
-                }
-            }
-            
-            // Delete thumbnail
-            if (product.thumbnail && product.thumbnail !== product.image && typeof product.thumbnail === 'string') {
-                // Skip Cloudinary URLs
-                if (!product.thumbnail.includes('cloudinary.com') && product.thumbnail.startsWith('/')) {
-                    const thumbnailPath = path.join(__dirname, '../public', product.thumbnail);
-                    console.log(`Checking thumbnail at: ${thumbnailPath}`);
-                    if (fs.existsSync(thumbnailPath)) {
-                        console.log(`Deleting thumbnail: ${thumbnailPath}`);
-                        fs.unlinkSync(thumbnailPath);
-                    } else {
-                        console.log(`Thumbnail not found at: ${thumbnailPath}`);
-                    }
-                } else {
-                    console.log(`Skipping Cloudinary thumbnail: ${product.thumbnail}`);
+                    // Just log the images, don't try to delete Cloudinary images
+                    imagesArray.forEach((imgPath, index) => {
+                        console.log(`Image ${index + 1}:`, imgPath);
+                    });
                 }
             }
         } catch (imageError) {
-            // Log error but continue with product deletion
-            console.error('Error handling product images during deletion:', imageError);
+            console.error('Error processing images (non-fatal):', imageError);
+            // Continue with product deletion
         }
 
         // Finally delete the product
-        console.log(`Deleting product with ID: ${product.id}`);
-        await product.destroy();
-        console.log(`Product successfully deleted`);
-        
-        res.status(200).json({ message: 'Product deleted successfully' });
+        try {
+            console.log(`Deleting product with ID: ${product.id}`);
+            await product.destroy();
+            console.log(`Product successfully deleted`);
+            
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Product deleted successfully',
+                productId: req.params.id
+            });
+        } catch (deleteError) {
+            console.error('Error during product.destroy():', deleteError);
+            
+            // Check for foreign key constraint violations
+            if (deleteError.name === 'SequelizeForeignKeyConstraintError') {
+                return res.status(400).json({ 
+                    message: 'Cannot delete product because it is referenced by other records',
+                    error: deleteError.message,
+                    table: deleteError.table || 'unknown'
+                });
+            }
+            
+            throw deleteError; // Re-throw to be caught by the outer catch
+        }
     } catch (error) {
         console.error('Error deleting product:', error);
         
-        // Provide more detailed error information
-        let errorMessage = 'Error deleting product';
-        
-        // Check for foreign key constraint error
-        if (error.name === 'SequelizeForeignKeyConstraintError') {
-            errorMessage = 'Cannot delete product because it is referenced by other records in the database';
-            
-            // Check which tables still reference this product
-            if (error.table) {
-                errorMessage += ` (in table: ${error.table})`;
-            }
-        }
-        
-        res.status(500).json({ 
-            message: errorMessage,
-            error: error.message,
-            details: process.env.NODE_ENV === 'development' ? error : undefined
+        return res.status(500).json({ 
+            message: 'Error deleting product',
+            error: error.message
         });
     }
 });

@@ -307,7 +307,35 @@ async function deleteProduct(productId) {
         
         console.log(`Deleting product ${productId}...`);
         
-        const response = await fetch(`${window.API_URL}/products/${productId}`, {
+        // Debug: Log the full URL and headers being sent
+        const deleteUrl = `${window.API_URL}/products/${productId}`;
+        console.log('DELETE request to:', deleteUrl);
+        console.log('Authorization token (first 10 chars):', token.substring(0, 10) + '...');
+        
+        // First try to fetch the product to confirm it exists
+        try {
+            const checkResponse = await fetch(`${window.API_URL}/products/${productId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!checkResponse.ok) {
+                console.error(`Product ${productId} not found or not accessible`);
+                throw new Error(`Product not found or not accessible. Status: ${checkResponse.status}`);
+            }
+            
+            const productData = await checkResponse.json();
+            console.log(`Product ${productId} exists:`, productData.name || 'Unknown name');
+        } catch (checkError) {
+            console.error('Error checking product existence:', checkError);
+            // Continue with delete anyway
+        }
+        
+        // Attempt to delete the product
+        const response = await fetch(deleteUrl, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -317,6 +345,7 @@ async function deleteProduct(productId) {
         
         // Check response status
         console.log('Delete response status:', response.status);
+        console.log('Delete response headers:', Object.fromEntries(response.headers.entries()));
         
         // Try to parse error message from response when available
         let errorMessage = 'Failed to delete product';
@@ -327,14 +356,14 @@ async function deleteProduct(productId) {
             try {
                 const errorData = await response.json();
                 errorMessage = errorData.message || errorMessage;
-                console.error('Server error:', errorData);
+                console.error('Server error details:', errorData);
             } catch (parseError) {
                 // If not JSON, try to get text
                 try {
                     const errorText = await response.text();
-                    console.error('Server response:', errorText);
+                    console.error('Server response (text):', errorText);
                 } catch (textError) {
-                    console.error('Could not parse error response');
+                    console.error('Could not parse error response:', textError);
                 }
             }
             
@@ -348,8 +377,18 @@ async function deleteProduct(productId) {
             }
             
             throw new Error(errorMessage);
+        } else {
+            // Successfully deleted
+            try {
+                // Try to parse success response
+                const successData = await response.json();
+                console.log('Success response:', successData);
+            } catch (e) {
+                console.log('No JSON in success response (expected for 204 No Content)');
+            }
         }
         
+        console.log('Product deleted successfully');
         showToast('success', 'Product deleted successfully');
         loadProducts(); // Reload the table
     } catch (error) {
