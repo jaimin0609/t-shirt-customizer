@@ -693,6 +693,52 @@
                 alert('Error testing dropdown: ' + error.message);
             }
         }
+
+        function testCategoryLoading() {
+            console.log('Testing category loading...');
+            
+            try {
+                // Clear existing categories to force reload
+                const categorySelect = document.getElementById('productCategory');
+                if (categorySelect) {
+                    // Save current value if any
+                    const currentValue = categorySelect.value;
+                    
+                    // Clear all options
+                    categorySelect.innerHTML = '';
+                    
+                    // Reload categories
+                    loadCategories();
+                    
+                    // Show toast notification
+                    showToast('info', 'Reloading categories... Check console for details.');
+                    
+                    // Log debug information
+                    setTimeout(() => {
+                        // Check status after a short delay
+                        const optionsCount = categorySelect.options.length;
+                        console.log(`Categories reload status: ${optionsCount > 1 ? 'Success' : 'Failed'}`);
+                        console.log(`Found ${optionsCount} options in the dropdown`);
+                        
+                        if (optionsCount > 1) {
+                            showToast('success', `Successfully loaded ${optionsCount} categories`);
+                        } else {
+                            showToast('error', 'Failed to load categories');
+                        }
+                    }, 1000);
+                } else {
+                    console.error('Category select element not found!');
+                    showToast('error', 'Category select element not found!');
+                }
+            } catch (error) {
+                console.error('Error in test category loading:', error);
+                showToast('error', `Error: ${error.message}`);
+            }
+        }
+
+        function testShowToast() {
+            showToast('success', 'This is a test toast message');
+        }
     </script>
 </body>
 </html> 

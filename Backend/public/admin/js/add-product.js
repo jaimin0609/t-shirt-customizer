@@ -114,9 +114,22 @@ function loadCategories() {
     categorySelect.innerHTML = '<option value="">Loading categories...</option>';
     categorySelect.disabled = true;
     
+    // Make sure dropdown is visible in DOM and CSS
+    categorySelect.style.display = 'block';
+    categorySelect.style.visibility = 'visible';
+    categorySelect.style.opacity = '1';
+    
+    console.log('Category select before fetch:', {
+        id: categorySelect.id,
+        options: categorySelect.options.length,
+        display: categorySelect.style.display,
+        visible: categorySelect.style.visibility
+    });
+    
     // Try fetching from API but have a short timeout to fail gracefully
     const fetchPromise = fetch(`${window.API_URL}/products/categories/all`)
         .then(response => {
+            console.log('Category API response status:', response.status);
             if (!response.ok) {
                 throw new Error(`Failed to fetch categories (${response.status})`);
             }
@@ -138,8 +151,15 @@ function loadCategories() {
                 throw new Error('Invalid categories data format');
             }
             
-            // Populate the dropdown
-            populateCategoriesDropdown(categories);
+            // Add small delay to ensure DOM is ready
+            setTimeout(() => {
+                // Populate the dropdown
+                populateCategoriesDropdown(categories);
+                
+                // Force a refresh of the select element
+                const event = new Event('change');
+                categorySelect.dispatchEvent(event);
+            }, 100);
         })
         .catch(error => {
             console.warn('Error loading categories from API:', error);
@@ -174,7 +194,16 @@ function loadCategories() {
                 categorySelect.style.display = 'none';
                 setTimeout(() => {
                     categorySelect.style.display = 'block';
-                }, 10);
+                    
+                    // Check final state
+                    console.log('Category select after population:', {
+                        id: categorySelect.id,
+                        options: categorySelect.options.length,
+                        selectedIndex: categorySelect.selectedIndex,
+                        value: categorySelect.value,
+                        display: window.getComputedStyle(categorySelect).display
+                    });
+                }, 50);
             }, 100);
         });
 }
@@ -188,6 +217,8 @@ function populateCategoriesDropdown(categories) {
         console.error('Category select element not found!');
         return;
     }
+    
+    console.log('Populating dropdown with', categories.length, 'categories');
     
     // Clear existing options
     categorySelect.innerHTML = '';
@@ -218,8 +249,8 @@ function populateCategoriesDropdown(categories) {
     
     console.log('Categories dropdown populated with', categories.length, 'items');
     
-    // Debug: Log the HTML content of the dropdown
-    console.log('Dropdown HTML:', categorySelect.outerHTML);
+    // Manually select the default option
+    categorySelect.selectedIndex = 0;
 }
 
 /**
