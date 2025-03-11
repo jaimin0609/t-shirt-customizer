@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build script for Render.com deployment
+# Build script for Render.com deployment - Simplified version
 
-echo "Starting build process..."
+echo "Starting simplified build process..."
 echo "Current directory: $(pwd)"
 echo "Directory contents: $(ls -la)"
 
@@ -17,19 +17,22 @@ fi
 
 echo "Directory contents: $(ls -la)"
 
-# Install dependencies with legacy-peer-deps flag
-echo "Installing dependencies with --legacy-peer-deps flag..."
-echo "Using --no-scripts to prevent installation loops..."
-# Use --no-scripts to prevent running scripts during installation
-npm install --legacy-peer-deps --no-scripts
+# Disable all lifecycle scripts to prevent loops
+echo "Creating .npmrc file to disable scripts..."
+echo "ignore-scripts=true" > .npmrc
+cat .npmrc
+
+# Direct installation with all safeguards enabled
+echo "Installing dependencies with all safeguards..."
+npm ci --no-audit --no-fund --ignore-scripts --legacy-peer-deps
 
 # Check for errors
 if [ $? -ne 0 ]; then
-  echo "Error during npm install. Trying with force..."
-  npm install --force --no-scripts
+  echo "Error during npm ci. Trying with npm install..."
+  npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps --no-package-lock
   
   if [ $? -ne 0 ]; then
-    echo "Build failed even with --force flag."
+    echo "Build failed even with fallback approach."
     exit 1
   fi
 fi
