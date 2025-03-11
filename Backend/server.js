@@ -146,19 +146,27 @@ if (process.env.NODE_ENV === 'production') {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com"],
-                styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-                imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://img.icons8.com", "https://res.cloudinary.com"],
-                connectSrc: ["'self'", "https://api.stripe.com"],
-                fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+                imgSrc: [
+                    "'self'", 
+                    "data:", 
+                    "https://cdn.jsdelivr.net", 
+                    "https://img.icons8.com", 
+                    "https://res.cloudinary.com",
+                    "http://localhost:5002",
+                    "https://t-shirt-customizer-backend.onrender.com"
+                ],
+                connectSrc: ["'self'", "https://api.cloudinary.com"],
+                fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
-                frameSrc: ["'self'", "https://js.stripe.com"],
-                scriptSrcAttr: ["'unsafe-inline'"],
-                upgradeInsecureRequests: []
-            },
+                frameSrc: ["'self'"]
+            }
         },
-        crossOriginEmbedderPolicy: false,
+        xssFilter: true,
+        noSniff: true,
+        referrerPolicy: { policy: 'same-origin' }
     }));
     
     // Add rate limiting in production

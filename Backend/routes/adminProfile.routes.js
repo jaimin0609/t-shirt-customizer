@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 import { fileURLToPath } from 'url';
 import { User } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
+import { cloudinaryEnabled, uploadToCloudinary } from '../config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,17 +98,52 @@ router.put('/profile', auth, isAdmin, upload.single('profileImage'), async (req,
         if (req.file) {
             console.log('Processing new profile image');
             
-            // Delete old profile image if exists
-            if (user.profileImage && user.profileImage.startsWith('/uploads/profiles/')) {
-                const oldImagePath = path.join(__dirname, '../public', user.profileImage);
-                if (fs.existsSync(oldImagePath)) {
-                    fs.unlinkSync(oldImagePath);
-                    console.log('Deleted old profile image:', oldImagePath);
+            try {
+                let imageUrl = '';
+                
+                // Use Cloudinary if enabled
+                if (cloudinaryEnabled) {
+                    console.log('Uploading profile image to Cloudinary');
+                    
+                    // Upload to Cloudinary
+                    const result = await uploadToCloudinary(req.file.path, {
+                        folder: 'profiles',
+                        transformation: [
+                            { width: 500, height: 500, crop: 'limit' },
+                            { quality: 'auto' }
+                        ]
+                    });
+                    
+                    // Get the Cloudinary URL
+                    imageUrl = result.secure_url;
+                    console.log('Cloudinary upload successful:', imageUrl);
+                    
+                    // Clean up local file after Cloudinary upload
+                    fs.unlinkSync(req.file.path);
+                    console.log('Local temporary file cleaned up');
+                } else {
+                    // Use local file storage
+                    imageUrl = `/uploads/profiles/${req.file.filename}`;
+                    console.log('Using local file storage:', imageUrl);
                 }
+                
+                // Delete old profile image if exists and is a local file
+                if (user.profileImage && user.profileImage.startsWith('/uploads/profiles/')) {
+                    const oldImagePath = path.join(__dirname, '../public', user.profileImage);
+                    if (fs.existsSync(oldImagePath)) {
+                        fs.unlinkSync(oldImagePath);
+                        console.log('Deleted old profile image:', oldImagePath);
+                    }
+                }
+                
+                // Update the profile image URL
+                updateData.profileImage = imageUrl;
+                console.log('New profile image path:', updateData.profileImage);
+            } catch (imageError) {
+                console.error('Error processing profile image:', imageError);
+                // Continue with update but without changing the profile image
+                console.log('Continuing update without changing profile image');
             }
-            
-            updateData.profileImage = `/uploads/profiles/${req.file.filename}`;
-            console.log('New profile image path:', updateData.profileImage);
         }
         
         console.log('Updating user with data:', updateData);

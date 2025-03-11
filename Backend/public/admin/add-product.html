@@ -559,91 +559,49 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin/js/config.js"></script>
+    <!-- JavaScript libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom scripts -->
     <script src="/admin/js/utils.js"></script>
+    <script src="/admin/js/config.js"></script>
     <script src="/admin/js/layout.js"></script>
+    <script src="/admin/js/variants.js"></script>
     <script src="/admin/js/profile.js"></script>
     <script src="/admin/js/language.js"></script>
-    <script src="/admin/js/variants.js"></script>
     <script src="/admin/js/add-product.js"></script>
-    <script src="/admin/js/auth.js"></script>
-    <script src="/admin/js/debug-product-form.js"></script>
+    <!-- Debug script for development - remove in production -->
+    <!-- <script src="/admin/js/debug-product-form.js"></script> -->
+    
+    <!-- Testing code - to be removed -->
     <script>
-        // Debug functions
-        function testCategoryLoading() {
-            console.log('Testing category loading...');
-            const sampleCategories = [
-                { id: 1, name: 'T-Shirts' },
-                { id: 2, name: 'Hoodies' },
-                { id: 3, name: 'Accessories' },
-                { id: 4, name: 'Caps' },
-                { id: 5, name: 'Mugs' }
-            ];
-            
-            const categorySelect = document.getElementById('productCategory');
-            if (categorySelect) {
-                categorySelect.innerHTML = '<option value="">Select Category</option>';
-                
-                sampleCategories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category.name;
-                    option.textContent = category.name;
-                    categorySelect.appendChild(option);
-                });
-                
-                alert('Categories loaded successfully!');
-            } else {
-                alert('ERROR: Category select element not found!');
-            }
-        }
-        
-        function testShowToast() {
-            try {
-                console.log('Testing toast display...');
-                
-                const toast = document.getElementById('toast');
-                const toastTitle = document.getElementById('toastTitle');
-                const toastMessage = document.getElementById('toastMessage');
-                
-                if (!toast || !toastTitle || !toastMessage) {
-                    alert('Toast elements not found! Using alert instead.');
-                    return;
-                }
-                
-                toastTitle.textContent = 'Test Toast';
-                toastMessage.textContent = 'This is a test toast message!';
-                
-                const bsToast = new bootstrap.Toast(toast);
-                bsToast.show();
-            } catch (error) {
-                alert('ERROR showing toast: ' + error.message);
-            }
-        }
-        
-        // Fix for Image Upload
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, setting up image upload...');
-            const dropzoneContainer = document.querySelector('.dropzone-container');
-            const productImages = document.getElementById('productImages');
             
-            if (dropzoneContainer && productImages) {
+            // Make dropzone container clickable
+            const dropzoneContainer = document.querySelector('.dropzone-container');
+            if (dropzoneContainer) {
                 dropzoneContainer.addEventListener('click', function(e) {
-                    console.log('Dropzone clicked');
-                    if (e.target !== productImages) {
-                        productImages.click();
+                    console.log('Dropzone click handler set up');
+                    const fileInput = document.getElementById('productImages');
+                    if (fileInput) {
+                        fileInput.click();
                     }
                 });
-                
-                console.log('Dropzone click handler set up');
-            } else {
-                console.error('ERROR: Dropzone or product images element not found');
             }
-            
-            // Automatically test category loading
-            setTimeout(testCategoryLoading, 1000);
         });
+        
+        /* 
+        // Test to ensure category loading works
+        setTimeout(() => {
+            console.log('Testing category loading...');
+            // Make an API call to get categories
+            fetch('/api/products/categories/all')
+                .then(res => res.json())
+                .then(data => console.log('Categories loaded:', data))
+                .catch(err => console.error('Error loading categories:', err));
+        }, 2000);
+        */
     </script>
 </body>
 </html> 
