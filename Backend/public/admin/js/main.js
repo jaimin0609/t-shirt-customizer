@@ -166,25 +166,28 @@ function initializeCharts() {
     }
 }
 
-// Load Analytics Data
-async function loadAnalyticsData(range) {
+/**
+ * Load analytics data from the API
+ * @param {string} range - The date range to load (7days, 14days, 30days)
+ */
+async function loadAnalyticsData(range = '7days') {
+    debug('Loading analytics data for range:', range);
+    
+    // Track loading time for better UX
+    const loadingStart = performance.now();
+    
     try {
-        const loadingStart = performance.now();
-        
-        // Show loading state in cards
+        // Add loading state to all stat cards
         document.querySelectorAll('.stat-card').forEach(card => {
             card.classList.add('loading');
-        });
-        
-        // Add loading overlay to charts
-        document.querySelectorAll('#sessionsChart, #pageviewsChart').forEach(chart => {
-            if (chart) {
-                const parent = chart.parentElement;
+            
+            // Add loading overlay to charts if not present
+            if (card.querySelector('.chart-container')) {
+                const parent = card.querySelector('.chart-container');
                 if (!parent.querySelector('.chart-loading')) {
                     const loadingDiv = document.createElement('div');
-                    loadingDiv.className = 'chart-loading';
+                    loadingDiv.className = 'chart-loading position-absolute w-100 h-100 d-flex align-items-center justify-content-center';
                     loadingDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-                    loadingDiv.style.position = 'absolute';
                     loadingDiv.style.top = '0';
                     loadingDiv.style.left = '0';
                     loadingDiv.style.width = '100%';
@@ -200,18 +203,31 @@ async function loadAnalyticsData(range) {
             }
         });
         
-        // Fetch analytics data with the selected date range
+        // Get the authentication token
         const token = localStorage.getItem('token');
-        const response = await fetch(window.API_URL + '/analytics?range=' + range, {
+        if (!token) {
+            debug('No authentication token found');
+            throw new Error('Authentication required');
+        }
+        
+        debug('Making analytics request with token', { range, tokenExists: !!token });
+        
+        // Fetch analytics data with the selected date range and authentication
+        const response = await fetch(`${window.API_URL}/analytics?range=${range}`, {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
             }
         });
+        
         if (!response.ok) {
+            debug('Analytics API error', { status: response.status });
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
+        debug('Analytics data received', data);
         
         // Ensure minimum loading time of 500ms for better UX
         const loadingTime = performance.now() - loadingStart;
@@ -219,9 +235,7 @@ async function loadAnalyticsData(range) {
             await new Promise(resolve => setTimeout(resolve, 500 - loadingTime));
         }
         
-        console.log('Analytics data received:', data);
-        
-        // Use the API response directly - it already has the right format
+        // Update the analytics data display
         updateAnalyticsCards(data);
         updateCharts(data);
         
@@ -263,11 +277,10 @@ async function loadAnalyticsData(range) {
                 change: -5,
                 data: [52, 48, 45, 50, 47, 46, 49],
                 labels: labels
-            },
-            sessionsData: [75, 85, 70, 90, 80, 95, 72], // Use avgSession data for sessions
-            pageviewsData: [1200, 1500, 2000, 1700, 1900, 2200, 1800]
+            }
         };
         
+        // Use fallback data for the display
         updateAnalyticsCards(fallbackData);
         updateCharts(fallbackData);
         
@@ -339,28 +352,32 @@ function updateCard(type, value, change) {
     }
 }
 
-// Function to update charts with new data
+/**
+ * Update charts with new data
+ * @param {Object} data - The analytics data
+ */
 function updateCharts(data) {
+    debug('Updating charts with data', data);
+    
     // Default labels if none provided
     const labels = data.pageviews?.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     
-    // Check if the sessions chart exists
-    if (document.getElementById('sessionsChart')) {
+    // Check if the sessions chart element exists
+    const sessionsElement = document.getElementById('sessionsChart');
+    if (sessionsElement) {
         try {
-            // Destroy previous chart instance if it exists
-            if (sessionsChart) {
-                sessionsChart.destroy();
+            // IMPORTANT: Destroy the previous chart instance to prevent the "Canvas is already in use" error
+            if (window.sessionsChart) {
+                window.sessionsChart.destroy();
             }
             
             // Get sessions data from the API response
-            // The API returns data in avgSession.data for sessions
             const sessionsData = data.avgSession?.data || [];
-            
-            console.log('Sessions data for chart:', sessionsData);
+            debug('Sessions data for chart:', sessionsData);
             
             // Create new chart
-            const sessionsCtx = document.getElementById('sessionsChart').getContext('2d');
-            sessionsChart = new Chart(sessionsCtx, {
+            const sessionsCtx = sessionsElement.getContext('2d');
+            window.sessionsChart = new Chart(sessionsCtx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -399,11 +416,15 @@ function updateCharts(data) {
                             grid: {
                                 borderDash: [3, 3],
                                 drawBorder: false
+                            },
+                            ticks: {
+                                stepSize: 25
                             }
                         },
                         x: {
                             grid: {
-                                display: false
+                                display: false,
+                                drawBorder: false
                             }
                         }
                     }
@@ -413,31 +434,34 @@ function updateCharts(data) {
             console.error('Error creating sessions chart:', error);
         }
     }
-
-    // Check if the pageviews chart exists
-    if (document.getElementById('pageviewsChart')) {
+    
+    // Check if the pageviews chart element exists
+    const pageviewsElement = document.getElementById('pageviewsChart');
+    if (pageviewsElement) {
         try {
-            // Destroy previous chart instance if it exists
-            if (pageviewsChart) {
-                pageviewsChart.destroy();
+            // IMPORTANT: Destroy the previous chart instance to prevent the "Canvas is already in use" error
+            if (window.pageviewsChart) {
+                window.pageviewsChart.destroy();
             }
             
             // Get pageviews data from the API response
             const pageviewsData = data.pageviews?.data || [];
-            
-            console.log('Pageviews data for chart:', pageviewsData);
+            debug('Pageviews data for chart:', pageviewsData);
             
             // Create new chart
-            const pageviewsCtx = document.getElementById('pageviewsChart').getContext('2d');
-            pageviewsChart = new Chart(pageviewsCtx, {
+            const pageviewsCtx = pageviewsElement.getContext('2d');
+            window.pageviewsChart = new Chart(pageviewsCtx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Pageviews',
                         data: pageviewsData,
-                        backgroundColor: '#0d6efd',
-                        borderRadius: 4
+                        backgroundColor: 'rgba(66, 133, 244, 0.2)',
+                        borderColor: 'rgba(66, 133, 244, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        maxBarThickness: 25
                     }]
                 },
                 options: {
@@ -461,11 +485,20 @@ function updateCharts(data) {
                             grid: {
                                 borderDash: [3, 3],
                                 drawBorder: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000) {
+                                        return (value / 1000) + 'k';
+                                    }
+                                    return value;
+                                }
                             }
                         },
                         x: {
                             grid: {
-                                display: false
+                                display: false,
+                                drawBorder: false
                             }
                         }
                     }

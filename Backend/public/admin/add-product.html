@@ -573,10 +573,24 @@
     <!-- Debug script for development - remove in production -->
     <!-- <script src="/admin/js/debug-product-form.js"></script> -->
     
-    <!-- Testing code - to be removed -->
+    <!-- Accessibility fixes -->
     <script>
+        // Fix for aria-hidden accessibility issue on modal
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, setting up image upload...');
+            const profileModal = document.getElementById('profileModal');
+            if (profileModal) {
+                profileModal.addEventListener('show.bs.modal', function() {
+                    // Remove aria-hidden when modal is shown to fix accessibility warning
+                    setTimeout(() => {
+                        this.removeAttribute('aria-hidden');
+                    }, 100);
+                });
+                
+                profileModal.addEventListener('hidden.bs.modal', function() {
+                    // Restore aria-hidden when modal is hidden
+                    this.setAttribute('aria-hidden', 'true');
+                });
+            }
             
             // Make dropzone container clickable
             const dropzoneContainer = document.querySelector('.dropzone-container');
@@ -590,18 +604,6 @@
                 });
             }
         });
-        
-        /* 
-        // Test to ensure category loading works
-        setTimeout(() => {
-            console.log('Testing category loading...');
-            // Make an API call to get categories
-            fetch('/api/products/categories/all')
-                .then(res => res.json())
-                .then(data => console.log('Categories loaded:', data))
-                .catch(err => console.error('Error loading categories:', err));
-        }, 2000);
-        */
     </script>
 </body>
 </html> 

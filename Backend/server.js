@@ -162,9 +162,12 @@ if (process.env.NODE_ENV === 'production') {
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
                 frameSrc: ["'self'"],
-                scriptSrcAttr: ["'unsafe-inline'"]  // Allow inline event handlers
+                scriptSrcAttr: ["'unsafe-inline'"],  // Allow inline event handlers
+                upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
             }
         },
+        crossOriginEmbedderPolicy: false,
+        crossOriginOpenerPolicy: false,
         xssFilter: true,
         noSniff: true,
         referrerPolicy: { policy: 'same-origin' }

@@ -60,7 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
  * @returns {string} - The proper URL to use in src attributes
  */
 function getImageUrl(imagePath) {
+    // Default avatar if no image path is provided
     if (!imagePath) {
+        console.log('No profile image path provided, using default avatar');
         return '/admin/img/default-avatar.png';
     }
     
@@ -70,9 +72,10 @@ function getImageUrl(imagePath) {
         if (imagePath.includes('t-shirt-customizer-backend.onrender.com')) {
             // Extract just the filename from the path
             const filename = imagePath.split('/').pop();
+            console.log('Converting remote URL to local path:', filename);
             
             // Use the current origin instead
-            return `${window.location.origin}/uploads/profiles/${filename}`;
+            return `/uploads/profiles/${filename}`;
         }
         return imagePath;
     }
@@ -105,7 +108,10 @@ async function loadUserProfile() {
         console.log('User profile data:', userData);
         
         // Update UI with user data
-        document.getElementById('userName').textContent = userData.name || 'Admin';
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            userNameElement.textContent = userData.name || 'Admin';
+        }
         
         // If user has a profile image, update the avatar
         if (userData.profileImage) {
@@ -115,15 +121,42 @@ async function loadUserProfile() {
             // Update all avatar instances in the UI
             const avatars = document.querySelectorAll('.avatar, #userAvatar, .rounded-circle');
             avatars.forEach(avatar => {
-                avatar.src = avatarUrl;
-                
-                // Add error handler to fall back to default avatar if image fails to load
-                avatar.onerror = function() {
-                    console.warn('Profile image failed to load, using default avatar');
-                    this.src = '/admin/img/default-avatar.png';
-                    // Remove the error handler to prevent infinite loops
-                    this.onerror = null;
-                };
+                // Only update if it's an image element
+                if (avatar.tagName.toLowerCase() === 'img') {
+                    // Set default before loading new image
+                    if (!avatar.getAttribute('data-default-set')) {
+                        avatar.setAttribute('data-default-src', '/admin/img/default-avatar.png');
+                        avatar.setAttribute('data-default-set', 'true');
+                    }
+                    
+                    // Add error handler before setting src
+                    avatar.onerror = function() {
+                        console.warn('Profile image failed to load, using default avatar');
+                        
+                        // Try local path if URL failed
+                        if (this.src.startsWith('http')) {
+                            // Extract filename and try local path
+                            const filename = this.src.split('/').pop();
+                            const localUrl = `/uploads/profiles/${filename}`;
+                            console.log('Trying local path instead:', localUrl);
+                            
+                            // Keep original error handler but set a flag to prevent infinite loops
+                            if (!this.getAttribute('data-tried-local')) {
+                                this.setAttribute('data-tried-local', 'true');
+                                this.src = localUrl;
+                                return;
+                            }
+                        }
+                        
+                        // If we get here, both remote and local paths failed
+                        this.src = this.getAttribute('data-default-src') || '/admin/img/default-avatar.png';
+                        // Remove the error handler to prevent infinite loops
+                        this.onerror = null;
+                    };
+                    
+                    // Set the image src after setting up error handler
+                    avatar.src = avatarUrl;
+                }
             });
         }
         
