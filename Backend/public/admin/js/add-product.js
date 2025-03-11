@@ -54,6 +54,48 @@ function initializeForm() {
     if (customizableCheckbox) customizableCheckbox.checked = false;
     
     console.log('Form initialized with default values');
+    
+    // Add responsive improvements for mobile devices
+    if (window.innerWidth < 768) {
+        // Make dropzone smaller on mobile
+        const dropzone = document.querySelector('.dropzone-container');
+        if (dropzone) {
+            dropzone.style.minHeight = '120px';
+        }
+        
+        // Simplify variant UI on mobile
+        const variantRows = document.querySelectorAll('.variant-row');
+        variantRows.forEach(row => {
+            row.classList.add('mb-4');
+        });
+        
+        // Better mobile UX for color picker
+        const colorPickers = document.querySelectorAll('input[type="color"]');
+        colorPickers.forEach(picker => {
+            picker.style.minHeight = '44px';
+            picker.style.minWidth = '44px';
+        });
+    }
+    
+    // Add window resize listener for responsive behavior
+    window.addEventListener('resize', function() {
+        const isMobile = window.innerWidth < 768;
+        
+        // Adjust UI based on screen size
+        const dropzone = document.querySelector('.dropzone-container');
+        if (dropzone) {
+            dropzone.style.minHeight = isMobile ? '120px' : '200px';
+        }
+        
+        // Adjust variant UI based on screen size
+        document.querySelectorAll('.variant-row').forEach(row => {
+            if (isMobile) {
+                row.classList.add('mb-4');
+            } else {
+                row.classList.remove('mb-4');
+            }
+        });
+    });
 }
 
 /**
