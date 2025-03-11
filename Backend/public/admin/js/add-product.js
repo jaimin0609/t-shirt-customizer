@@ -524,6 +524,8 @@ function hideLoading() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
+    console.log("🚀 FORM SUBMISSION STARTED");
+    
     // Show loading state
     const submitBtn = document.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
@@ -535,6 +537,9 @@ async function handleFormSubmit(e) {
         setTimeout(() => reject(new Error('Request timed out after 45 seconds')), 45000);
     });
     
+    // Create a debug panel in the console
+    console.group("📋 PRODUCT FORM DEBUG");
+    
     try {
         console.log('Starting product submission...');
         showLoading();
@@ -542,6 +547,13 @@ async function handleFormSubmit(e) {
         // Create a new FormData object directly (fixing potential issues)
         const form = document.getElementById('addProductForm');
         const formData = new FormData();
+        
+        // DEBUG SUMMARY
+        console.log("Form Details:", {
+            formElement: form ? "Found" : "Missing",
+            authToken: localStorage.getItem('token') ? "Present" : "Missing",
+            apiUrl: window.API_URL
+        });
         
         // Manually add all the form fields to ensure proper values
         // This avoids issues with disabled fields, checkboxes, etc.
@@ -554,13 +566,14 @@ async function handleFormSubmit(e) {
         const categorySelect = document.getElementById('productCategory');
         if (categorySelect && categorySelect.value) {
             formData.append('category', categorySelect.value);
-            console.log('Added category:', categorySelect.value);
+            console.log('✅ Added category:', categorySelect.value);
         } else {
-            console.warn('No category selected!');
+            console.warn('⚠️ No category selected!');
             showNotification('Please select a product category', 'warning');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnText;
             hideLoading();
+            console.groupEnd();
             return; // Stop the submission
         }
         
@@ -574,90 +587,174 @@ async function handleFormSubmit(e) {
         // Add featured as boolean
         formData.append('featured', document.getElementById('productFeatured').checked ? 'true' : 'false');
         
-        // Add customization options if any are present
-        const customizationOptions = [];
-        document.querySelectorAll('.customization-option:checked').forEach(option => {
-            customizationOptions.push(option.value);
-        });
-        formData.append('customizationOptions', JSON.stringify(customizationOptions));
+        // STEP 1: CUSTOMIZATION OPTIONS - DEBUG SECTION
+        console.group("🛠️ Customization Options");
+        try {
+            // Add customization options if any are present
+            const customizationOptions = [];
+            document.querySelectorAll('.customization-option:checked').forEach(option => {
+                customizationOptions.push(option.value);
+            });
+            formData.append('customizationOptions', JSON.stringify(customizationOptions));
+            console.log('✅ Added customization options:', customizationOptions);
+        } catch (customizationError) {
+            console.error('❌ Error adding customization options:', customizationError);
+            // Continue submission despite this error
+        }
+        console.groupEnd();
         
-        // Process image uploads - critical fix
+        // STEP 2: IMAGE UPLOADS - DEBUG SECTION
+        console.group("🖼️ Image Processing");
         const imageInput = document.getElementById('productImages');
-        console.log('Image files selected:', imageInput.files?.length || 0);
+        console.log('Image input element found:', !!imageInput);
+        console.log('Image files selected:', imageInput?.files?.length || 0);
         
-        if (imageInput && imageInput.files && imageInput.files.length > 0) {
-            // Add each file individually with explicit type checking
-            for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
-                const file = imageInput.files[i];
+        let imageProcessingSuccess = false;
+        
+        try {
+            if (imageInput && imageInput.files && imageInput.files.length > 0) {
+                console.log(`Processing ${imageInput.files.length} image files...`);
+                // Add each file individually with explicit type checking
+                let successfulImages = 0;
                 
-                // Verify it's an image file
-                if (file.type.startsWith('image/')) {
-                    console.log(`Adding image file ${i+1}:`, file.name, file.type, file.size);
+                for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
+                    const file = imageInput.files[i];
                     
-                    // Important: Use 'images' as the field name to match server expectation
-                    formData.append('images', file);
-                } else {
-                    console.warn(`Skipping non-image file: ${file.name} (${file.type})`);
+                    // Verify it's an image file
+                    if (file.type.startsWith('image/')) {
+                        try {
+                            console.log(`Adding image ${i+1}: ${file.name} (${file.size} bytes, ${file.type})`);
+                            
+                            // Important: Use 'images' as the field name to match server expectation
+                            formData.append('images', file);
+                            successfulImages++;
+                        } catch (singleImageError) {
+                            console.error(`❌ Error adding image ${i+1}:`, singleImageError);
+                        }
+                    } else {
+                        console.warn(`⚠️ Skipping non-image file: ${file.name} (${file.type})`);
+                    }
                 }
+                
+                if (successfulImages > 0) {
+                    console.log(`✅ Successfully processed ${successfulImages} images`);
+                    imageProcessingSuccess = true;
+                } else {
+                    console.warn('⚠️ No images were successfully processed');
+                }
+            } else {
+                console.log('⚠️ No image files selected - continuing without images');
+                imageProcessingSuccess = true; // No images is still a success case
             }
-        } else {
-            console.warn('No image files selected');
-            // Continue without images - will show warning but not block submission
+        } catch (imageError) {
+            console.error('❌ Error processing images:', imageError);
+            // Continue submission despite image errors
         }
+        console.groupEnd();
         
-        // Add variant data from the variant system
-        if (window.variantSystem && typeof window.variantSystem.areVariantsEnabled === 'function') {
-            const hasVariants = window.variantSystem.areVariantsEnabled();
-            formData.append('hasVariants', hasVariants ? 'true' : 'false');
-            
-            if (hasVariants) {
-                // Get color variants
-                const colorVariants = window.variantSystem.getColorVariants();
+        // STEP 3: VARIANTS - DEBUG SECTION
+        console.group("🔄 Product Variants");
+        let variantProcessingSuccess = false;
+        
+        try {
+            // Add variant data from the variant system
+            if (window.variantSystem && typeof window.variantSystem.areVariantsEnabled === 'function') {
+                const hasVariants = window.variantSystem.areVariantsEnabled();
+                formData.append('hasVariants', hasVariants ? 'true' : 'false');
+                console.log('Has variants:', hasVariants);
                 
-                // Validate color variants
-                if (Array.isArray(colorVariants) && colorVariants.length > 0) {
-                    // Make sure all required fields are present and valid
-                    const validColorVariants = colorVariants.map(variant => ({
-                        color: String(variant.color || ''),
-                        colorCode: String(variant.colorCode || ''),
-                        stock: parseInt(variant.stock || 0, 10),
-                        priceAdjustment: parseFloat(variant.priceAdjustment || 0)
-                    }));
-                    formData.append('colorVariantsData', JSON.stringify(validColorVariants));
-                    console.log('Valid color variants:', validColorVariants);
-                } else {
-                    console.warn('No color variants provided or invalid format');
-                    formData.append('colorVariantsData', JSON.stringify([]));
+                if (hasVariants) {
+                    try {
+                        // Get color variants
+                        const colorVariants = window.variantSystem.getColorVariants();
+                        console.log('Raw color variants:', colorVariants);
+                        
+                        // Validate color variants
+                        if (Array.isArray(colorVariants) && colorVariants.length > 0) {
+                            // Make sure all required fields are present and valid
+                            const validColorVariants = colorVariants.map(variant => ({
+                                color: String(variant.color || ''),
+                                colorCode: String(variant.colorCode || ''),
+                                stock: parseInt(variant.stock || 0, 10),
+                                priceAdjustment: parseFloat(variant.priceAdjustment || 0)
+                            }));
+                            
+                            const colorJson = JSON.stringify(validColorVariants);
+                            formData.append('colorVariantsData', colorJson);
+                            console.log('✅ Added color variants:', validColorVariants.length);
+                            console.log('Color variants JSON length:', colorJson.length);
+                        } else {
+                            console.warn('⚠️ No color variants provided or invalid format');
+                            formData.append('colorVariantsData', JSON.stringify([]));
+                        }
+                    } catch (colorError) {
+                        console.error('❌ Error processing color variants:', colorError);
+                        formData.append('colorVariantsData', JSON.stringify([]));
+                    }
+                    
+                    try {
+                        // Get size variants
+                        const sizeVariants = window.variantSystem.getSizeVariants();
+                        console.log('Raw size variants:', sizeVariants);
+                        
+                        // Validate size variants
+                        if (Array.isArray(sizeVariants) && sizeVariants.length > 0) {
+                            // Make sure all required fields are present and valid
+                            const validSizeVariants = sizeVariants.map(variant => ({
+                                size: String(variant.size || ''),
+                                stock: parseInt(variant.stock || 0, 10),
+                                priceAdjustment: parseFloat(variant.priceAdjustment || 0)
+                            }));
+                            
+                            const sizeJson = JSON.stringify(validSizeVariants);
+                            formData.append('sizeVariantsData', sizeJson);
+                            console.log('✅ Added size variants:', validSizeVariants.length);
+                            console.log('Size variants JSON length:', sizeJson.length);
+                        } else {
+                            console.warn('⚠️ No size variants provided or invalid format');
+                            formData.append('sizeVariantsData', JSON.stringify([]));
+                        }
+                    } catch (sizeError) {
+                        console.error('❌ Error processing size variants:', sizeError);
+                        formData.append('sizeVariantsData', JSON.stringify([]));
+                    }
                 }
-                
-                // Get size variants
-                const sizeVariants = window.variantSystem.getSizeVariants();
-                
-                // Validate size variants
-                if (Array.isArray(sizeVariants) && sizeVariants.length > 0) {
-                    // Make sure all required fields are present and valid
-                    const validSizeVariants = sizeVariants.map(variant => ({
-                        size: String(variant.size || ''),
-                        stock: parseInt(variant.stock || 0, 10),
-                        priceAdjustment: parseFloat(variant.priceAdjustment || 0)
-                    }));
-                    formData.append('sizeVariantsData', JSON.stringify(validSizeVariants));
-                    console.log('Valid size variants:', validSizeVariants);
-                } else {
-                    console.warn('No size variants provided or invalid format');
-                    formData.append('sizeVariantsData', JSON.stringify([]));
-                }
+                variantProcessingSuccess = true;
+            } else {
+                console.warn('⚠️ Variant system not available');
+                formData.append('hasVariants', 'false');
+                formData.append('colorVariantsData', JSON.stringify([]));
+                formData.append('sizeVariantsData', JSON.stringify([]));
+                variantProcessingSuccess = true; // No variants is still a success case
             }
-        } else {
+        } catch (variantError) {
+            console.error('❌ Error processing variants:', variantError);
+            // Continue submission despite variant errors
             formData.append('hasVariants', 'false');
-            console.warn('Variant system not available');
         }
+        console.groupEnd();
         
-        // Add tags if the tag input exists
-        const tags = getTagsFromInput();
-        if (tags.length > 0) {
-            formData.append('tags', tags.join(','));
+        // STEP 4: TAGS - DEBUG SECTION
+        console.group("🏷️ Product Tags");
+        let tagsProcessingSuccess = false;
+        
+        try {
+            // Add tags if the tag input exists
+            const tags = getTagsFromInput();
+            console.log('Retrieved tags:', tags);
+            
+            if (tags.length > 0) {
+                formData.append('tags', tags.join(','));
+                console.log('✅ Added tags:', tags.join(','));
+            } else {
+                console.log('⚠️ No tags provided');
+            }
+            tagsProcessingSuccess = true;
+        } catch (tagsError) {
+            console.error('❌ Error processing tags:', tagsError);
+            // Continue submission despite tag errors
         }
+        console.groupEnd();
         
         // Validate required fields to make sure we have them
         const requiredFields = ['name', 'price'];
@@ -673,15 +770,23 @@ async function handleFormSubmit(e) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
         
-        // Log the form data for debugging
-        console.log("Form data being sent:");
+        // Log the complete form data for debugging
+        console.group("📤 Final Form Data Being Sent");
         for (let [key, value] of formData.entries()) {
             if (key !== 'images') {
-                console.log(key, value);
+                console.log(`${key}:`, value);
             } else {
-                console.log(key, "File object", value instanceof File ? `(${value.name}, ${value.size} bytes, ${value.type})` : 'Not a file');
+                console.log(`${key}:`, `File object (${value.name}, ${value.size} bytes, ${value.type})`);
             }
         }
+        console.groupEnd();
+        
+        // STATUS CHECK BEFORE SUBMISSION
+        console.log("⚠️ Component Status Check:", {
+            images: imageProcessingSuccess ? "✅ OK" : "❌ Failed",
+            variants: variantProcessingSuccess ? "✅ OK" : "❌ Failed",
+            tags: tagsProcessingSuccess ? "✅ OK" : "❌ Failed"
+        });
         
         // Make the API request to create the product with timeout protection
         console.log('Sending product data to API:', window.API_URL);
@@ -696,6 +801,8 @@ async function handleFormSubmit(e) {
             throw new Error('Authentication token not found');
         }
         
+        // THE ACTUAL API REQUEST
+        console.log("🔄 Starting API request...");
         const fetchPromise = fetch(`${window.API_URL}/products`, {
             method: 'POST',
             body: formData,
@@ -706,8 +813,13 @@ async function handleFormSubmit(e) {
         });
         
         // Race between the fetch and the timeout
+        console.time("API Request Duration");
+        
+        // This is the crucial point where the request might be hanging
         const response = await Promise.race([fetchPromise, timeoutPromise]);
-        console.log('Received response from server with status:', response.status);
+        console.timeEnd("API Request Duration");
+        
+        console.log('✅ Received response from server with status:', response.status);
         
         // Parse the JSON response
         let result;
@@ -741,7 +853,7 @@ async function handleFormSubmit(e) {
             }
         }, 1500);
     } catch (error) {
-        console.error('Error creating product:', error);
+        console.error('❌ Error creating product:', error);
         showNotification(`Failed to add product: ${error.message}`, 'danger');
         
         // Log extra diagnostic information for specific errors
@@ -753,6 +865,7 @@ async function handleFormSubmit(e) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
         hideLoading();
+        console.groupEnd(); // End the main debug group
     }
 }
 
