@@ -961,24 +961,44 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
         
         console.log(`Found product: ${product.name} (ID: ${product.id})`);
 
-        // First, check if product has variants
-        if (product.hasVariants) {
-            console.log(`Product has variants. Deleting variants first...`);
+        // ALWAYS attempt to delete variants first, regardless of hasVariants flag
+        console.log(`Attempting to delete any variants for product ${req.params.id}...`);
+        
+        try {
+            // First check if there are any variants
+            const variantCount = await ProductVariant.count({
+                where: { productId: req.params.id }
+            });
             
-            try {
+            console.log(`Found ${variantCount} variants for product ${req.params.id}`);
+            
+            if (variantCount > 0) {
                 // Delete all related product variants first
                 const deletedVariants = await ProductVariant.destroy({
-                    where: { productId: product.id }
+                    where: { productId: req.params.id }
                 });
                 
                 console.log(`Successfully deleted ${deletedVariants} product variants`);
-            } catch (variantError) {
-                console.error('Error deleting product variants:', variantError);
-                return res.status(500).json({ 
-                    message: 'Error deleting product variants',
-                    error: variantError.message
+                
+                // Double-check that all variants were deleted
+                const remainingVariants = await ProductVariant.count({
+                    where: { productId: req.params.id }
                 });
+                
+                if (remainingVariants > 0) {
+                    console.error(`Failed to delete all variants. ${remainingVariants} variants remain.`);
+                    return res.status(500).json({ 
+                        message: 'Failed to delete all product variants',
+                        remainingVariants
+                    });
+                }
             }
+        } catch (variantError) {
+            console.error('Error deleting product variants:', variantError);
+            return res.status(500).json({ 
+                message: 'Error deleting product variants',
+                error: variantError.message
+            });
         }
 
         // Handle image processing in a try/catch block to prevent it from aborting the delete
@@ -1012,6 +1032,28 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
             // Continue with product deletion
         }
 
+        // Check for any other potential foreign key constraints
+        try {
+            // Check for order items referencing this product
+            const { OrderItem } = require('../models'); // Import the OrderItem model
+            const orderItemCount = await OrderItem.count({
+                where: { productId: req.params.id }
+            });
+            
+            if (orderItemCount > 0) {
+                console.error(`Product is referenced in ${orderItemCount} order items`);
+                return res.status(400).json({
+                    message: 'Cannot delete product because it is referenced in orders',
+                    orderCount: orderItemCount
+                });
+            }
+            
+            // Add checks for any other tables that might reference products here
+        } catch (refCheckError) {
+            console.error('Error checking product references:', refCheckError);
+            // Continue anyway as it's not critical
+        }
+
         // Finally delete the product
         try {
             console.log(`Deleting product with ID: ${product.id}`);
@@ -1028,10 +1070,20 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
             
             // Check for foreign key constraint violations
             if (deleteError.name === 'SequelizeForeignKeyConstraintError') {
+                const referringTable = deleteError.table || 
+                                     (deleteError.original && deleteError.original.table) || 
+                                     'unknown';
+                                     
+                const errorDetail = deleteError.original && deleteError.original.detail 
+                    ? deleteError.original.detail 
+                    : 'Unknown constraint violation';
+                
+                console.error(`Foreign key constraint error: ${errorDetail}`);
+                
                 return res.status(400).json({ 
-                    message: 'Cannot delete product because it is referenced by other records',
-                    error: deleteError.message,
-                    table: deleteError.table || 'unknown'
+                    message: `Cannot delete product because it is referenced by other records in ${referringTable}`,
+                    error: errorDetail,
+                    table: referringTable
                 });
             }
             

@@ -329,9 +329,21 @@ async function deleteProduct(productId) {
             
             const productData = await checkResponse.json();
             console.log(`Product ${productId} exists:`, productData.name || 'Unknown name');
+            
+            // Check if product has variants
+            if (productData.hasVariants) {
+                console.log('Product has variants that will be deleted');
+            }
         } catch (checkError) {
             console.error('Error checking product existence:', checkError);
             // Continue with delete anyway
+        }
+        
+        // Show loading state
+        const deleteButton = document.querySelector(`button[onclick*="deleteProduct(${productId})"]`);
+        if (deleteButton) {
+            deleteButton.disabled = true;
+            deleteButton.innerHTML = '<i class="bi bi-hourglass-split"></i>';
         }
         
         // Attempt to delete the product
@@ -349,14 +361,28 @@ async function deleteProduct(productId) {
         
         // Try to parse error message from response when available
         let errorMessage = 'Failed to delete product';
+        let responseData = null;
         
         // Handle different error cases
         if (!response.ok) {
             // Try to get detailed error from JSON response
             try {
                 const errorData = await response.json();
+                responseData = errorData;
                 errorMessage = errorData.message || errorMessage;
                 console.error('Server error details:', errorData);
+                
+                // Format user-friendly error messages
+                if (errorData.table === 'ProductVariants') {
+                    errorMessage = 'Cannot delete product because it still has variants. Please delete all variants first.';
+                } else if (errorData.table === 'OrderItems') {
+                    errorMessage = 'Cannot delete product because it appears in customer orders.';
+                }
+                
+                // Add more detailed context if available
+                if (errorData.error && typeof errorData.error === 'string' && errorData.error.includes('Key')) {
+                    console.log('Detailed error information available');
+                }
             } catch (parseError) {
                 // If not JSON, try to get text
                 try {
@@ -381,8 +407,8 @@ async function deleteProduct(productId) {
             // Successfully deleted
             try {
                 // Try to parse success response
-                const successData = await response.json();
-                console.log('Success response:', successData);
+                responseData = await response.json();
+                console.log('Success response:', responseData);
             } catch (e) {
                 console.log('No JSON in success response (expected for 204 No Content)');
             }
@@ -394,6 +420,13 @@ async function deleteProduct(productId) {
     } catch (error) {
         console.error('Error deleting product:', error);
         showToast('error', error.message || 'Failed to delete product');
+    } finally {
+        // Reset any UI elements that were changed
+        const deleteButton = document.querySelector(`button[onclick*="deleteProduct(${productId})"]`);
+        if (deleteButton) {
+            deleteButton.disabled = false;
+            deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
+        }
     }
 }
 
