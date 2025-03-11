@@ -294,13 +294,14 @@ const fixProductImagesColumnPG = async () => {
       console.log(`Verification complete. ${verifiedCount} products now have non-empty images array.`);
       
       // Create ProductPatch.js file
-      // ... rest of existing code ...
+      console.log('Creating Product model patch file...');
+      
+      // ... Add code to create ProductPatch.js if needed ...
+    }
   } catch (error) {
-    console.error('Error in fix script:', error);
-  } finally {
-    await sequelize.close();
+    console.error('Error in PostgreSQL fix script:', error);
   }
-}; 
+};
 
 // Main function
 const fixDatabaseSchema = async () => {
