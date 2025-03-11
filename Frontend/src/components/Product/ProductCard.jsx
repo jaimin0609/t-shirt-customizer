@@ -19,7 +19,6 @@ import { promotionLogger } from '../../services/promotionLogger';
 const ProductCard = ({ product }) => {
     // Safety check for product props
     if (!product) {
-        console.error('Product data is missing in ProductCard');
         return null;
     }
 
@@ -51,20 +50,16 @@ const ProductCard = ({ product }) => {
     // Fetch price information when product changes
     useEffect(() => {
         let isMounted = true;
-        console.log(`[ProductCard] Product: ${safeProduct.name}, ID: ${safeProduct._id}`);
 
         const componentName = 'ProductCard:' + safeProduct._id;
         promotionLogger.logProductPromotion(safeProduct, componentName);
 
         const fetchPriceInfo = async () => {
             try {
-                console.log(`[ProductCard] Fetching price info for product ${safeProduct._id} with price ${safeProduct.price}`);
                 const info = await calculateProductPrice(safeProduct._id, safeProduct.price);
-                console.log('[ProductCard] Received price info:', info);
 
                 // FORCE DISCOUNT: If the info doesn't have a discount but the product has a promotion, force the discount
                 if (!info.hasDiscount && safeProduct.promotion && safeProduct.promotion.isActive) {
-                    console.log(`[${componentName}] Found active promotion for product`);
                     const price = parseFloat(safeProduct.price);
                     const discountValue = safeProduct.promotion.discountValue;
 
@@ -84,7 +79,6 @@ const ProductCard = ({ product }) => {
                         };
 
                         if (isMounted) {
-                            console.log('[ProductCard] Setting forced price info:', forcedInfo);
                             setPriceInfo(forcedInfo);
                             promotionLogger.logPriceCalculation(forcedInfo, safeProduct, componentName);
                             return;
@@ -97,12 +91,10 @@ const ProductCard = ({ product }) => {
                     promotionLogger.logPriceCalculation(info, safeProduct, componentName);
                 }
             } catch (error) {
-                console.error(`[${componentName}] Error fetching price:`, error);
                 // On error, fall back to basic price display
                 if (isMounted) {
                     // FORCE DISCOUNT: Even on error, display the discount if the product has a promotion
                     if (safeProduct.promotion && safeProduct.promotion.isActive) {
-                        console.log(`[${componentName}] Handling promotion after error`);
                         const price = parseFloat(safeProduct.price);
                         const discountValue = safeProduct.promotion.discountValue;
 
@@ -188,9 +180,6 @@ const ProductCard = ({ product }) => {
         ? priceInfo.discountPercentage
         : (priceInfo.promotion?.discountValue || 0);
 
-    console.log(`[ProductCard] ${safeProduct.name} - Has promotion: ${hasPromotion}, Discount: ${displayDiscountPercentage}%`);
-    console.log(`[ProductCard] ${safeProduct.name} - Original: ${priceInfo.originalPrice}, Final: ${priceInfo.finalPrice}`);
-
     // Check if there's discount information
     const renderPriceInfo = () => {
         if (priceInfo.hasDiscount) {
@@ -228,16 +217,6 @@ const ProductCard = ({ product }) => {
     // A helper function to get a proper image URL
     const getImageUrl = (product) => {
         if (!product) return '/assets/placeholder-product.jpg';
-
-        // Log available image fields for debugging
-        console.log('ProductCard - image data:', {
-            id: product.id || product._id,
-            name: product.name,
-            image: product.image,
-            imageUrl: product.imageUrl,
-            imagesArray: product.images,
-            thumbnail: product.thumbnail
-        });
 
         let imagePath = null;
 
@@ -279,7 +258,6 @@ const ProductCard = ({ product }) => {
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
             // Don't try to load from backend - use placeholder instead
-            console.log('Backend image path detected, using placeholder');
             return '/assets/placeholder-product.jpg';
         }
 
@@ -295,6 +273,15 @@ const ProductCard = ({ product }) => {
     // Get the proper image URL for this product
     const productImageUrl = getImageUrl(safeProduct);
 
+    const isProduction = import.meta.env.PROD;
+
+    // Helper function to safely log only in development
+    const debugLog = (message, data) => {
+        if (!isProduction) {
+            console.log(message, data);
+        }
+    };
+
     return (
         <div className="product-card">
             <Link to={`/product/${safeProduct._id || safeProduct.id}`} className="block">
@@ -305,7 +292,6 @@ const ProductCard = ({ product }) => {
                         alt={safeProduct.name}
                         className="product-image"
                         onError={(e) => {
-                            console.log(`[ProductCard] Image error for ${safeProduct.name}. Using placeholder.`);
                             e.target.src = '/assets/placeholder-product.jpg';
                             e.target.onerror = null; // Prevent infinite error loop
                         }}

@@ -99,10 +99,10 @@ app.use(cors({
             }
         }
         
-        console.log('CORS request from origin:', origin);
-        
         // In development or where needed, print allowed origins for debugging
         if (process.env.NODE_ENV !== 'production') {
+            // Remove debug logging in production
+            console.log('CORS request from origin:', origin);
             console.log('Allowed origins:', allowedOrigins);
         }
         
@@ -459,6 +459,27 @@ app.get('/test-image', (req, res) => {
         });
     });
 });
+
+// Remove debug route handlers
+app.get('/direct-image/:filename', (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, 'public/uploads/products', filename);
+    
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+    }
+    
+    // Fallback to placeholder if file doesn't exist
+    res.status(404).json({ error: 'Image not found' });
+});
+
+// Custom middleware to log all API requests (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+    app.use('/api', (req, res, next) => {
+        // Only log API requests in non-production environments
+        next();
+    });
+}
 
 // Main startup function
 async function startServer() {

@@ -1,8 +1,13 @@
 // Use the environment variable for API URL with fallback to local development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
 
-// Log the API URL being used (helpful for debugging deployment issues)
-console.log('Using API URL:', API_URL);
+// Production code should not have console.log statements
+const isProd = import.meta.env.PROD;
+const log = (message, data) => {
+  if (!isProd) {
+    console.log(message, data);
+  }
+};
 
 import axios from 'axios';
 
@@ -120,7 +125,7 @@ export const productService = {
 
     getSimilarProducts: async (productId) => {
         try {
-            console.log(`[ProductService] Fetching similar products for: ${productId}`);
+            log(`[ProductService] Fetching similar products for: ${productId}`);
             
             // Get token if available, but don't require it for public product listing
             const token = localStorage.getItem('token');
