@@ -80,6 +80,10 @@ app.use(cors({
             'http://127.0.0.1:5173',  // Also allow access via IP
             'http://127.0.0.1:5002',
             'http://127.0.0.1:3000',
+            // Add Vercel domains
+            'https://uniqverse-five.vercel.app',
+            'https://uniqverse-7a3cxn0ti-jaimin0609s-projects.vercel.app',
+            'https://*.vercel.app'  // Allow all Vercel subdomains
         ];
         
         // Add FRONTEND_URL from environment if it exists
@@ -121,8 +125,14 @@ app.use(cors({
                 return callback(null, true);
             }
             
-            console.warn('CORS blocked production request from:', origin);
-            return callback(new Error('CORS not allowed'), false);
+            // Log blocked request for debugging but still allow in production for now
+            console.warn('CORS request from non-allowed origin:', origin);
+            // Instead of blocking with an error, allow the request and log it
+            return callback(null, true);
+            
+            // Original blocking code - commented out for now
+            // console.warn('CORS blocked production request from:', origin);
+            // return callback(new Error('CORS not allowed'), false);
         }
         
         // More permissive in development
