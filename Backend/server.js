@@ -15,6 +15,31 @@ import { fixProductImagesColumn } from './scripts/fix-production-images.js';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 
+// Create a mock Sharp module if it fails to load
+let sharpAvailable = true;
+try {
+  require('sharp');
+  console.log('✅ Sharp module loaded successfully');
+} catch (e) {
+  console.warn('⚠️ Sharp module failed to load, using fallbacks for image processing');
+  console.warn('Original error:', e.message);
+  sharpAvailable = false;
+  
+  // Create a global mock for Sharp to prevent application crashes
+  global.mockSharp = {
+    // Mock basic Sharp functionality for fallback
+    resize: () => global.mockSharp,
+    toFormat: () => global.mockSharp,
+    toBuffer: () => Promise.resolve(Buffer.from([])),
+    // Add other required mock methods as needed
+  };
+  
+  // Replace the Sharp module with our mock
+  require.cache[require.resolve('sharp')] = {
+    exports: () => global.mockSharp
+  };
+}
+
 // Import routes
 import authRoutes from './routes/auth.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
