@@ -291,6 +291,12 @@ function hideLoading() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    
     try {
         showLoading();
         
@@ -351,12 +357,6 @@ async function handleFormSubmit(e) {
                     console.warn('No size variants provided or invalid format');
                     formData.append('sizeVariantsData', JSON.stringify([]));
                 }
-                
-                // Log the complete FormData for debugging
-                console.log('Form data entries:');
-                for (const pair of formData.entries()) {
-                    console.log(pair[0], pair[1]);
-                }
             }
         } else {
             formData.append('hasVariants', 'false');
@@ -366,50 +366,62 @@ async function handleFormSubmit(e) {
         // Add tags if the tag input exists
         const tags = getTagsFromInput();
         if (tags.length > 0) {
-            formData.append('tags', JSON.stringify(tags));
+            formData.append('tags', tags.join(','));
+        }
+        
+        // Log the form data for debugging
+        console.log("Form data being sent:");
+        for (let [key, value] of formData.entries()) {
+            if (key !== 'images') {
+                console.log(key, value);
+            } else {
+                console.log(key, "File object");
+            }
         }
         
         // Make the API request to create the product
         const response = await fetch(`${window.API_URL}/products`, {
             method: 'POST',
             body: formData,
+            // No need to set Content-Type with FormData, it's set automatically with proper boundary
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
         
-        // Log the full response for debugging
-        console.log('Server response status:', response.status);
-        console.log('Server response headers:', Object.fromEntries([...response.headers.entries()]));
-        
+        // Parse the JSON response
         let result;
         try {
-            // Try to parse the JSON response
             result = await response.json();
-            console.log('Server response body:', result);
+            console.log('Server response:', result);
         } catch (jsonError) {
             console.error('Failed to parse response as JSON:', jsonError);
             // Get the raw text if JSON parsing fails
             const textResponse = await response.text();
             console.log('Raw server response:', textResponse);
-            result = { message: 'Invalid server response format' };
+            throw new Error('Invalid server response format');
         }
         
+        // Check if the request was successful
         if (!response.ok) {
             throw new Error(result.message || `Server error (${response.status})`);
         }
         
-        showToast('success', 'Product added successfully!');
+        // Show success notification
+        showNotification('Product added successfully!', 'success');
         
         // Reset form and redirect after a short delay
         setTimeout(() => {
+            e.target.reset();
             window.location.href = 'products.html';
         }, 1500);
-        
     } catch (error) {
-        console.error('Error adding product:', error);
-        showToast('error', error.message || 'Failed to add product');
+        console.error('Error creating product:', error);
+        showNotification(`Failed to add product: ${error.message}`, 'danger');
     } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
         hideLoading();
     }
 }
@@ -446,6 +458,25 @@ function showToast(type, message) {
     // Show the toast
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
+}
+
+// Function to show notification
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} notification`;
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '1';
+    }, 10);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            notification.remove();
+        }, 500);
+    }, 5000);
 }
 
 console.log('add-product.js loaded successfully!'); 

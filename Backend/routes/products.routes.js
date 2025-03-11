@@ -487,7 +487,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 }
             } catch (error) {
                 console.error('Error processing uploaded images:', error);
-                return res.status(500).json({ message: 'Error processing images', error: error.message });
+                // Don't fail the entire request, just log the error and continue with empty image array
+                imageUrls = [];
             }
         }
         
@@ -495,24 +496,49 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         const productData = {
             name: req.body.name,
             description: req.body.description || '',
-            price: parseFloat(req.body.price),
+            price: parseFloat(req.body.price) || 0,
             category: req.body.category || 'Uncategorized',
             gender: req.body.gender || 'unisex',
             ageGroup: req.body.ageGroup || 'adult',
             stock: parseInt(req.body.stock) || 0,
             status: req.body.status || 'active',
             featured: req.body.featured === 'true',
-            
-            // Handle JSON data for PostgreSQL compatibility
-            image: imageUrls.length > 0 ? imageUrls[0] : null,
-            images: formatArrayForPostgres(imageUrls),
-            
-            // Process tags
-            tags: formatArrayForPostgres(req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []),
-                
-            // Empty customization options
-            customizationOptions: formatArrayForPostgres([])
         };
+        
+        // Handle images safely for both MySQL and PostgreSQL
+        if (imageUrls.length > 0) {
+            productData.image = imageUrls[0]; // Set the main image to the first one
+            
+            // Format array for database
+            if (process.env.DATABASE_URL) { // For PostgreSQL
+                productData.images = JSON.stringify(imageUrls);
+            } else { // For MySQL
+                productData.images = imageUrls;
+            }
+        } else {
+            productData.image = null;
+            productData.images = process.env.DATABASE_URL ? '[]' : []; // Empty array based on DB type
+        }
+        
+        // Process tags - safely
+        try {
+            const tags = Array.isArray(req.body.tags) 
+                ? req.body.tags 
+                : (typeof req.body.tags === 'string' ? req.body.tags.split(',').map(t => t.trim()) : []);
+                
+            // Format tags for database
+            if (process.env.DATABASE_URL) { // For PostgreSQL
+                productData.tags = JSON.stringify(tags);
+            } else { // For MySQL
+                productData.tags = tags;
+            }
+        } catch (tagError) {
+            console.error('Error processing tags:', tagError);
+            productData.tags = process.env.DATABASE_URL ? '[]' : [];
+        }
+        
+        // Empty customization options
+        productData.customizationOptions = process.env.DATABASE_URL ? '[]' : [];
         
         // Create the product
         const product = await Product.create(productData);
@@ -525,9 +551,21 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 // Process color variants
                 if (req.body.colorVariantsData) {
                     try {
-                        let colorVariants = typeof req.body.colorVariantsData === 'string' 
-                            ? JSON.parse(req.body.colorVariantsData) 
-                            : req.body.colorVariantsData;
+                        let colorVariants;
+                        
+                        // Parse color variants data safely
+                        if (typeof req.body.colorVariantsData === 'string') {
+                            try {
+                                colorVariants = JSON.parse(req.body.colorVariantsData);
+                            } catch (e) {
+                                console.error('Failed to parse colorVariantsData:', e);
+                                colorVariants = [];
+                            }
+                        } else if (Array.isArray(req.body.colorVariantsData)) {
+                            colorVariants = req.body.colorVariantsData;
+                        } else {
+                            colorVariants = [];
+                        }
                             
                         if (Array.isArray(colorVariants)) {
                             for (const variant of colorVariants) {
@@ -553,10 +591,22 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 // Process size variants
                 if (req.body.sizeVariantsData) {
                     try {
-                        let sizeVariants = typeof req.body.sizeVariantsData === 'string' 
-                            ? JSON.parse(req.body.sizeVariantsData) 
-                            : req.body.sizeVariantsData;
-                            
+                        let sizeVariants;
+                        
+                        // Parse size variants data safely
+                        if (typeof req.body.sizeVariantsData === 'string') {
+                            try {
+                                sizeVariants = JSON.parse(req.body.sizeVariantsData);
+                            } catch (e) {
+                                console.error('Failed to parse sizeVariantsData:', e);
+                                sizeVariants = [];
+                            }
+                        } else if (Array.isArray(req.body.sizeVariantsData)) {
+                            sizeVariants = req.body.sizeVariantsData;
+                        } else {
+                            sizeVariants = [];
+                        }
+                        
                         if (Array.isArray(sizeVariants)) {
                             for (const variant of sizeVariants) {
                                 if (!variant) continue;
@@ -577,33 +627,24 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                     }
                 }
                 
-                // Mark product as having variants
-                if (variantsAdded > 0) {
-                    await product.update({ hasVariants: true });
-                    console.log(`Updated product with ${variantsAdded} variants`);
-                }
+                console.log(`Added ${variantsAdded} variants to product ${product.id}`);
             } catch (variantError) {
-                console.error('Error processing variants:', variantError);
-                // Don't fail the product creation if variants fail
+                console.error('Error processing product variants:', variantError);
+                // Don't fail the entire request, we already have the base product created
             }
         }
         
-        // Return success response
+        // Return success response with created product
         return res.status(201).json({
             success: true,
             message: 'Product created successfully',
-            product: {
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                variants: variantsAdded
-            }
+            product
         });
     } catch (error) {
         console.error('Error creating product:', error);
-        return res.status(500).json({ 
+        return res.status(500).json({
             success: false,
-            message: 'Server error during product creation',
+            message: 'Error creating product',
             error: error.message
         });
     }
