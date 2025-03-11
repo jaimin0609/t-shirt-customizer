@@ -16,7 +16,7 @@ import Analytics from './Analytics.js';
 // import Review from './Review.js';
 // import ShippingAddress from './ShippingAddress.js';
 // import CouponCode from './CouponCode.js';
-import applyProductPatches from './ProductPatch.js';
+import { applyProductModelPatch } from './ProductPatch.js';
 
 // Initialize models with sequelize instance
 const models = {
@@ -41,7 +41,7 @@ const models = {
 };
 
 // Apply Product model patch for backward compatibility
-const PatchedProduct = applyProductPatches(Product);
+applyProductModelPatch(Product);
 
 // Explicitly define Product-ProductVariant association
 Product.hasMany(ProductVariant, {
