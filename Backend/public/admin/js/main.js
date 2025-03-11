@@ -15,7 +15,7 @@ if (typeof window.API_URL === 'undefined') {
     console.log('Using existing API_URL:', window.API_URL);
 }
 
-// Global chart instances
+// Global chart variables
 let sessionsChart = null;
 let pageviewsChart = null;
 
@@ -82,8 +82,16 @@ function initializeCharts() {
 
     // Only initialize charts if we're on the dashboard page
     if (sessionsCtx && pageviewsCtx) {
+        // Destroy existing charts if they exist
+        if (sessionsChart) {
+            sessionsChart.destroy();
+        }
+        if (pageviewsChart) {
+            pageviewsChart.destroy();
+        }
+        
         // Sessions Chart
-        new Chart(sessionsCtx, {
+        sessionsChart = new Chart(sessionsCtx, {
             type: 'line',
             data: {
                 labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -120,14 +128,16 @@ function initializeCharts() {
         });
 
         // Pageviews Chart
-        new Chart(pageviewsCtx, {
+        pageviewsChart = new Chart(pageviewsCtx, {
             type: 'bar',
             data: {
                 labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 datasets: [{
                     label: 'Pageviews',
-                    data: [10000, 15000, 20000, 15000, 15000, 20000, 12000],
-                    backgroundColor: '#0d6efd'
+                    data: [15000, 18000, 12000, 20000, 17000, 22000, 19000],
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                    borderColor: '#0d6efd',
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -191,7 +201,12 @@ async function loadAnalyticsData(range) {
         });
         
         // Fetch analytics data with the selected date range
-        const response = await fetch(window.API_URL + '/analytics?range=' + range);
+        const token = localStorage.getItem('token');
+        const response = await fetch(window.API_URL + '/analytics?range=' + range, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

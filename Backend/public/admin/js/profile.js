@@ -66,6 +66,14 @@ function getImageUrl(imagePath) {
     
     // If it's already a full URL (Cloudinary or other external source)
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        // For production URLs that might have changed deployment locations
+        if (imagePath.includes('t-shirt-customizer-backend.onrender.com')) {
+            // Extract just the filename from the path
+            const filename = imagePath.split('/').pop();
+            
+            // Use the current origin instead
+            return `${window.location.origin}/uploads/profiles/${filename}`;
+        }
         return imagePath;
     }
     
@@ -108,6 +116,14 @@ async function loadUserProfile() {
             const avatars = document.querySelectorAll('.avatar, #userAvatar, .rounded-circle');
             avatars.forEach(avatar => {
                 avatar.src = avatarUrl;
+                
+                // Add error handler to fall back to default avatar if image fails to load
+                avatar.onerror = function() {
+                    console.warn('Profile image failed to load, using default avatar');
+                    this.src = '/admin/img/default-avatar.png';
+                    // Remove the error handler to prevent infinite loops
+                    this.onerror = null;
+                };
             });
         }
         

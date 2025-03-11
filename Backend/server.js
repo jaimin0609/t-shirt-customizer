@@ -161,7 +161,8 @@ if (process.env.NODE_ENV === 'production') {
                 fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
-                frameSrc: ["'self'"]
+                frameSrc: ["'self'"],
+                scriptSrcAttr: ["'unsafe-inline'"]  // Allow inline event handlers
             }
         },
         xssFilter: true,
