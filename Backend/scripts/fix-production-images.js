@@ -87,7 +87,7 @@ export const fixProductImagesColumn = async () => {
         // Count how many products need migration
         console.log('Counting products that need image data migration...');
         const countQueryStr = sequelize.dialect.name === 'postgres' 
-            ? 'SELECT COUNT(*) as count FROM "Products" WHERE image IS NOT NULL AND (images IS NULL OR jsonb_array_length(images) = 0)'
+            ? 'SELECT COUNT(*) as count FROM "Products" WHERE image IS NOT NULL AND (images IS NULL OR images::text = \'[]\' OR images::text = \'""\')' 
             : 'SELECT COUNT(*) as count FROM Products WHERE image IS NOT NULL AND (images IS NULL OR JSON_LENGTH(images) = 0)';
         
         const [countResult] = await sequelize.query(countQueryStr);
@@ -100,7 +100,7 @@ export const fixProductImagesColumn = async () => {
             
             // Different SQL syntax for PostgreSQL vs MySQL
             const updateQueryStr = sequelize.dialect.name === 'postgres' 
-                ? 'UPDATE "Products" SET images = jsonb_build_array(image) WHERE image IS NOT NULL AND (images IS NULL OR jsonb_array_length(images) = 0)'
+                ? 'UPDATE "Products" SET images = jsonb_build_array(image) WHERE image IS NOT NULL AND (images IS NULL OR images::text = \'[]\' OR images::text = \'""\')' 
                 : 'UPDATE Products SET images = JSON_ARRAY(image) WHERE image IS NOT NULL AND (images IS NULL OR JSON_LENGTH(images) = 0)';
             
             try {
@@ -114,7 +114,7 @@ export const fixProductImagesColumn = async () => {
         // Verify the migration
         console.log('Verifying migration...');
         const verifyQueryStr = sequelize.dialect.name === 'postgres'
-            ? 'SELECT COUNT(*) as count FROM "Products" WHERE images IS NOT NULL AND jsonb_array_length(images) > 0'
+            ? 'SELECT COUNT(*) as count FROM "Products" WHERE images IS NOT NULL AND images::text != \'[]\' AND images::text != \'""\''
             : 'SELECT COUNT(*) as count FROM Products WHERE images IS NOT NULL AND JSON_LENGTH(images) > 0';
         
         const [verifyResult] = await sequelize.query(verifyQueryStr);
@@ -229,7 +229,7 @@ const fixProductImagesColumnPG = async () => {
         countQuery = `
           SELECT COUNT(*) as count 
           FROM "Products" 
-          WHERE image IS NOT NULL AND (images IS NULL OR images = '[]' OR images = '""')
+          WHERE image IS NOT NULL AND (images IS NULL OR images::text = '[]' OR images::text = '""')
         `;
       } else {
         // MySQL query
@@ -254,7 +254,7 @@ const fixProductImagesColumnPG = async () => {
           updateQuery = `
             UPDATE "Products"
             SET images = jsonb_build_array(image)
-            WHERE image IS NOT NULL AND (images IS NULL OR images = '[]' OR images = '""')
+            WHERE image IS NOT NULL AND (images IS NULL OR images::text = '[]' OR images::text = '""')
           `;
         } else {
           // MySQL query
@@ -278,7 +278,7 @@ const fixProductImagesColumnPG = async () => {
         verifyQuery = `
           SELECT COUNT(*) as count 
           FROM "Products" 
-          WHERE images IS NOT NULL AND images != '[]' AND images != '""'
+          WHERE images IS NOT NULL AND images::text != '[]' AND images::text != '""'
         `;
       } else {
         // MySQL query

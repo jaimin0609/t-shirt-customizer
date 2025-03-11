@@ -22,12 +22,11 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Helper function commented out as we're using direct JSON.stringify approach
-/*
-const formatForDB = (value) => {
+// Helper function for proper PostgreSQL JSON handling
+const formatArrayForPostgres = (value) => {
     if (process.env.DATABASE_URL) { // PostgreSQL needs proper JSON strings
         if (value === null || value === undefined) {
-            return JSON.stringify([]);
+            return '[]';
         }
         if (typeof value === 'string') {
             try {
@@ -46,7 +45,6 @@ const formatForDB = (value) => {
         return value;
     }
 };
-*/
 
 // Ensure uploads directory exists for local development fallback
 const uploadDir = path.join(__dirname, '../public/uploads/products');
@@ -330,12 +328,18 @@ router.get('/', async (req, res) => {
             const productData = product.toJSON();
             
             // If images is null/undefined or empty array, but image exists, use image instead
-            if ((!productData.images || productData.images.length === 0) && productData.image) {
+            if ((!productData.images || 
+                 (Array.isArray(productData.images) && productData.images.length === 0) ||
+                 productData.images === '[]' ||
+                 productData.images === '""') && 
+                productData.image) {
                 productData.images = [productData.image];
             }
             
             // Ensure images is always at least an empty array
-            if (!productData.images) {
+            if (!productData.images || 
+                productData.images === '[]' ||
+                productData.images === '""') {
                 productData.images = [];
             }
             
@@ -501,15 +505,13 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             
             // Handle JSON data for PostgreSQL compatibility
             image: imageUrls.length > 0 ? imageUrls[0] : null,
-            images: process.env.DATABASE_URL ? JSON.stringify(imageUrls) : imageUrls,
+            images: formatArrayForPostgres(imageUrls),
             
             // Process tags
-            tags: process.env.DATABASE_URL 
-                ? JSON.stringify(req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []) 
-                : (req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []),
+            tags: formatArrayForPostgres(req.body.tags ? req.body.tags.split(',').map(t => t.trim()) : []),
                 
             // Empty customization options
-            customizationOptions: process.env.DATABASE_URL ? '[]' : []
+            customizationOptions: formatArrayForPostgres([])
         };
         
         // Create the product
