@@ -617,22 +617,56 @@ async function handleFormSubmit(e) {
                 // Add each file individually with explicit type checking
                 let successfulImages = 0;
                 
-                for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
+                // Debug all files
+                for (let i = 0; i < imageInput.files.length; i++) {
                     const file = imageInput.files[i];
-                    
-                    // Verify it's an image file
-                    if (file.type.startsWith('image/')) {
-                        try {
-                            console.log(`Adding image ${i+1}: ${file.name} (${file.size} bytes, ${file.type})`);
-                            
-                            // Important: Use 'images' as the field name to match server expectation
-                            formData.append('images', file);
-                            successfulImages++;
-                        } catch (singleImageError) {
-                            console.error(`❌ Error adding image ${i+1}:`, singleImageError);
+                    console.log(`Image file ${i+1}: Name=${file.name}, Size=${file.size}, Type=${file.type}`);
+                }
+                
+                // Critical fix: Make sure the file input is not disabled and its files are accessible
+                if (imageInput.disabled) {
+                    console.warn('Image input was disabled! Enabling it...');
+                    imageInput.disabled = false;
+                }
+                
+                // Double check that files are still available
+                if (!imageInput.files || imageInput.files.length === 0) {
+                    console.error('⚠️ Files disappeared from input element!');
+                } else {
+                    // Ensure the files are properly attached to the FormData
+                    // This is the critical section to fix the "Files received: 0" issue
+                    for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
+                        const file = imageInput.files[i];
+                        
+                        // Verify it's an image file
+                        if (file.type.startsWith('image/')) {
+                            try {
+                                console.log(`Adding image ${i+1}: ${file.name} (${file.size} bytes, ${file.type})`);
+                                
+                                // Important: Use 'images' as the field name to match server expectation
+                                formData.append('images', file);
+                                
+                                // Debug log to verify image was added to FormData
+                                console.log(`✓ Successfully appended file ${file.name} to FormData as 'images'`);
+                                successfulImages++;
+                            } catch (singleImageError) {
+                                console.error(`❌ Error adding image ${i+1}:`, singleImageError);
+                            }
+                        } else {
+                            console.warn(`⚠️ Skipping non-image file: ${file.name} (${file.type})`);
                         }
-                    } else {
-                        console.warn(`⚠️ Skipping non-image file: ${file.name} (${file.type})`);
+                    }
+                }
+                
+                // Debug log to verify FormData contents
+                console.log('Verifying FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    if (key === 'images') {
+                        if (value instanceof File) {
+                            console.log(`FormData contains image: ${value.name} (${value.size} bytes)`);
+                        } else {
+                            console.warn(`FormData contains non-File value for 'images' key:`, value);
+                        }
                     }
                 }
                 
@@ -815,57 +849,65 @@ async function handleFormSubmit(e) {
         // Race between the fetch and the timeout
         console.time("API Request Duration");
         
-        // This is the crucial point where the request might be hanging
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-        console.timeEnd("API Request Duration");
-        
-        console.log('✅ Received response from server with status:', response.status);
-        
-        // Parse the JSON response
-        let result;
+        // Added additional debugging for request progress
         try {
-            result = await response.json();
-            console.log('Server response:', result);
-        } catch (jsonError) {
-            console.error('Failed to parse response as JSON:', jsonError);
-            // Get the raw text if JSON parsing fails
-            const textResponse = await response.text();
-            console.log('Raw server response:', textResponse);
-            throw new Error('Invalid server response format');
-        }
-        
-        // Check if the request was successful
-        if (!response.ok) {
-            throw new Error(result.message || `Server error (${response.status})`);
-        }
-        
-        // Show success notification
-        showNotification('Product added successfully!', 'success');
-        
-        // Reset form and redirect after a short delay
-        setTimeout(() => {
-            e.target.reset();
-            // Redirect to products page or the newly created product page
-            if (result && result.product && result.product.id) {
-                window.location.href = `products.html`;
-            } else {
-                window.location.href = 'products.html';
+            console.log('⏳ Waiting for API response...');
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
+            console.timeEnd("API Request Duration");
+            
+            if (!response) {
+                throw new Error('Empty response received');
             }
-        }, 1500);
-    } catch (error) {
-        console.error('❌ Error creating product:', error);
-        showNotification(`Failed to add product: ${error.message}`, 'danger');
-        
-        // Log extra diagnostic information for specific errors
-        if (error.message.includes('timeout')) {
-            console.error('Request timed out. This might indicate a server-side issue or large file uploads.');
+            
+            console.log('✅ Received response from server with status:', response.status);
+            
+            // Parse the JSON response
+            let result;
+            try {
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                // Try to parse the text as JSON
+                try {
+                    result = JSON.parse(responseText);
+                    console.log('Server response (parsed):', result);
+                } catch (jsonParseError) {
+                    console.error('Failed to parse response as JSON:', jsonParseError);
+                    throw new Error(`Invalid server response format: ${responseText.substring(0, 100)}...`);
+                }
+            } catch (jsonError) {
+                console.error('Failed to process response:', jsonError);
+                throw new Error('Error processing server response');
+            }
+            
+            // Check if the request was successful
+            if (!response.ok) {
+                throw new Error(result?.message || `Server error (${response.status})`);
+            }
+            
+            // Show success notification
+            showNotification('Product added successfully!', 'success');
+            
+            // Reset form and redirect after a short delay
+            setTimeout(() => {
+                console.log('Redirecting to products page...');
+                e.target.reset();
+                window.location.href = 'products.html';
+            }, 1500);
+        } catch (fetchError) {
+            console.error('❌ API request failed:', fetchError);
+            showNotification('Error: ' + (fetchError.message || 'Failed to save product'), 'danger');
+            throw fetchError; // Re-throw to be caught by the outer try-catch
         }
+    } catch (error) {
+        console.error('❌ PRODUCT SUBMISSION FAILED:', error);
+        showNotification('Error: ' + error.message, 'danger');
     } finally {
-        // Reset button state
+        // Always restore button state and hide loading regardless of success/failure
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
         hideLoading();
-        console.groupEnd(); // End the main debug group
+        console.groupEnd(); // Close the form debug group
     }
 }
 

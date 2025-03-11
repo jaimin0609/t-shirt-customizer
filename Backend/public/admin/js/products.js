@@ -435,19 +435,75 @@ function displayProducts(products) {
     products.forEach(product => {
         // Get the main image from either images array or legacy image field
         let mainImage = '/admin/assets/placeholder.png';
-        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            // Use the first image from the images array
-            mainImage = product.images[0];
-            console.log(`Using image from images array: ${mainImage}`);
-        } else if (product.image) {
-            // Fallback to the legacy image field
-            mainImage = product.image;
-            console.log(`Using legacy image field: ${mainImage}`);
-        }
         
-        // Ensure the image URL starts with a slash if it's a relative path
-        if (mainImage && !mainImage.startsWith('/') && !mainImage.startsWith('http')) {
-            mainImage = '/' + mainImage;
+        try {
+            // Improved image URL handling to support all formats
+            console.log(`Processing product ${product.id} images:`, {
+                hasImagesArray: !!product.images,
+                imagesType: typeof product.images,
+                mainImage: product.image,
+            });
+            
+            // Handle different image data formats
+            if (product.images) {
+                let imagesArray = product.images;
+                
+                // If it's a string, try to parse it as JSON
+                if (typeof imagesArray === 'string') {
+                    try {
+                        imagesArray = JSON.parse(imagesArray);
+                    } catch (e) {
+                        console.warn(`Failed to parse images JSON for product ${product.id}:`, e);
+                    }
+                }
+                
+                // If we now have an array with contents, use the first image
+                if (Array.isArray(imagesArray) && imagesArray.length > 0) {
+                    // Filter out any null/undefined/empty values
+                    const validImages = imagesArray.filter(img => img);
+                    if (validImages.length > 0) {
+                        mainImage = validImages[0];
+                        console.log(`Using image from images array: ${mainImage}`);
+                    }
+                }
+            }
+            
+            // Fallback to the legacy image field if images array didn't work
+            if (mainImage === '/admin/assets/placeholder.png' && product.image) {
+                mainImage = product.image;
+                console.log(`Using legacy image field: ${mainImage}`);
+            }
+            
+            // Ensure the image URL is correctly formatted
+            if (mainImage && typeof mainImage === 'string') {
+                // Handle different image URL formats
+                if (mainImage.startsWith('http') || mainImage.startsWith('https')) {
+                    // Already a full URL, no change needed
+                    console.log(`Using absolute URL: ${mainImage}`);
+                } else if (mainImage.startsWith('data:image')) {
+                    // Data URL, no change needed
+                    console.log(`Using data URL (truncated): ${mainImage.substring(0, 30)}...`);
+                } else {
+                    // Ensure the image URL starts with a slash if it's a relative path
+                    if (!mainImage.startsWith('/')) {
+                        mainImage = '/' + mainImage;
+                    }
+                    console.log(`Using relative URL: ${mainImage}`);
+                    
+                    // Check if this is a Cloudinary ID without the full URL
+                    if (mainImage.includes('/v1/') || mainImage.includes('/upload/')) {
+                        // This might be a Cloudinary ID without the domain
+                        // Try to construct a full Cloudinary URL
+                        if (window.CLOUDINARY_CLOUD_NAME) {
+                            mainImage = `https://res.cloudinary.com/${window.CLOUDINARY_CLOUD_NAME}/image/upload${mainImage}`;
+                            console.log(`Converted to full Cloudinary URL: ${mainImage}`);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Error processing image for product ${product.id}:`, e);
+            mainImage = '/admin/assets/placeholder.png';
         }
         
         // Log the final image URL for debugging
@@ -460,7 +516,7 @@ function displayProducts(products) {
                 <img src="${mainImage}" 
                      alt="${product.name}" 
                      class="product-thumbnail"
-                     onerror="this.onerror=null; this.src='/admin/assets/placeholder.png'; console.log('Image load error, using placeholder');"
+                     onerror="this.onerror=null; this.src='/admin/assets/placeholder.png'; console.log('Image load error for product ${product.id}, using placeholder');"
                      style="width: 50px; height: 50px; object-fit: cover;">
             </td>
             <td>${product.name}</td>

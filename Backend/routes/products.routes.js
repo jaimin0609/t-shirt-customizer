@@ -461,6 +461,23 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         console.log('Request from:', req.ip);
         console.log('Files received:', req.files ? req.files.length : 0);
         
+        // Log detailed information about received files
+        if (req.files && req.files.length > 0) {
+            req.files.forEach((file, index) => {
+                console.log(`File ${index + 1}:`, {
+                    filename: file.filename,
+                    originalname: file.originalname,
+                    mimetype: file.mimetype,
+                    size: file.size,
+                    path: file.path || 'No path',
+                    destination: file.destination || 'No destination',
+                    cloudinaryEnabled: cloudinaryEnabled
+                });
+            });
+        } else {
+            console.warn('⚠️ No files received in request');
+        }
+        
         // Validate required fields
         if (!req.body.name || !req.body.price) {
             return res.status(400).json({ 
@@ -473,17 +490,74 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
             try {
+                console.log('Processing uploaded images...');
+                
+                // Fix: Apply additional debugging to see exactly what properties are available
+                const sampleFile = req.files[0];
+                console.log('Sample file properties:', Object.keys(sampleFile));
+                
                 // With Cloudinary, the secure URL is in file.path
                 if (cloudinaryEnabled) {
-                    imageUrls = req.files.map(file => file.path);
+                    console.log('Using Cloudinary for image URLs');
+                    imageUrls = req.files.map(file => {
+                        // Debug each file
+                        console.log(`Processing file for URL: ${file.originalname}`);
+                        
+                        // Check all possible properties where Cloudinary URL might be stored
+                        if (!file.path) {
+                            console.warn(`Missing path for file ${file.originalname}, checking for cloudinary data`);
+                            // Try to find cloudinary URL in any available field
+                            if (file.cloudinaryUrl) return file.cloudinaryUrl;
+                            if (file.secure_url) return file.secure_url;
+                            if (file.url) return file.url;
+                            
+                            // If none of the standard properties work, try multer-storage-cloudinary specific properties
+                            if (file.cloudinary && file.cloudinary.secure_url) {
+                                console.log('Found URL in file.cloudinary:', file.cloudinary.secure_url);
+                                return file.cloudinary.secure_url;
+                            }
+                            
+                            // If still not found, handle the file manually as a fallback
+                            console.error('No valid URL found for uploaded file:', file.originalname);
+                            
+                            // In case the file was uploaded but the URL wasn't captured correctly,
+                            // construct a Cloudinary URL format
+                            if (file.filename) {
+                                const cloudUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/${file.filename}`;
+                                console.log('Constructed Cloudinary URL:', cloudUrl);
+                                return cloudUrl;
+                            }
+                            
+                            return null;
+                        }
+                        
+                        console.log(`Using path: ${file.path}`);
+                        return file.path;
+                    }).filter(url => url !== null);
+                    
                     console.log('Cloudinary image URLs:', imageUrls);
                 } else {
                     // For local storage, construct the URL from the filename
+                    console.log('Using local storage for image URLs');
                     imageUrls = req.files.map(file => {
-                        const filename = file.filename || path.basename(file.path);
-                        return `/uploads/products/${filename}`;
-                    });
+                        const filename = file.filename || path.basename(file.path || '');
+                        
+                        // If we couldn't get a filename, log an error and return null
+                        if (!filename) {
+                            console.error('Could not determine filename for:', file.originalname);
+                            return null;
+                        }
+                        
+                        const localUrl = `/uploads/products/${filename}`;
+                        console.log(`Local URL for ${file.originalname}: ${localUrl}`);
+                        return localUrl;
+                    }).filter(url => url !== null);
+                    
                     console.log('Local image URLs:', imageUrls);
+                }
+                
+                if (imageUrls.length === 0 && req.files.length > 0) {
+                    console.warn('⚠️ Warning: Files were uploaded but no URLs were generated');
                 }
             } catch (error) {
                 console.error('Error processing uploaded images:', error);
@@ -509,6 +583,9 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         if (imageUrls.length > 0) {
             productData.image = imageUrls[0]; // Set the main image to the first one
             
+            // Log the image being used as main image
+            console.log('Setting main product image to:', productData.image);
+            
             // Format array for database
             if (process.env.DATABASE_URL) { // For PostgreSQL
                 productData.images = JSON.stringify(imageUrls);
@@ -516,6 +593,7 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                 productData.images = imageUrls;
             }
         } else {
+            console.log('No image URLs available, using null for product image');
             productData.image = null;
             productData.images = process.env.DATABASE_URL ? '[]' : []; // Empty array based on DB type
         }
@@ -541,6 +619,14 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         productData.customizationOptions = process.env.DATABASE_URL ? '[]' : [];
         
         // Create the product
+        console.log('Creating product with data:', { 
+            name: productData.name,
+            price: productData.price,
+            hasImage: productData.image !== null,
+            imageCount: Array.isArray(productData.images) ? productData.images.length : 
+                         (productData.images ? JSON.parse(productData.images).length : 0)
+        });
+        
         const product = await Product.create(productData);
         console.log('Base product created successfully, ID:', product.id);
         

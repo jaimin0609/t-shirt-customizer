@@ -3,11 +3,11 @@
 
 // ===== CONFIGURATION =====
 // Replace this with your Render DATABASE_URL
-const DATABASE_URL = 'postgresql://t_shirt_customizer_db_user:N6h76ZKQNvDLnXdasl4hktPzbrtC7LjB@dpg-cv5r06in91rc73b7odt0-a/t_shirt_customizer_db';
+const DATABASE_URL = 'postgresql://t_shirt_customizer_db_user:N6h76ZKQNvDLnXdasl4hktPzbrtC7LjB@dpg-cv5r06in91rc73b7odt0-a.oregon-postgres.render.com/t_shirt_customizer_db';
 // =======================
 
 // Import required modules
-const { Sequelize } = require('sequelize');
+import { Sequelize } from 'sequelize';
 
 console.log('=== Category Checker Script ===');
 console.log('This script will connect to your database and list all categories');
@@ -93,7 +93,7 @@ async function checkCategories() {
 // =================================================
 
 // Check if DATABASE_URL has been updated
-if (DATABASE_URL === 'postgres://username:password@host:port/database') {
+if (DATABASE_URL.includes('username:password')) {
   console.log('\n⚠️ ERROR: You need to update the DATABASE_URL in the script');
   console.log('1. Open check-categories-local.js in a text editor');
   console.log('2. Replace the DATABASE_URL at the top with your Render PostgreSQL connection string');

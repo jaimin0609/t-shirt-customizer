@@ -1,11 +1,37 @@
 // Configuration file for admin panel
 // Single source of truth for the API URL
 
-// Define API URL constant
-const API_URL = '/api';
+// Check if running locally, otherwise use the production URL
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Make it globally available for all scripts
-window.API_URL = API_URL;
+// Base API URL
+window.API_URL = isLocalhost ? 'http://localhost:5002/api' : 'https://t-shirt-customizer-server.onrender.com/api';
+
+// Don't use these in production
+window.SHOW_DEBUG = isLocalhost;
+
+// Cloudinary configuration
+window.CLOUDINARY_CLOUD_NAME = 'dopvs93sl'; // Your Cloudinary cloud name
+
+// Configure the API URL based on the current location
+if (window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')) {
+    // If we're using the Node.js backend on the same machine but different port
+    window.API_URL = `${window.location.protocol}//${window.location.hostname}:5002/api`;
+    console.log('Using local API URL:', window.API_URL);
+} else if (window.location.origin.includes('render.com')) {
+    // If we're on Render.com
+    window.API_URL = `${window.location.origin}/api`;
+    console.log('Using Render.com API URL:', window.API_URL);
+} else {
+    // In case we're in a different environment
+    console.log('Using default API URL:', window.API_URL);
+}
+
+// Log the configuration
+console.log('======= App Configuration =======');
+console.log('API URL:', window.API_URL);
+console.log('Cloudinary cloud name:', window.CLOUDINARY_CLOUD_NAME);
+console.log('================================');
 
 // This config.js file should be loaded BEFORE all other JavaScript files
 // to ensure API_URL is available globally 

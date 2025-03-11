@@ -12,6 +12,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
+// Debug Cloudinary configuration
+console.log('=== CLOUDINARY CONFIGURATION DEBUG ===');
+console.log('Checking Cloudinary environment variables:');
+console.log('CLOUDINARY_CLOUD_NAME exists:', !!process.env.CLOUDINARY_CLOUD_NAME);
+console.log('CLOUDINARY_API_KEY exists:', !!process.env.CLOUDINARY_API_KEY);
+console.log('CLOUDINARY_API_SECRET exists:', !!process.env.CLOUDINARY_API_SECRET);
+
+// If they exist, log the first 4 chars to verify we have the right keys
+if (process.env.CLOUDINARY_API_KEY) {
+  // Only show a prefix for security reasons
+  const apiKeyPrefix = process.env.CLOUDINARY_API_KEY.substring(0, 4) + '...';
+  console.log('API Key prefix:', apiKeyPrefix);
+}
+
 // Validate required environment variables
 const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -143,7 +157,8 @@ const uploadImage = (imagePath, options = {}) => {
       }
     }
     
-    // Upload to Cloudinary
+    // Upload to Cloudinary with more detailed logging
+    console.log(`Attempting to upload to Cloudinary: ${imagePath}`, uploadOptions);
     cloudinary.uploader.upload(imagePath, (error, result) => {
       if (error) {
         console.error('Cloudinary upload error:', error);
@@ -159,7 +174,18 @@ const uploadImage = (imagePath, options = {}) => {
           url: localUrl
         });
       } else {
-        console.log('Uploaded to Cloudinary:', result.secure_url);
+        console.log('✅ Successfully uploaded to Cloudinary:', result.secure_url);
+        
+        // Log only a sample of the result to debug console
+        const resultSummary = {
+          public_id: result.public_id,
+          secure_url: result.secure_url,
+          format: result.format,
+          width: result.width,
+          height: result.height
+        };
+        console.log('Upload result details:', resultSummary);
+        
         resolve(result);
       }
     }, uploadOptions);
@@ -173,6 +199,12 @@ const getCloudinaryConfig = () => {
     return null;
   }
   
+  // Log the configuration being returned
+  console.log('Providing Cloudinary configuration for frontend:', {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    hasApiKey: !!process.env.CLOUDINARY_API_KEY,
+  });
+  
   return {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
@@ -183,28 +215,61 @@ const getCloudinaryConfig = () => {
 // Function to get default Cloudinary URL for placeholder image
 const getCloudinaryUrl = () => {
   if (!cloudinaryEnabled) {
+    console.log('Returning local placeholder URL because Cloudinary is not enabled');
     return '/uploads/products/placeholder.jpg';
   }
   
-  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder-tshirt-white.jpg`;
+  const url = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder-tshirt-white.jpg`;
+  console.log('Returning Cloudinary placeholder URL:', url);
+  return url;
 };
 
 // Function to get image URL for a public ID
 const getImageUrl = (publicId) => {
-  if (!publicId) return getCloudinaryUrl();
+  if (!publicId) {
+    console.log('No publicId provided, returning placeholder');
+    return getCloudinaryUrl();
+  }
   
   if (!cloudinaryEnabled) {
     // If it's already a local path, return as is
     if (publicId.startsWith('/uploads/')) {
+      console.log('Using existing local path:', publicId);
       return publicId;
     }
+    
+    console.log('Converting to local path:', `/uploads/products/${publicId}`);
     return `/uploads/products/${publicId}`;
   }
   
-  return cloudinary.url(publicId, {
-    secure: true,
-    transformation: [{ width: 800, height: 800, crop: 'limit' }]
-  });
+  // Check if it's already a complete URL
+  if (publicId.startsWith('http')) {
+    console.log('Public ID is already a complete URL:', publicId);
+    return publicId;
+  }
+  
+  // Check if it needs the v1 path segment (Cloudinary standard format)
+  const needsV1Prefix = !publicId.includes('/v1/') && !publicId.includes('/upload/');
+  
+  // For Cloudinary resources that need a full URL
+  if (needsV1Prefix) {
+    const url = cloudinary.url(publicId, {
+      secure: true,
+      transformation: [{ width: 800, height: 800, crop: 'limit' }]
+    });
+    console.log(`Generated Cloudinary URL for ${publicId}:`, url);
+    return url;
+  } else {
+    // It's a partial Cloudinary URL, ensure it has the full domain
+    if (!publicId.startsWith('https://res.cloudinary.com')) {
+      const url = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload${publicId.startsWith('/') ? publicId : '/' + publicId}`;
+      console.log(`Completed partial Cloudinary URL for ${publicId}:`, url);
+      return url;
+    }
+    
+    console.log('Using existing complete Cloudinary URL:', publicId);
+    return publicId;
+  }
 };
 
 export { cloudinary, storage, uploadImage, getCloudinaryConfig, getCloudinaryUrl, getImageUrl, cloudinaryEnabled }; 

@@ -3,11 +3,11 @@
 
 // ===== CONFIGURATION =====
 // Replace this with your Render DATABASE_URL
-const DATABASE_URL = 'postgres://username:password@host:port/database';
+const DATABASE_URL = 'postgresql://t_shirt_customizer_db_user:N6h76ZKQNvDLnXdasl4hktPzbrtC7LjB@dpg-cv5r06in91rc73b7odt0-a.oregon-postgres.render.com/t_shirt_customizer_db';
 // =======================
 
 // Import required modules
-const { Sequelize, DataTypes } = require('sequelize');
+import { Sequelize, DataTypes } from 'sequelize';
 
 console.log('=== Category Setup Script ===');
 console.log('This script will add default categories to your database if they don\'t exist');
@@ -62,12 +62,30 @@ const Product = sequelize.define('Product', {
   },
   category: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: false
   },
-  isActive: {
+  gender: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'unisex'
+  },
+  ageGroup: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'adult'
+  },
+  status: {
+    type: DataTypes.STRING,  // Using STRING instead of ENUM to simplify
+    defaultValue: 'active'
+  },
+  images: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  isCustomizable: {
     type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true
+    defaultValue: false
   }
 }, {
   tableName: 'Products'
@@ -114,7 +132,11 @@ async function setupCategories() {
           price: 19.99 + Math.floor(Math.random() * 10),
           stock: 50 + Math.floor(Math.random() * 50),
           category: category,
-          isActive: true
+          status: 'active',
+          gender: 'unisex',
+          ageGroup: 'adult',
+          images: JSON.stringify([]),
+          isCustomizable: category === 'customizable-tshirts'
         });
         
         console.log(`✅ Added sample product for '${category}' category`);
@@ -144,7 +166,7 @@ async function setupCategories() {
 // =================================================
 
 // Check if DATABASE_URL has been updated
-if (DATABASE_URL === 'postgres://username:password@host:port/database') {
+if (DATABASE_URL.includes('username:password')) {
   console.log('\n⚠️ ERROR: You need to update the DATABASE_URL in the script');
   console.log('1. Open setup-categories.js in a text editor');
   console.log('2. Replace the DATABASE_URL at the top with your Render PostgreSQL connection string');
