@@ -80,32 +80,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
             // Create a monitoring interval
-            setInterval(() => {
-                if (loadingOverlay.style.display === 'block' || 
-                    loadingOverlay.style.display === '') {
-                    console.log('Loading overlay is visible for', 
-                                Math.round((Date.now() - window._debugLoadingStartTime) / 1000), 
-                                'seconds');
-                }
-            }, 3000);
+            let loadingMonitorInterval;
             
-            // Override loading functions
-            if (typeof showLoading === 'function') {
+            // Override loading functions - with safety mechanism
+            if (typeof window.showLoading === 'function') {
                 const originalShowLoading = window.showLoading;
                 window.showLoading = function() {
                     console.log('%c[LOADING] showLoading() called', 'background: #fffacd; color: #8b4513;');
                     window._debugLoadingStartTime = Date.now();
+                    
+                    // Start monitoring interval
+                    clearInterval(loadingMonitorInterval);
+                    loadingMonitorInterval = setInterval(() => {
+                        if (loadingOverlay.style.display === 'block' || 
+                            loadingOverlay.style.display === '') {
+                            const loadingTime = Math.round((Date.now() - window._debugLoadingStartTime) / 1000);
+                            console.log('Loading overlay is visible for', loadingTime, 'seconds');
+                            
+                            // Safety mechanism - auto-hide loading after 30 seconds
+                            if (loadingTime > 30) {
+                                console.warn('Loading took too long! Auto-hiding loading overlay');
+                                clearInterval(loadingMonitorInterval);
+                                loadingOverlay.style.display = 'none';
+                            }
+                        }
+                    }, 3000);
+                    
                     return originalShowLoading.apply(this, arguments);
                 };
             }
             
-            if (typeof hideLoading === 'function') {
+            if (typeof window.hideLoading === 'function') {
                 const originalHideLoading = window.hideLoading;
                 window.hideLoading = function() {
                     console.log('%c[LOADING] hideLoading() called after', 
                                 Math.round((Date.now() - (window._debugLoadingStartTime || Date.now())) / 1000),
                                 'seconds', 
                                 'background: #fffacd; color: #228b22;');
+                    
+                    // Clear monitoring interval
+                    clearInterval(loadingMonitorInterval);
+                    
+                    // Force hide the overlay to be extra safe
+                    setTimeout(() => {
+                        if (loadingOverlay && (loadingOverlay.style.display === 'block' || loadingOverlay.style.display === '')) {
+                            console.log('Forcing hideLoading again for safety');
+                            loadingOverlay.style.display = 'none';
+                        }
+                    }, 500);
+                    
                     return originalHideLoading.apply(this, arguments);
                 };
             }
