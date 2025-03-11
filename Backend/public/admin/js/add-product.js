@@ -269,15 +269,28 @@ function setupImageUpload() {
         return;
     }
     
-    // Fix: Make sure the click event is properly handled
-    dropzoneContainer.addEventListener('click', function(e) {
-        console.log('Dropzone clicked');
-        // Prevent the event from being triggered twice
-        e.preventDefault();
-        e.stopPropagation();
-        // Directly trigger file selection
-        productImages.click();
-    });
+    // Create a fixed click handler one time only
+    let clickHandlerAttached = false;
+    
+    function attachClickHandler() {
+        if (clickHandlerAttached) return; // Only attach once
+        
+        // Fix: Make sure the click event is properly handled with direct event binding
+        dropzoneContainer.onclick = function(e) {
+            console.log('Dropzone clicked');
+            // Prevent the event from being triggered twice
+            e.preventDefault();
+            e.stopPropagation();
+            // Directly trigger file selection
+            productImages.click();
+        };
+        
+        clickHandlerAttached = true;
+        console.log('Dropzone click handler attached successfully');
+    }
+    
+    // Immediately attach the click handler
+    attachClickHandler();
     
     // Add drag and drop visual feedback
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -312,23 +325,32 @@ function setupImageUpload() {
     function handleDrop(e) {
         const dt = e.dataTransfer;
         const files = dt.files;
-        productImages.files = files; // This might not work directly due to security
-        handleFiles(files);
+        
+        // Check if files were actually dropped
+        if (files && files.length > 0) {
+            console.log('Files dropped:', files.length);
+            handleFiles(files);
+        } else {
+            console.warn('No files found in drop event');
+        }
     }
     
     // Handle file selection - with improved error handling
     productImages.addEventListener('change', function(e) {
-        console.log('Files selected via input:', this.files?.length || 0);
+        console.log('Files selected via input change event:', this.files?.length || 0);
         if (this.files && this.files.length > 0) {
             handleFiles(this.files);
+        } else {
+            console.warn('No files in change event');
         }
     });
     
     function handleFiles(files) {
-        console.log('Processing files:', files.length);
+        console.log('Processing files in handleFiles:', files.length);
         previewsContainer.innerHTML = '';
         
         if (!files || files.length === 0) {
+            console.warn('No files to process');
             dropzoneMessage.style.display = 'block';
             return;
         }
@@ -337,68 +359,116 @@ function setupImageUpload() {
         dropzoneMessage.style.display = 'none';
         
         // Process each file (up to 5)
+        const promises = [];
+        
         Array.from(files).slice(0, 5).forEach((file, index) => {
-            console.log(`Processing file ${index + 1}:`, file.name);
+            console.log(`Processing file ${index + 1}:`, file.name, file.type, file.size);
             
-            const reader = new FileReader();
+            // Verify it's an image file
+            if (!file.type.startsWith('image/')) {
+                console.warn(`Skipping non-image file: ${file.name} (${file.type})`);
+                showToast('warning', `Skipped non-image file: ${file.name}`);
+                return;
+            }
             
-            // Add error handling for FileReader
-            reader.onerror = function() {
-                console.error(`Error reading file ${file.name}`);
-                showToast('error', `Failed to read file: ${file.name}`);
-            };
-            
-            reader.onload = function(e) {
-                // Create preview card
-                const previewCol = document.createElement('div');
-                previewCol.className = 'col-md-4 col-6';
+            const promise = new Promise((resolve, reject) => {
+                const reader = new FileReader();
                 
-                const previewCard = document.createElement('div');
-                previewCard.className = 'card h-100';
-                
-                const previewImg = document.createElement('img');
-                previewImg.src = e.target.result;
-                previewImg.className = 'card-img-top';
-                previewImg.style.height = '150px';
-                previewImg.style.objectFit = 'cover';
-                
-                // Add error handling for image loading
-                previewImg.onerror = function() {
-                    previewImg.src = '/admin/img/image-placeholder.png'; // Fallback image
-                    console.error(`Failed to load image preview for ${file.name}`);
+                // Add error handling for FileReader
+                reader.onerror = function() {
+                    console.error(`Error reading file ${file.name}`);
+                    showToast('error', `Failed to read file: ${file.name}`);
+                    reject(new Error(`Failed to read file: ${file.name}`));
                 };
                 
-                const cardBody = document.createElement('div');
-                cardBody.className = 'card-body p-2';
-                
-                const fileName = document.createElement('p');
-                fileName.className = 'card-text small text-truncate mb-0';
-                fileName.textContent = file.name;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'btn btn-sm btn-danger position-absolute top-0 end-0 m-1';
-                removeBtn.innerHTML = '<i class="bi bi-x"></i>';
-                removeBtn.onclick = function() {
-                    previewCol.remove();
-                    // Show dropzone message if no previews left
-                    if (previewsContainer.children.length === 0) {
-                        dropzoneMessage.style.display = 'block';
+                reader.onload = function(e) {
+                    try {
+                        // Create preview card
+                        const previewCol = document.createElement('div');
+                        previewCol.className = 'col-md-4 col-6';
+                        
+                        const previewCard = document.createElement('div');
+                        previewCard.className = 'card h-100';
+                        
+                        const previewImg = document.createElement('img');
+                        previewImg.src = e.target.result;
+                        previewImg.className = 'card-img-top';
+                        previewImg.style.height = '150px';
+                        previewImg.style.objectFit = 'cover';
+                        
+                        // Add error handling for image loading
+                        previewImg.onerror = function() {
+                            previewImg.src = '/admin/img/image-placeholder.png'; // Fallback image
+                            console.error(`Failed to load image preview for ${file.name}`);
+                        };
+                        
+                        const cardBody = document.createElement('div');
+                        cardBody.className = 'card-body p-2';
+                        
+                        const fileName = document.createElement('p');
+                        fileName.className = 'card-text small text-truncate mb-0';
+                        fileName.textContent = file.name;
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'btn btn-sm btn-danger position-absolute top-0 end-0 m-1';
+                        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                        removeBtn.onclick = function() {
+                            previewCol.remove();
+                            // Show dropzone message if no previews left
+                            if (previewsContainer.children.length === 0) {
+                                dropzoneMessage.style.display = 'block';
+                            }
+                        };
+                        
+                        // Assemble the preview card
+                        cardBody.appendChild(fileName);
+                        previewCard.appendChild(previewImg);
+                        previewCard.appendChild(cardBody);
+                        previewCard.appendChild(removeBtn);
+                        previewCol.appendChild(previewCard);
+                        previewsContainer.appendChild(previewCol);
+                        
+                        resolve();
+                    } catch (error) {
+                        console.error('Error creating preview:', error);
+                        reject(error);
                     }
                 };
                 
-                // Assemble the preview card
-                cardBody.appendChild(fileName);
-                previewCard.appendChild(previewImg);
-                previewCard.appendChild(cardBody);
-                previewCard.appendChild(removeBtn);
-                previewCol.appendChild(previewCard);
-                previewsContainer.appendChild(previewCol);
-            };
+                reader.readAsDataURL(file);
+            });
             
-            reader.readAsDataURL(file);
+            promises.push(promise);
+        });
+        
+        // After all files are processed, check if any were added
+        Promise.allSettled(promises).then(results => {
+            const successful = results.filter(r => r.status === 'fulfilled').length;
+            console.log(`Successfully processed ${successful} out of ${files.length} files`);
+            
+            if (successful === 0) {
+                dropzoneMessage.style.display = 'block';
+                showToast('warning', 'No valid image files were added');
+            }
+            
+            // Make sure the click handler is still attached (sometimes it gets lost)
+            attachClickHandler();
         });
     }
+    
+    // Also trigger a click handler check every 2 seconds to ensure it's always available
+    const handlerInterval = setInterval(() => {
+        if (!clickHandlerAttached) {
+            console.log('Reattaching dropzone click handler');
+            attachClickHandler();
+        }
+    }, 2000);
+    
+    // Clean up interval after 30 seconds
+    setTimeout(() => {
+        clearInterval(handlerInterval);
+    }, 30000);
     
     console.log('Image upload setup complete');
 }
@@ -462,20 +532,47 @@ async function handleFormSubmit(e) {
     
     // Add a timeout to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
+        setTimeout(() => reject(new Error('Request timed out after 45 seconds')), 45000);
     });
     
     try {
         console.log('Starting product submission...');
         showLoading();
         
-        const formData = new FormData(e.target);
+        // Create a new FormData object directly (fixing potential issues)
+        const form = document.getElementById('addProductForm');
+        const formData = new FormData();
+        
+        // Manually add all the form fields to ensure proper values
+        // This avoids issues with disabled fields, checkboxes, etc.
+        formData.append('name', document.getElementById('productName').value);
+        formData.append('description', document.getElementById('productDescription').value);
+        formData.append('price', document.getElementById('productPrice').value);
+        formData.append('stock', document.getElementById('productStock').value);
+        
+        // Category - critical field that may have issues
+        const categorySelect = document.getElementById('productCategory');
+        if (categorySelect && categorySelect.value) {
+            formData.append('category', categorySelect.value);
+            console.log('Added category:', categorySelect.value);
+        } else {
+            console.warn('No category selected!');
+            showNotification('Please select a product category', 'warning');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+            hideLoading();
+            return; // Stop the submission
+        }
+        
+        // Other dropdowns
+        formData.append('gender', document.getElementById('productGender').value);
+        formData.append('ageGroup', document.getElementById('productAgeGroup').value);
         
         // Add status as boolean
-        formData.set('status', document.getElementById('productStatus').checked ? 'active' : 'inactive');
+        formData.append('status', document.getElementById('productStatus').checked ? 'active' : 'inactive');
         
         // Add featured as boolean
-        formData.set('featured', document.getElementById('productFeatured').checked ? 'true' : 'false');
+        formData.append('featured', document.getElementById('productFeatured').checked ? 'true' : 'false');
         
         // Add customization options if any are present
         const customizationOptions = [];
@@ -483,6 +580,30 @@ async function handleFormSubmit(e) {
             customizationOptions.push(option.value);
         });
         formData.append('customizationOptions', JSON.stringify(customizationOptions));
+        
+        // Process image uploads - critical fix
+        const imageInput = document.getElementById('productImages');
+        console.log('Image files selected:', imageInput.files?.length || 0);
+        
+        if (imageInput && imageInput.files && imageInput.files.length > 0) {
+            // Add each file individually with explicit type checking
+            for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
+                const file = imageInput.files[i];
+                
+                // Verify it's an image file
+                if (file.type.startsWith('image/')) {
+                    console.log(`Adding image file ${i+1}:`, file.name, file.type, file.size);
+                    
+                    // Important: Use 'images' as the field name to match server expectation
+                    formData.append('images', file);
+                } else {
+                    console.warn(`Skipping non-image file: ${file.name} (${file.type})`);
+                }
+            }
+        } else {
+            console.warn('No image files selected');
+            // Continue without images - will show warning but not block submission
+        }
         
         // Add variant data from the variant system
         if (window.variantSystem && typeof window.variantSystem.areVariantsEnabled === 'function') {
@@ -538,8 +659,8 @@ async function handleFormSubmit(e) {
             formData.append('tags', tags.join(','));
         }
         
-        // Validate required fields
-        const requiredFields = ['name', 'price', 'category'];
+        // Validate required fields to make sure we have them
+        const requiredFields = ['name', 'price'];
         const missingFields = [];
         
         requiredFields.forEach(field => {
@@ -552,32 +673,35 @@ async function handleFormSubmit(e) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
         
-        // Validate that at least one image is selected
-        const imageInput = document.getElementById('productImages');
-        if (imageInput && (!imageInput.files || imageInput.files.length === 0)) {
-            console.warn('No images selected for product');
-            // Continue without images - it's a warning, not an error
-        }
-        
         // Log the form data for debugging
         console.log("Form data being sent:");
         for (let [key, value] of formData.entries()) {
             if (key !== 'images') {
                 console.log(key, value);
             } else {
-                console.log(key, "File object", value instanceof File ? `(${value.name}, ${value.size} bytes)` : 'Not a file');
+                console.log(key, "File object", value instanceof File ? `(${value.name}, ${value.size} bytes, ${value.type})` : 'Not a file');
             }
         }
         
         // Make the API request to create the product with timeout protection
         console.log('Sending product data to API:', window.API_URL);
         
+        // Check if token exists
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showNotification('Authentication token not found. Please log in again.', 'danger');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1500);
+            throw new Error('Authentication token not found');
+        }
+        
         const fetchPromise = fetch(`${window.API_URL}/products`, {
             method: 'POST',
             body: formData,
             // No need to set Content-Type with FormData, it's set automatically with proper boundary
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`
             }
         });
         
@@ -609,7 +733,12 @@ async function handleFormSubmit(e) {
         // Reset form and redirect after a short delay
         setTimeout(() => {
             e.target.reset();
-            window.location.href = 'products.html';
+            // Redirect to products page or the newly created product page
+            if (result && result.product && result.product.id) {
+                window.location.href = `products.html`;
+            } else {
+                window.location.href = 'products.html';
+            }
         }, 1500);
     } catch (error) {
         console.error('Error creating product:', error);
