@@ -19,12 +19,14 @@ echo "Directory contents: $(ls -la)"
 
 # Install dependencies with legacy-peer-deps flag
 echo "Installing dependencies with --legacy-peer-deps flag..."
-npm install --legacy-peer-deps
+echo "Using --no-scripts to prevent installation loops..."
+# Use --no-scripts to prevent running scripts during installation
+npm install --legacy-peer-deps --no-scripts
 
 # Check for errors
 if [ $? -ne 0 ]; then
   echo "Error during npm install. Trying with force..."
-  npm install --force
+  npm install --force --no-scripts
   
   if [ $? -ne 0 ]; then
     echo "Build failed even with --force flag."

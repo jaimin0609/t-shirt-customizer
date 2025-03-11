@@ -6,10 +6,10 @@
         "start:frontend": "cd Frontend && npm run dev",
         "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
         "build:frontend": "cd Frontend && npm run build",
-        "build:install": "npm install && (cd Backend && npm install) && (cd Frontend && npm install)",
+        "build:install": "npm install && (cd Backend && npm install --legacy-peer-deps) && (cd Frontend && npm install)",
         "start:prod": "cd Backend && NODE_ENV=production npm start",
         "deploy": "npm run build:frontend && npm run start:prod",
-        "postinstall": "cd Backend && npm install && cd ../Frontend && npm install"
+        "setup": "cd Backend && npm install --legacy-peer-deps && cd ../Frontend && npm install"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
