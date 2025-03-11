@@ -452,6 +452,93 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// Add a diagnostic route for testing image uploads
+router.post('/diagnostic-upload', auth, isAdmin, upload.single('testImage'), async (req, res) => {
+  try {
+    console.log('=== UPLOAD DIAGNOSTIC TEST ===');
+    console.log('Request IP:', req.ip);
+    console.log('Request headers:', req.headers);
+    console.log('User:', req.user ? `${req.user.email} (ID: ${req.user.id})` : 'Not authenticated');
+    console.log('Cloudinary enabled:', cloudinaryEnabled);
+    
+    // Check if file was received
+    if (!req.file) {
+      console.error('❌ No file received');
+      return res.status(400).json({
+        success: false,
+        message: 'No file received',
+        diagnosticInfo: {
+          requestHeaders: req.headers,
+          cloudinaryEnabled: cloudinaryEnabled,
+          formFields: req.body
+        }
+      });
+    }
+    
+    // Log file details
+    console.log('File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path || 'No path',
+      filename: req.file.filename || 'No filename',
+      destination: req.file.destination || 'No destination'
+    });
+    
+    // If using Cloudinary, log more details
+    if (cloudinaryEnabled) {
+      console.log('Cloudinary file details:', {
+        hasCloudinaryProperty: !!req.file.cloudinary,
+        cloudinaryUrl: req.file.cloudinary ? req.file.cloudinary.secure_url : 'Not available',
+        allProperties: Object.keys(req.file)
+      });
+    }
+    
+    // Determine the URL to return
+    let imageUrl = '';
+    
+    if (cloudinaryEnabled && req.file.path) {
+      imageUrl = req.file.path;
+      console.log('Using Cloudinary URL from path:', imageUrl);
+    } else if (cloudinaryEnabled && req.file.cloudinary && req.file.cloudinary.secure_url) {
+      imageUrl = req.file.cloudinary.secure_url;
+      console.log('Using Cloudinary URL from cloudinary property:', imageUrl);
+    } else {
+      // For local storage
+      const filename = req.file.filename || path.basename(req.file.path || '');
+      imageUrl = `/uploads/products/${filename}`;
+      console.log('Using local URL:', imageUrl);
+    }
+    
+    // Return success with diagnostic info
+    return res.status(200).json({
+      success: true,
+      message: 'Diagnostic upload test successful',
+      imageUrl: imageUrl,
+      diagnosticInfo: {
+        file: {
+          originalname: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype,
+          path: req.file.path,
+          cloudinaryData: req.file.cloudinary
+        },
+        cloudinaryEnabled: cloudinaryEnabled,
+        serverTime: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Diagnostic upload test error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Diagnostic upload test failed',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'production' ? 'Hidden in production' : error.stack
+    });
+  }
+});
+
 // Create new product endpoint with better error handling
 router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {

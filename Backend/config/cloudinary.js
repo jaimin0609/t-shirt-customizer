@@ -233,6 +233,24 @@ const getCloudinaryUrl = () => {
     return '/uploads/products/placeholder.jpg';
   }
   
+  // Debug information to verify Cloudinary configuration
+  console.log('===== CLOUDINARY DETAILED DEBUG =====');
+  console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET');
+  console.log('CLOUDINARY_API_KEY exists:', !!process.env.CLOUDINARY_API_KEY);
+  console.log('CLOUDINARY_API_SECRET exists:', !!process.env.CLOUDINARY_API_SECRET);
+  console.log('cloudinaryEnabled flag:', cloudinaryEnabled);
+  
+  // Test Cloudinary connectivity again
+  try {
+    cloudinary.api.ping().then(result => {
+      console.log('✅ Cloudinary ping test successful:', result);
+    }).catch(err => {
+      console.error('❌ Cloudinary ping test failed:', err.message);
+    });
+  } catch (err) {
+    console.error('❌ Error testing Cloudinary connection:', err.message);
+  }
+  
   const url = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder-tshirt-white.jpg`;
   console.log('Returning Cloudinary placeholder URL:', url);
   return url;

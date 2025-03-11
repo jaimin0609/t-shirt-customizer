@@ -194,6 +194,9 @@ async function editProduct(productId) {
 
 // Save Product
 async function saveProduct() {
+    let timerStart = Date.now();
+    console.log('⏱️ Starting product save operation at:', new Date().toISOString());
+    
     try {
         // Show loading indicator
         const saveButton = document.getElementById('saveProductBtn');
@@ -206,19 +209,28 @@ async function saveProduct() {
             showToast('error', 'Authentication required');
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
+            console.error('❌ Authentication required - no token found');
             return;
         }
 
+        // Get form and create FormData
+        console.log('📝 Creating form data...');
         const form = document.getElementById('productForm');
         const formData = new FormData(form);
         
-        // Log form data contents
-        console.log('Form data contents:');
+        // Log form data contents with more details
+        console.log('📦 Form data contents:');
+        const formDataEntries = [];
         for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value}`);
+            const valueDetails = value instanceof File 
+                ? `File: ${value.name} (${value.size} bytes, ${value.type})` 
+                : value;
+            console.log(`${key}: ${valueDetails}`);
+            formDataEntries.push({ key, value: valueDetails });
         }
         
         // Check if there are image files and validate them
+        console.log('🖼️ Checking for image files...');
         const imageFiles = [];
         for (let [key, value] of formData.entries()) {
             if (key === 'images' && value instanceof File && value.size > 0) {
@@ -230,6 +242,7 @@ async function saveProduct() {
                     showToast('error', `Invalid file type: ${value.name}. Only JPEG, PNG, GIF, and WebP are supported.`);
                     saveButton.textContent = originalButtonText;
                     saveButton.disabled = false;
+                    console.error(`❌ Invalid file type: ${value.name} (${value.type})`);
                     return;
                 }
                 
@@ -239,104 +252,129 @@ async function saveProduct() {
                     showToast('error', `File too large: ${value.name}. Maximum size is 5MB.`);
                     saveButton.textContent = originalButtonText;
                     saveButton.disabled = false;
+                    console.error(`❌ File too large: ${value.name} (${value.size} bytes)`);
                     return;
                 }
             }
         }
         
-        console.log(`Found ${imageFiles.length} image files to upload`);
+        console.log(`📸 Found ${imageFiles.length} valid image files to upload`);
         
+        // Prepare URL and method based on whether we're editing or creating
         const url = editingProductId ? 
             `${window.API_URL}/products/${editingProductId}` : 
             `${window.API_URL}/products`;
             
         const method = editingProductId ? 'PUT' : 'POST';
 
-        console.log('Saving product...', {
+        console.log(`⬆️ ${method === 'POST' ? 'Creating' : 'Updating'} product...`, {
             url,
             method,
             editingProductId,
             token: token.substring(0, 10) + '...',
-            imageCount: imageFiles.length
+            imageCount: imageFiles.length,
+            apiUrl: window.API_URL
         });
 
-        const response = await fetch(url, {
-            method: method,
-            body: formData,
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        console.log('Save response status:', response.status);
-        console.log('Save response headers:', Object.fromEntries(response.headers.entries()));
-
-        // First check if the response is JSON
-        const contentType = response.headers.get("content-type");
+        console.log('⏱️ Starting fetch at:', new Date().toISOString());
+        console.log('⏱️ Time elapsed:', Date.now() - timerStart, 'ms');
         
-        // Check for error response
-        if (!response.ok) {
-            let errorMessage = 'Failed to save product';
+        try {
+            const response = await fetch(url, {
+                method: method,
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             
-            // Try to get detailed error from JSON response
+            const fetchTime = Date.now() - timerStart;
+            console.log(`⏱️ Fetch completed in ${fetchTime}ms at:`, new Date().toISOString());
+            console.log('📡 Response status:', response.status, response.statusText);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+            // First check if the response is JSON
+            const contentType = response.headers.get("content-type");
+            console.log('📡 Response content type:', contentType);
+            
+            // Check for error response
+            if (!response.ok) {
+                let errorMessage = 'Failed to save product';
+                
+                // Try to get detailed error from JSON response
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                    console.error('❌ Server error:', errorData);
+                } else {
+                    // If not JSON, try to get text
+                    const errorText = await response.text();
+                    console.error('❌ Server response:', errorText);
+                }
+                
+                // Handle specific HTTP status codes
+                if (response.status === 401 || response.status === 403) {
+                    errorMessage = 'You do not have permission to perform this action';
+                } else if (response.status === 400) {
+                    errorMessage = 'Invalid product data. Please check your inputs.';
+                } else if (response.status === 413) {
+                    errorMessage = 'Image file too large. Maximum total size is 10MB.';
+                } else if (response.status === 415) {
+                    errorMessage = 'Unsupported file type. Use JPG, PNG, GIF, or WebP images.';
+                } else if (response.status === 500) {
+                    errorMessage = 'Server error while saving product. Try again later.';
+                } else if (response.status === 0) {
+                    errorMessage = 'Network error. Check your internet connection or CORS settings.';
+                }
+                
+                throw new Error(errorMessage);
+            }
+
+            // Get the response data
+            let data = {};
             if (contentType && contentType.indexOf("application/json") !== -1) {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-                console.error('Server error:', errorData);
-            } else {
-                // If not JSON, try to get text
-                const errorText = await response.text();
-                console.error('Server response:', errorText);
+                try {
+                    data = await response.json();
+                    console.log('✅ Save response data:', data);
+                } catch (e) {
+                    console.warn('⚠️ Could not parse JSON response:', e);
+                }
             }
-            
-            // Handle specific HTTP status codes
-            if (response.status === 401 || response.status === 403) {
-                errorMessage = 'You do not have permission to perform this action';
-            } else if (response.status === 400) {
-                errorMessage = 'Invalid product data. Please check your inputs.';
-            } else if (response.status === 413) {
-                errorMessage = 'Image file too large. Maximum total size is 10MB.';
-            } else if (response.status === 415) {
-                errorMessage = 'Unsupported file type. Use JPG, PNG, GIF, or WebP images.';
-            } else if (response.status === 500) {
-                errorMessage = 'Server error while saving product. Try again later.';
-            } else if (response.status === 0) {
-                errorMessage = 'Network error. Check your internet connection or CORS settings.';
-            }
-            
-            throw new Error(errorMessage);
-        }
 
-        // Get the response data
-        let data = {};
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            try {
-                data = await response.json();
-                console.log('Save response data:', data);
-            } catch (e) {
-                console.warn('Could not parse JSON response:', e);
-            }
+            // Show success message
+            const message = editingProductId ? 'Product updated successfully' : 'Product added successfully';
+            showToast('success', message);
+            console.log(`✅ ${message}`);
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+            modal.hide();
+            
+            // Reload products
+            loadProducts();
+        } catch (fetchError) {
+            console.error('❌ Fetch error:', fetchError);
+            throw fetchError;
         }
-
-        // Show success message
-        const message = editingProductId ? 'Product updated successfully' : 'Product added successfully';
-        showToast('success', message);
-        
-        // Close the modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
-        modal.hide();
-        
-        // Reload products
-        loadProducts();
     } catch (error) {
-        console.error('Error saving product:', error);
+        console.error('❌ Error saving product:', error);
         showToast('error', error.message || 'Failed to save product');
+        
+        // Log additional debugging information
+        console.error('🔍 Additional debugging info:');
+        console.error('- API URL:', window.API_URL);
+        console.error('- Current origin:', window.location.origin);
+        console.error('- Browser:', navigator.userAgent);
+        console.error('- Time of error:', new Date().toISOString());
     } finally {
         // Reset button state
         const saveButton = document.getElementById('saveProductBtn');
         saveButton.textContent = 'Save Product';
         saveButton.disabled = false;
+        
+        const totalTime = Date.now() - timerStart;
+        console.log(`⏱️ Total operation time: ${totalTime}ms`);
     }
 }
 
@@ -718,3 +756,174 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
+
+// Add a diagnostic test function that can be called from the console
+window.testImageUpload = async function(useConsoleLog = true) {
+    try {
+        // Create a small test image (1x1 pixel transparent GIF)
+        const base64Image = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        const blob = await (await fetch(`data:image/gif;base64,${base64Image}`)).blob();
+        const testFile = new File([blob], 'test-upload.gif', { type: 'image/gif' });
+        
+        const formData = new FormData();
+        formData.append('testImage', testFile);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+            const message = 'Authentication required for test';
+            useConsoleLog ? console.error(message) : alert(message);
+            return { success: false, error: message };
+        }
+        
+        // Log what we're about to do
+        useConsoleLog ? console.log('Testing image upload with diagnostic endpoint...') : null;
+        useConsoleLog ? console.log('API URL:', window.API_URL) : null;
+        
+        // Make the request
+        const startTime = Date.now();
+        const response = await fetch(`${window.API_URL}/products/diagnostic-upload`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const endTime = Date.now();
+        
+        // Get the response content type
+        const contentType = response.headers.get('content-type');
+        
+        // Check if response is OK and is JSON
+        if (!response.ok) {
+            let errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
+            
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+                useConsoleLog ? console.error('Server error:', errorData) : null;
+            } else {
+                const errorText = await response.text();
+                useConsoleLog ? console.error('Server response:', errorText) : null;
+            }
+            
+            const message = `Test failed: ${errorMessage}`;
+            useConsoleLog ? console.error(message) : alert(message);
+            
+            return { 
+                success: false, 
+                error: errorMessage,
+                status: response.status,
+                responseTime: endTime - startTime,
+                responseHeaders: Object.fromEntries(response.headers.entries())
+            };
+        }
+        
+        // Parse the response
+        let responseData = {};
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+            useConsoleLog ? console.log('Test successful:', responseData) : alert('Test successful! Check console for details.');
+        } else {
+            const textResponse = await response.text();
+            useConsoleLog ? console.log('Unexpected response format:', textResponse) : alert('Unexpected response format. Check console.');
+            responseData = { rawText: textResponse };
+        }
+        
+        return {
+            success: true,
+            data: responseData,
+            status: response.status,
+            responseTime: endTime - startTime,
+            responseHeaders: Object.fromEntries(response.headers.entries())
+        };
+        
+    } catch (error) {
+        const message = `Network error during test: ${error.message}`;
+        useConsoleLog ? console.error(message, error) : alert(message);
+        return { success: false, error: error.message };
+    }
+};
+
+// Also add a function to check CORS setup
+window.testCORS = function() {
+    const origins = [
+        window.location.origin,
+        window.API_URL,
+        'https://t-shirt-customizer-backend.onrender.com',
+        'https://res.cloudinary.com'
+    ];
+    
+    console.log('Testing CORS from current origin:', window.location.origin);
+    console.log('API URL configured as:', window.API_URL);
+    
+    // Test each origin with a simple OPTIONS request
+    origins.forEach(async (origin) => {
+        try {
+            console.log(`Testing CORS with origin: ${origin}`);
+            
+            // Use fetch with no-cors mode first to see if the server is reachable
+            const noCorsResponse = await fetch(`${window.API_URL}/health`, { 
+                method: 'GET',
+                mode: 'no-cors'
+            });
+            console.log(`No-CORS mode request to ${window.API_URL}/health:`, noCorsResponse.type);
+            
+            // Then try with normal CORS mode
+            const response = await fetch(`${window.API_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Origin': origin
+                }
+            });
+            
+            console.log(`CORS test for ${origin}: ${response.ok ? '✅ Success' : '❌ Failed'}`);
+            console.log('Status:', response.status);
+            console.log('CORS headers:', {
+                'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                'access-control-allow-methods': response.headers.get('access-control-allow-methods'),
+                'access-control-allow-headers': response.headers.get('access-control-allow-headers')
+            });
+            
+            // Try to get the response data
+            const data = await response.text();
+            console.log('Response data:', data.substring(0, 100) + (data.length > 100 ? '...' : ''));
+            
+        } catch (error) {
+            console.error(`❌ CORS test failed for ${origin}:`, error.message);
+        }
+    });
+    
+    return 'CORS tests initiated. Check console for results.';
+};
+
+// Additional diagnostic function to show configuration
+window.showConfig = function() {
+    console.log('Current configuration:');
+    console.log('API URL:', window.API_URL);
+    console.log('Current origin:', window.location.origin);
+    console.log('Is authenticated:', !!localStorage.getItem('token'));
+    
+    // Check if a token exists and show its expiration
+    const token = localStorage.getItem('token');
+    if (token) {
+        try {
+            // Split the JWT and decode the payload
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('Token payload:', payload);
+            
+            // Show token expiration
+            if (payload.exp) {
+                const expDate = new Date(payload.exp * 1000);
+                const now = new Date();
+                console.log('Token expires:', expDate);
+                console.log('Token expired:', expDate < now);
+                console.log('Time until expiration:', Math.floor((expDate - now) / 1000 / 60), 'minutes');
+            }
+        } catch (e) {
+            console.error('Error parsing token:', e);
+        }
+    }
+    
+    return 'Configuration displayed in console.';
+};
