@@ -1,3 +1,4 @@
+
 // This file patches the Product model to handle legacy 'image' field
 // It ensures that 'images' is always populated even for older products
 // that only have the 'image' field
@@ -25,4 +26,4 @@ export function applyProductModelPatch(Product) {
     };
     
     console.log('Product model patch applied - image/images compatibility added');
-} 
+}
