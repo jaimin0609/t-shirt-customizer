@@ -68,7 +68,8 @@ const upload = multer({
             public_id: (req, file) => {
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 return `product-${uniqueSuffix}`;
-            }
+            },
+            resource_type: 'auto'
         }
     }) : storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB size limit
@@ -583,7 +584,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                     size: file.size,
                     path: file.path || 'No path',
                     destination: file.destination || 'No destination',
-                    cloudinaryUrl: cloudinaryEnabled && file.path ? file.path : null
+                    cloudinaryUrl: file.path || null,
+                    cloudinaryDetails: file.cloudinary || null
                 });
             });
         } else {
@@ -607,8 +609,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             try {
                 console.log('Processing uploaded images...');
                 imageUrls = req.files.map(file => {
-                    // If using Cloudinary, the URL will be in file.path
-                    const url = cloudinaryEnabled ? file.path : `/uploads/products/${file.filename}`;
+                    // For Cloudinary uploads, the URL will be in file.path
+                    const url = file.path;
                     console.log(`Processed image URL: ${url}`);
                     return url;
                 });
