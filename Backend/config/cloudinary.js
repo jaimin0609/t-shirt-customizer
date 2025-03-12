@@ -54,7 +54,7 @@ const localStorageConfig = multer.diskStorage({
 
 // Variable to track if Cloudinary is working
 let cloudinaryEnabled = false;
-let storage = localStorageConfig; // Now localStorageConfig is defined before use
+let cloudinaryStorage = null;
 
 // Validate required environment variables
 const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
@@ -79,6 +79,17 @@ if (missingEnvVars.length > 0) {
       secure: true
     });
     
+    // Create Cloudinary storage instance
+    cloudinaryStorage = new CloudinaryStorage({
+      cloudinary: cloudinary.v2,
+      params: {
+        folder: 'products',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+        transformation: [{ width: 1000, crop: "limit" }],
+        resource_type: 'auto'
+      }
+    });
+    
     // Test Cloudinary connection
     const testCloudinaryConnection = async () => {
       try {
@@ -93,17 +104,6 @@ if (missingEnvVars.length > 0) {
         return false;
       }
     };
-    
-    // Create Cloudinary storage instance
-    const cloudinaryStorage = new CloudinaryStorage({
-      cloudinary: cloudinary.v2,
-      params: {
-        folder: 'products',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-        transformation: [{ width: 1000, crop: "limit" }],
-        resource_type: 'auto'
-      }
-    });
     
     // Execute the test
     testCloudinaryConnection();
@@ -314,7 +314,7 @@ const getFileUrl = (file) => {
 
 export {
   cloudinary,
-  cloudinaryStorage as storage,
+  cloudinaryStorage,
   uploadImage,
   getCloudinaryConfig,
   getCloudinaryUrl,
@@ -322,5 +322,6 @@ export {
   cloudinaryEnabled,
   getFileUrl,
   setupLocalStorage,
-  testCloudinaryConnection
+  testCloudinaryConnection,
+  localStorageConfig
 }; 

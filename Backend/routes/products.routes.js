@@ -8,7 +8,7 @@ import { optimizeProductImage } from '../middleware/imageOptimization.js';
 import { sequelize } from '../models/index.js';
 import { Sequelize } from 'sequelize';
 import { auth, isAdmin } from '../middleware/auth.js';
-import { storage, uploadImage, getCloudinaryUrl, cloudinaryEnabled } from '../config/cloudinary.js';
+import { cloudinaryStorage, localStorageConfig, cloudinaryEnabled } from '../config/cloudinary.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { promisify } from 'util';
@@ -57,18 +57,9 @@ if (!fs.existsSync(uploadDir)) {
     console.log('Upload directory exists:', uploadDir);
 }
 
-// Configure multer to use Cloudinary storage
+// Configure multer to use the appropriate storage
 const upload = multer({
-    storage: cloudinaryEnabled ? new CloudinaryStorage({
-        cloudinary: cloudinary.v2,
-        params: {
-            folder: 'products',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-            transformation: [{ width: 1000, crop: "limit" }],
-            format: 'jpg',
-            resource_type: 'auto'
-        }
-    }) : storage,
+    storage: cloudinaryEnabled ? cloudinaryStorage : localStorageConfig,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB size limit
     fileFilter: (req, file, cb) => {
         console.log('Processing file upload:', {
