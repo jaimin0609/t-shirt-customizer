@@ -59,13 +59,32 @@ if (!fs.existsSync(uploadDir)) {
 
 // Configure multer to use Cloudinary storage
 const upload = multer({
-    storage: storage,
+    storage: cloudinaryEnabled ? new CloudinaryStorage({
+        cloudinary: cloudinary,
+        params: {
+            folder: 'products',
+            allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+            transformation: [{ width: 1000, crop: "limit" }],
+            public_id: (req, file) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                return `product-${uniqueSuffix}`;
+            }
+        }
+    }) : storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB size limit
     fileFilter: (req, file, cb) => {
+        console.log('Processing file upload:', {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
+        });
+        
         // Accept image files only
         if (file.mimetype.startsWith('image/')) {
+            console.log('✅ File type accepted:', file.mimetype);
             cb(null, true);
         } else {
+            console.log('❌ File type rejected:', file.mimetype);
             cb(new Error('Only image files are allowed!'), false);
         }
     }
@@ -563,7 +582,8 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                     mimetype: file.mimetype,
                     size: file.size,
                     path: file.path || 'No path',
-                    destination: file.destination || 'No destination'
+                    destination: file.destination || 'No destination',
+                    cloudinaryUrl: cloudinaryEnabled && file.path ? file.path : null
                 });
             });
         } else {
@@ -587,10 +607,13 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             try {
                 console.log('Processing uploaded images...');
                 imageUrls = req.files.map(file => {
+                    // If using Cloudinary, the URL will be in file.path
                     const url = cloudinaryEnabled ? file.path : `/uploads/products/${file.filename}`;
                     console.log(`Processed image URL: ${url}`);
                     return url;
                 });
+                
+                console.log('Final image URLs:', imageUrls);
             } catch (imageError) {
                 console.error('Error processing images:', imageError);
                 return res.status(500).json({
@@ -614,13 +637,14 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
             isCustomizable: req.body.isCustomizable === 'true',
             hasVariants: req.body.hasVariants === 'true',
             images: imageUrls,
-            availableSizes: JSON.parse(req.body.availableSizes || '["S","M","L","XL"]')
+            image: imageUrls.length > 0 ? imageUrls[0] : null // Set first image as main image
         });
         
         console.log('Product created successfully:', {
             id: product.id,
             name: product.name,
-            imageCount: imageUrls.length
+            imageCount: imageUrls.length,
+            imageUrls: imageUrls
         });
         
         return res.status(201).json({
