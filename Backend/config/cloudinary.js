@@ -56,6 +56,21 @@ const localStorageConfig = multer.diskStorage({
 let cloudinaryEnabled = false;
 let cloudinaryStorage = null;
 
+// Test Cloudinary connection function
+const testCloudinaryConnection = async () => {
+  try {
+    const result = await cloudinary.v2.api.ping();
+    console.log('✅ Cloudinary connection test successful:', result);
+    cloudinaryEnabled = true;
+    return true;
+  } catch (error) {
+    console.error('❌ Cloudinary connection test failed:', error);
+    cloudinaryEnabled = false;
+    console.warn('Falling back to local storage for file uploads');
+    return false;
+  }
+};
+
 // Validate required environment variables
 const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -90,22 +105,7 @@ if (missingEnvVars.length > 0) {
       }
     });
     
-    // Test Cloudinary connection
-    const testCloudinaryConnection = async () => {
-      try {
-        const result = await cloudinary.v2.api.ping();
-        console.log('✅ Cloudinary connection test successful:', result);
-        cloudinaryEnabled = true;
-        return true;
-      } catch (error) {
-        console.error('❌ Cloudinary connection test failed:', error);
-        cloudinaryEnabled = false;
-        console.warn('Falling back to local storage for file uploads');
-        return false;
-      }
-    };
-    
-    // Execute the test
+    // Execute the connection test
     testCloudinaryConnection().catch(err => {
       console.error('Error during Cloudinary connection test:', err);
       cloudinaryEnabled = false;
