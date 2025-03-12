@@ -543,12 +543,16 @@ router.post('/diagnostic-upload', auth, isAdmin, upload.single('testImage'), asy
 router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
     try {
         console.log('Creating new product...');
+        console.log('Storage mode:', cloudinaryEnabled ? 'Cloudinary' : 'Local Storage');
         
         // Log request details
-        console.log('Request from:', req.ip);
-        console.log('User:', req.user ? req.user.email : 'Unknown');
-        console.log('Origin:', req.get('origin') || 'No origin header');
-        console.log('Files received:', req.files ? req.files.length : 0);
+        console.log('Request details:', {
+            ip: req.ip,
+            user: req.user ? req.user.email : 'Unknown',
+            origin: req.get('origin') || 'No origin header',
+            filesReceived: req.files ? req.files.length : 0,
+            contentType: req.get('content-type')
+        });
         
         // Log detailed information about received files
         if (req.files && req.files.length > 0) {
@@ -559,8 +563,7 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
                     mimetype: file.mimetype,
                     size: file.size,
                     path: file.path || 'No path',
-                    destination: file.destination || 'No destination',
-                    cloudinaryEnabled: cloudinaryEnabled
+                    destination: file.destination || 'No destination'
                 });
             });
         } else {
@@ -568,10 +571,13 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         }
         
         // Validate required fields
-        if (!req.body.name || !req.body.price) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Name and price are required' 
+        const requiredFields = ['name', 'price', 'description', 'category'];
+        const missingFields = requiredFields.filter(field => !req.body[field]);
+        
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required fields: ${missingFields.join(', ')}`
             });
         }
         
@@ -580,257 +586,49 @@ router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
         if (req.files && req.files.length > 0) {
             try {
                 console.log('Processing uploaded images...');
-                
-                // Fix: Apply additional debugging to see exactly what properties are available
-                const sampleFile = req.files[0];
-                console.log('Sample file properties:', Object.keys(sampleFile));
-                
-                // With Cloudinary, the secure URL is in file.path
-                if (cloudinaryEnabled) {
-                    console.log('Using Cloudinary for image URLs');
-                    
-                    // Validate Cloudinary configuration
-                    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-                        console.error('⚠️ Missing Cloudinary credentials. Check environment variables.');
-                    }
-                    
-                    try {
-                        imageUrls = req.files.map(file => {
-                            // Debug each file
-                            console.log(`Processing file for URL: ${file.originalname}`);
-                            
-                            // Check all possible properties where Cloudinary URL might be stored
-                            if (!file.path) {
-                                console.warn(`Missing path for file ${file.originalname}, checking for cloudinary data`);
-                                // Try to find cloudinary URL in any available field
-                                if (file.cloudinaryUrl) return file.cloudinaryUrl;
-                                if (file.secure_url) return file.secure_url;
-                                if (file.url) return file.url;
-                                
-                                // If none of the standard properties work, try multer-storage-cloudinary specific properties
-                                if (file.cloudinary && file.cloudinary.secure_url) {
-                                    console.log('Found URL in file.cloudinary:', file.cloudinary.secure_url);
-                                    return file.cloudinary.secure_url;
-                                }
-                                
-                                // If still not found, handle the file manually as a fallback
-                                console.error('No valid URL found for uploaded file:', file.originalname);
-                                
-                                // In case the file was uploaded but the URL wasn't captured correctly,
-                                // construct a Cloudinary URL format
-                                if (file.filename) {
-                                    const cloudUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/${file.filename}`;
-                                    console.log('Constructed Cloudinary URL:', cloudUrl);
-                                    return cloudUrl;
-                                }
-                                
-                                return null;
-                            }
-                            
-                            console.log(`Using path: ${file.path}`);
-                            return file.path;
-                        }).filter(url => url !== null);
-                    } catch (cloudinaryErr) {
-                        console.error('Error processing Cloudinary URLs:', cloudinaryErr);
-                        // Fall back to local URLs if Cloudinary processing fails
-                        imageUrls = req.files.map(file => {
-                            const filename = file.filename || path.basename(file.path || '');
-                            if (!filename) return null;
-                            return `/uploads/products/${filename}`;
-                        }).filter(url => url !== null);
-                    }
-                    
-                    console.log('Final image URLs:', imageUrls);
-                } else {
-                    // For local storage, construct the URL from the filename
-                    console.log('Using local storage for image URLs');
-                    imageUrls = req.files.map(file => {
-                        const filename = file.filename || path.basename(file.path || '');
-                        
-                        // If we couldn't get a filename, log an error and return null
-                        if (!filename) {
-                            console.error('Could not determine filename for:', file.originalname);
-                            return null;
-                        }
-                        
-                        const localUrl = `/uploads/products/${filename}`;
-                        console.log(`Local URL for ${file.originalname}: ${localUrl}`);
-                        return localUrl;
-                    }).filter(url => url !== null);
-                    
-                    console.log('Local image URLs:', imageUrls);
-                }
-                
-                if (imageUrls.length === 0 && req.files.length > 0) {
-                    console.warn('⚠️ Warning: Files were uploaded but no URLs were generated');
-                }
-            } catch (error) {
-                console.error('Error processing uploaded images:', error);
-                // Don't fail the entire request, just log the error and continue with empty image array
-                imageUrls = [];
+                imageUrls = req.files.map(file => {
+                    const url = cloudinaryEnabled ? file.path : `/uploads/products/${file.filename}`;
+                    console.log(`Processed image URL: ${url}`);
+                    return url;
+                });
+            } catch (imageError) {
+                console.error('Error processing images:', imageError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error processing uploaded images',
+                    error: imageError.message
+                });
             }
         }
         
-        // Create product data
-        const productData = {
+        // Create product in database
+        const product = await Product.create({
             name: req.body.name,
-            description: req.body.description || '',
-            price: parseFloat(req.body.price) || 0,
-            category: req.body.category || 'Uncategorized',
+            description: req.body.description,
+            price: req.body.price,
+            category: req.body.category,
             gender: req.body.gender || 'unisex',
             ageGroup: req.body.ageGroup || 'adult',
             stock: parseInt(req.body.stock) || 0,
             status: req.body.status || 'active',
-            featured: req.body.featured === 'true',
-        };
-        
-        // Handle images safely for both MySQL and PostgreSQL
-        if (imageUrls.length > 0) {
-            productData.image = imageUrls[0]; // Set the main image to the first one
-            
-            // Log the image being used as main image
-            console.log('Setting main product image to:', productData.image);
-            
-            // Format array for database
-            if (process.env.DATABASE_URL) { // For PostgreSQL
-                productData.images = JSON.stringify(imageUrls);
-            } else { // For MySQL
-                productData.images = imageUrls;
-            }
-        } else {
-            console.log('No image URLs available, using null for product image');
-            productData.image = null;
-            productData.images = process.env.DATABASE_URL ? '[]' : []; // Empty array based on DB type
-        }
-        
-        // Process tags - safely
-        try {
-            const tags = Array.isArray(req.body.tags) 
-                ? req.body.tags 
-                : (typeof req.body.tags === 'string' ? req.body.tags.split(',').map(t => t.trim()) : []);
-                
-            // Format tags for database
-            if (process.env.DATABASE_URL) { // For PostgreSQL
-                productData.tags = JSON.stringify(tags);
-            } else { // For MySQL
-                productData.tags = tags;
-            }
-        } catch (tagError) {
-            console.error('Error processing tags:', tagError);
-            productData.tags = process.env.DATABASE_URL ? '[]' : [];
-        }
-        
-        // Empty customization options
-        productData.customizationOptions = process.env.DATABASE_URL ? '[]' : [];
-        
-        // Create the product
-        console.log('Creating product with data:', { 
-            name: productData.name,
-            price: productData.price,
-            hasImage: productData.image !== null,
-            imageCount: Array.isArray(productData.images) ? productData.images.length : 
-                         (productData.images ? JSON.parse(productData.images).length : 0)
+            isCustomizable: req.body.isCustomizable === 'true',
+            hasVariants: req.body.hasVariants === 'true',
+            images: imageUrls,
+            availableSizes: JSON.parse(req.body.availableSizes || '["S","M","L","XL"]')
         });
         
-        const product = await Product.create(productData);
-        console.log('Base product created successfully, ID:', product.id);
+        console.log('Product created successfully:', {
+            id: product.id,
+            name: product.name,
+            imageCount: imageUrls.length
+        });
         
-        // Process variants if present
-        let variantsAdded = 0;
-        if (req.body.hasVariants === 'true') {
-            try {
-                // Process color variants
-                if (req.body.colorVariantsData) {
-                    try {
-                        let colorVariants;
-                        
-                        // Parse color variants data safely
-                        if (typeof req.body.colorVariantsData === 'string') {
-                            try {
-                                colorVariants = JSON.parse(req.body.colorVariantsData);
-                            } catch (e) {
-                                console.error('Failed to parse colorVariantsData:', e);
-                                colorVariants = [];
-                            }
-                        } else if (Array.isArray(req.body.colorVariantsData)) {
-                            colorVariants = req.body.colorVariantsData;
-                        } else {
-                            colorVariants = [];
-                        }
-                            
-                        if (Array.isArray(colorVariants)) {
-                            for (const variant of colorVariants) {
-                                if (!variant) continue;
-                                
-                                await ProductVariant.create({
-                                    productId: product.id,
-                                    type: 'color',
-                                    color: variant.color || 'Unknown',
-                                    colorCode: variant.colorCode || '#000000',
-                                    stock: parseInt(variant.stock) || 0,
-                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                                    status: 'active'
-                                });
-                                variantsAdded++;
-                            }
-                        }
-                    } catch (colorError) {
-                        console.error('Error processing color variants:', colorError);
-                    }
-                }
-                
-                // Process size variants
-                if (req.body.sizeVariantsData) {
-                    try {
-                        let sizeVariants;
-                        
-                        // Parse size variants data safely
-                        if (typeof req.body.sizeVariantsData === 'string') {
-                            try {
-                                sizeVariants = JSON.parse(req.body.sizeVariantsData);
-                            } catch (e) {
-                                console.error('Failed to parse sizeVariantsData:', e);
-                                sizeVariants = [];
-                            }
-                        } else if (Array.isArray(req.body.sizeVariantsData)) {
-                            sizeVariants = req.body.sizeVariantsData;
-                        } else {
-                            sizeVariants = [];
-                        }
-                        
-                        if (Array.isArray(sizeVariants)) {
-                            for (const variant of sizeVariants) {
-                                if (!variant) continue;
-                                
-                                await ProductVariant.create({
-                                    productId: product.id,
-                                    type: 'size',
-                                    size: variant.size || 'One Size',
-                                    stock: parseInt(variant.stock) || 0,
-                                    priceAdjustment: parseFloat(variant.priceAdjustment) || 0,
-                                    status: 'active'
-                                });
-                                variantsAdded++;
-                            }
-                        }
-                    } catch (sizeError) {
-                        console.error('Error processing size variants:', sizeError);
-                    }
-                }
-                
-                console.log(`Added ${variantsAdded} variants to product ${product.id}`);
-            } catch (variantError) {
-                console.error('Error processing product variants:', variantError);
-                // Don't fail the entire request, we already have the base product created
-            }
-        }
-        
-        // Return success response with created product
         return res.status(201).json({
             success: true,
             message: 'Product created successfully',
-            product
+            product: product
         });
+        
     } catch (error) {
         console.error('Error creating product:', error);
         return res.status(500).json({

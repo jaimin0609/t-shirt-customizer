@@ -254,223 +254,142 @@ function populateCategoriesDropdown(categories) {
 }
 
 /**
- * Set up image upload functionality
+ * Set up image upload functionality with drag and drop
  */
 function setupImageUpload() {
     console.log('Setting up image upload...');
     
-    const productImages = document.getElementById('productImages');
-    const previewsContainer = document.getElementById('productImagePreviews');
-    const dropzoneContainer = document.querySelector('.dropzone-container');
-    const dropzoneMessage = document.querySelector('.dz-message');
-    
-    if (!productImages || !previewsContainer || !dropzoneContainer || !dropzoneMessage) {
-        console.error('Image upload elements not found!');
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('productImages');
+    const previewContainer = document.getElementById('productImagePreviews');
+    const validationMessage = document.getElementById('imageValidationMessage');
+
+    if (!dropzone || !fileInput || !previewContainer) {
+        console.error('Required elements for image upload not found!');
         return;
     }
-    
-    // Create a fixed click handler one time only
-    let clickHandlerAttached = false;
-    
-    function attachClickHandler() {
-        if (clickHandlerAttached) return; // Only attach once
-        
-        // Fix: Make sure the click event is properly handled with direct event binding
-        dropzoneContainer.onclick = function(e) {
-            console.log('Dropzone clicked');
-            // Prevent the event from being triggered twice
-            e.preventDefault();
-            e.stopPropagation();
-            // Directly trigger file selection
-            productImages.click();
-        };
-        
-        clickHandlerAttached = true;
-        console.log('Dropzone click handler attached successfully');
-    }
-    
-    // Immediately attach the click handler
-    attachClickHandler();
-    
-    // Add drag and drop visual feedback
+
+    // Handle drag and drop events
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropzoneContainer.addEventListener(eventName, preventDefaults, false);
+        dropzone.addEventListener(eventName, preventDefaults, false);
     });
-    
+
     function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
     }
-    
-    // Add visual feedback for drag operations
+
     ['dragenter', 'dragover'].forEach(eventName => {
-        dropzoneContainer.addEventListener(eventName, highlight, false);
+        dropzone.addEventListener(eventName, () => {
+            dropzone.classList.add('border', 'border-primary');
+        });
     });
-    
+
     ['dragleave', 'drop'].forEach(eventName => {
-        dropzoneContainer.addEventListener(eventName, unhighlight, false);
+        dropzone.addEventListener(eventName, () => {
+            dropzone.classList.remove('border', 'border-primary');
+        });
     });
-    
-    function highlight() {
-        dropzoneContainer.classList.add('border-primary');
-    }
-    
-    function unhighlight() {
-        dropzoneContainer.classList.remove('border-primary');
-    }
-    
-    // Handle actual drop
-    dropzoneContainer.addEventListener('drop', handleDrop, false);
-    
-    function handleDrop(e) {
+
+    // Handle dropped files
+    dropzone.addEventListener('drop', (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
-        
-        // Check if files were actually dropped
-        if (files && files.length > 0) {
-            console.log('Files dropped:', files.length);
-            handleFiles(files);
-        } else {
-            console.warn('No files found in drop event');
-        }
-    }
-    
-    // Handle file selection - with improved error handling
-    productImages.addEventListener('change', function(e) {
-        console.log('Files selected via input change event:', this.files?.length || 0);
-        if (this.files && this.files.length > 0) {
-            handleFiles(this.files);
-        } else {
-            console.warn('No files in change event');
-        }
+        handleFiles(files);
     });
-    
+
+    // Handle click to upload
+    dropzone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+
     function handleFiles(files) {
-        console.log('Processing files in handleFiles:', files.length);
-        previewsContainer.innerHTML = '';
+        console.log('Handling files:', files.length);
         
-        if (!files || files.length === 0) {
-            console.warn('No files to process');
-            dropzoneMessage.style.display = 'block';
+        const validFiles = Array.from(files).filter(file => {
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please upload only image files.', 'warning');
+                return false;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('File size should not exceed 5MB.', 'warning');
+                return false;
+            }
+            return true;
+        });
+
+        if (validFiles.length === 0) {
             return;
         }
-        
-        // Hide the dropzone message when files are selected
-        dropzoneMessage.style.display = 'none';
-        
-        // Process each file (up to 5)
-        const promises = [];
-        
-        Array.from(files).slice(0, 5).forEach((file, index) => {
-            console.log(`Processing file ${index + 1}:`, file.name, file.type, file.size);
-            
-            // Verify it's an image file
-            if (!file.type.startsWith('image/')) {
-                console.warn(`Skipping non-image file: ${file.name} (${file.type})`);
-                showToast('warning', `Skipped non-image file: ${file.name}`);
+
+        // Clear existing previews if this is a new selection
+        previewContainer.innerHTML = '';
+        validationMessage.style.display = 'none';
+
+        validFiles.forEach((file, index) => {
+            if (index >= 5) {
+                showNotification('Maximum 5 images allowed.', 'warning');
                 return;
             }
-            
-            const promise = new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                
-                // Add error handling for FileReader
-                reader.onerror = function() {
-                    console.error(`Error reading file ${file.name}`);
-                    showToast('error', `Failed to read file: ${file.name}`);
-                    reject(new Error(`Failed to read file: ${file.name}`));
-                };
-                
-                reader.onload = function(e) {
-                    try {
-                        // Create preview card
-                        const previewCol = document.createElement('div');
-                        previewCol.className = 'col-md-4 col-6';
-                        
-                        const previewCard = document.createElement('div');
-                        previewCard.className = 'card h-100';
-                        
-                        const previewImg = document.createElement('img');
-                        previewImg.src = e.target.result;
-                        previewImg.className = 'card-img-top';
-                        previewImg.style.height = '150px';
-                        previewImg.style.objectFit = 'cover';
-                        
-                        // Add error handling for image loading
-                        previewImg.onerror = function() {
-                            previewImg.src = '/admin/img/image-placeholder.png'; // Fallback image
-                            console.error(`Failed to load image preview for ${file.name}`);
-                        };
-                        
-                        const cardBody = document.createElement('div');
-                        cardBody.className = 'card-body p-2';
-                        
-                        const fileName = document.createElement('p');
-                        fileName.className = 'card-text small text-truncate mb-0';
-                        fileName.textContent = file.name;
-                        
-                        const removeBtn = document.createElement('button');
-                        removeBtn.type = 'button';
-                        removeBtn.className = 'btn btn-sm btn-danger position-absolute top-0 end-0 m-1';
-                        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
-                        removeBtn.onclick = function() {
-                            previewCol.remove();
-                            // Show dropzone message if no previews left
-                            if (previewsContainer.children.length === 0) {
-                                dropzoneMessage.style.display = 'block';
-                            }
-                        };
-                        
-                        // Assemble the preview card
-                        cardBody.appendChild(fileName);
-                        previewCard.appendChild(previewImg);
-                        previewCard.appendChild(cardBody);
-                        previewCard.appendChild(removeBtn);
-                        previewCol.appendChild(previewCard);
-                        previewsContainer.appendChild(previewCol);
-                        
-                        resolve();
-                    } catch (error) {
-                        console.error('Error creating preview:', error);
-                        reject(error);
-                    }
-                };
-                
-                reader.readAsDataURL(file);
-            });
-            
-            promises.push(promise);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.createElement('div');
+                preview.className = 'col-md-4 mb-3';
+                preview.innerHTML = `
+                    <div class="card h-100">
+                        <img src="${e.target.result}" class="card-img-top" alt="Preview" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <p class="card-text small text-muted mb-2">${file.name}</p>
+                            <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeImage(this)">
+                                <i class="bi bi-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+                previewContainer.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
         });
+
+        // Update the file input with the valid files
+        const dt = new DataTransfer();
+        validFiles.slice(0, 5).forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
         
-        // After all files are processed, check if any were added
-        Promise.allSettled(promises).then(results => {
-            const successful = results.filter(r => r.status === 'fulfilled').length;
-            console.log(`Successfully processed ${successful} out of ${files.length} files`);
-            
-            if (successful === 0) {
-                dropzoneMessage.style.display = 'block';
-                showToast('warning', 'No valid image files were added');
-            }
-            
-            // Make sure the click handler is still attached (sometimes it gets lost)
-            attachClickHandler();
-        });
+        console.log('Files processed:', fileInput.files.length);
     }
+}
+
+/**
+ * Remove an image from the preview and file input
+ */
+function removeImage(button) {
+    const preview = button.closest('.col-md-4');
+    const index = Array.from(preview.parentNode.children).indexOf(preview);
+    const fileInput = document.getElementById('productImages');
     
-    // Also trigger a click handler check every 2 seconds to ensure it's always available
-    const handlerInterval = setInterval(() => {
-        if (!clickHandlerAttached) {
-            console.log('Reattaching dropzone click handler');
-            attachClickHandler();
+    // Remove the preview
+    preview.remove();
+    
+    // Update the file input
+    const dt = new DataTransfer();
+    Array.from(fileInput.files).forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
         }
-    }, 2000);
+    });
+    fileInput.files = dt.files;
     
-    // Clean up interval after 30 seconds
-    setTimeout(() => {
-        clearInterval(handlerInterval);
-    }, 30000);
-    
-    console.log('Image upload setup complete');
+    // Show validation message if no images left
+    const validationMessage = document.getElementById('imageValidationMessage');
+    if (fileInput.files.length === 0 && validationMessage) {
+        validationMessage.style.display = 'block';
+    }
 }
 
 /**
@@ -612,77 +531,51 @@ async function handleFormSubmit(e) {
         let imageProcessingSuccess = false;
         
         try {
-            if (imageInput && imageInput.files && imageInput.files.length > 0) {
+            if (!imageInput) {
+                throw new Error('Image input element not found');
+            }
+
+            if (!imageInput.files || imageInput.files.length === 0) {
+                console.log('No images selected - continuing without images');
+                imageProcessingSuccess = true;
+            } else {
                 console.log(`Processing ${imageInput.files.length} image files...`);
-                // Add each file individually with explicit type checking
-                let successfulImages = 0;
                 
                 // Debug all files
                 for (let i = 0; i < imageInput.files.length; i++) {
                     const file = imageInput.files[i];
                     console.log(`Image file ${i+1}: Name=${file.name}, Size=${file.size}, Type=${file.type}`);
-                }
-                
-                // Critical fix: Make sure the file input is not disabled and its files are accessible
-                if (imageInput.disabled) {
-                    console.warn('Image input was disabled! Enabling it...');
-                    imageInput.disabled = false;
-                }
-                
-                // Double check that files are still available
-                if (!imageInput.files || imageInput.files.length === 0) {
-                    console.error('⚠️ Files disappeared from input element!');
-                } else {
-                    // Ensure the files are properly attached to the FormData
-                    // This is the critical section to fix the "Files received: 0" issue
-                    for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
-                        const file = imageInput.files[i];
-                        
-                        // Verify it's an image file
-                        if (file.type.startsWith('image/')) {
-                            try {
-                                console.log(`Adding image ${i+1}: ${file.name} (${file.size} bytes, ${file.type})`);
-                                
-                                // Important: Use 'images' as the field name to match server expectation
-                                formData.append('images', file);
-                                
-                                // Debug log to verify image was added to FormData
-                                console.log(`✓ Successfully appended file ${file.name} to FormData as 'images'`);
-                                successfulImages++;
-                            } catch (singleImageError) {
-                                console.error(`❌ Error adding image ${i+1}:`, singleImageError);
-                            }
-                        } else {
-                            console.warn(`⚠️ Skipping non-image file: ${file.name} (${file.type})`);
-                        }
+                    
+                    // Verify it's an image file
+                    if (!file.type.startsWith('image/')) {
+                        throw new Error(`File ${file.name} is not an image`);
                     }
-                }
-                
-                // Debug log to verify FormData contents
-                console.log('Verifying FormData contents:');
-                for (let [key, value] of formData.entries()) {
-                    if (key === 'images') {
-                        if (value instanceof File) {
-                            console.log(`FormData contains image: ${value.name} (${value.size} bytes)`);
-                        } else {
-                            console.warn(`FormData contains non-File value for 'images' key:`, value);
-                        }
+                    
+                    // Verify file size (max 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        throw new Error(`File ${file.name} is too large (max 5MB)`);
                     }
+                    
+                    // Important: Use 'images' as the field name to match server expectation
+                    formData.append('images', file);
+                    console.log(`✓ Successfully appended file ${file.name} to FormData as 'images'`);
                 }
                 
-                if (successfulImages > 0) {
-                    console.log(`✅ Successfully processed ${successfulImages} images`);
-                    imageProcessingSuccess = true;
-                } else {
-                    console.warn('⚠️ No images were successfully processed');
+                // Verify files were added to FormData
+                let formDataEntries = Array.from(formData.entries());
+                let imageEntries = formDataEntries.filter(entry => entry[0] === 'images');
+                console.log(`FormData contains ${imageEntries.length} image entries`);
+                
+                if (imageEntries.length === 0) {
+                    throw new Error('Failed to append images to FormData');
                 }
-            } else {
-                console.log('⚠️ No image files selected - continuing without images');
-                imageProcessingSuccess = true; // No images is still a success case
+                
+                imageProcessingSuccess = true;
             }
         } catch (imageError) {
             console.error('❌ Error processing images:', imageError);
-            // Continue submission despite image errors
+            showNotification(imageError.message, 'danger');
+            throw imageError; // Stop form submission if image processing fails
         }
         console.groupEnd();
         

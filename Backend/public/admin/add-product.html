@@ -287,14 +287,17 @@
 
                             <div class="mb-4">
                                 <label class="form-label fw-bold">Product Images</label>
-                                <div class="dropzone-container bg-light p-4 rounded">
+                                <div class="dropzone-container bg-light p-4 rounded" id="dropzone">
                                     <div class="dz-message text-center py-5">
                                         <i class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
                                         <p class="mt-2 fs-5">Drag and drop product images here, or click to browse</p>
                                         <p class="text-muted">Upload up to 5 images. Max file size: 5MB</p>
                                     </div>
                                     <div id="productImagePreviews" class="row mt-3 g-3"></div>
-                                    <input type="file" id="productImages" name="images" multiple accept="image/*" style="display: none;">
+                                    <input type="file" id="productImages" name="images" multiple accept="image/*" class="d-none">
+                                </div>
+                                <div id="imageValidationMessage" class="invalid-feedback" style="display: none;">
+                                    Please select at least one image
                                 </div>
                             </div>
 
@@ -573,69 +576,7 @@
     <script src="/admin/js/add-product.js"></script>
     <!-- Debug script for development - remove in production -->
     <!-- <script src="/admin/js/debug-product-form.js"></script> -->
-    
-    <!-- Accessibility fixes -->
-    <script>
-        // Fix for aria-hidden accessibility issue on modal
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileModal = document.getElementById('profileModal');
-            if (profileModal) {
-                // Handle modal showing - remove aria-hidden immediately to avoid conflicts
-                profileModal.addEventListener('show.bs.modal', function() {
-                    // Remove aria-hidden immediately during the show phase
-                    this.removeAttribute('aria-hidden');
-                    console.log('aria-hidden removed during modal show phase');
-                });
-                
-                // Also handle immediately after it's shown
-                profileModal.addEventListener('shown.bs.modal', function() {
-                    // Ensure aria-hidden is removed when modal is fully shown
-                    this.removeAttribute('aria-hidden');
-                    console.log('aria-hidden removed after modal is shown');
-                    
-                    // Move focus inside modal to a non-interactive element first
-                    const modalTitle = this.querySelector('.modal-title');
-                    if (modalTitle) {
-                        modalTitle.setAttribute('tabindex', '-1');
-                        modalTitle.focus();
-                    }
-                });
-                
-                // Handle hide event
-                profileModal.addEventListener('hide.bs.modal', function() {
-                    // No need to add aria-hidden during hide, Bootstrap will do it
-                    console.log('Modal is being hidden');
-                });
-                
-                // Handle after modal is hidden
-                profileModal.addEventListener('hidden.bs.modal', function() {
-                    // Restore aria-hidden when modal is fully hidden
-                    this.setAttribute('aria-hidden', 'true');
-                    console.log('aria-hidden restored after modal is hidden');
-                    
-                    // Return focus to the element that opened the modal
-                    const openButton = document.getElementById('profileLink');
-                    if (openButton) {
-                        openButton.focus();
-                    }
-                });
-            }
-            
-            // Make dropzone container clickable
-            const dropzoneContainer = document.querySelector('.dropzone-container');
-            if (dropzoneContainer) {
-                dropzoneContainer.addEventListener('click', function(e) {
-                    console.log('Dropzone click handler set up');
-                    const fileInput = document.getElementById('productImages');
-                    if (fileInput) {
-                        fileInput.click();
-                    }
-                });
-            }
-        });
-    </script>
 
-    <!-- Debugging Scripts -->
     <script>
         function debugCategoryDropdown() {
             const categorySelect = document.getElementById('productCategory');
@@ -740,5 +681,66 @@
             showToast('success', 'This is a test toast message');
         }
     </script>
+
+    <!-- Accessibility fixes -->
+    <script>
+        // Fix for aria-hidden accessibility issue on modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileModal = document.getElementById('profileModal');
+            if (profileModal) {
+                // Handle modal showing - remove aria-hidden immediately to avoid conflicts
+                profileModal.addEventListener('show.bs.modal', function() {
+                    // Remove aria-hidden immediately during the show phase
+                    this.removeAttribute('aria-hidden');
+                    console.log('aria-hidden removed during modal show phase');
+                });
+                
+                // Also handle immediately after it's shown
+                profileModal.addEventListener('shown.bs.modal', function() {
+                    // Ensure aria-hidden is removed when modal is fully shown
+                    this.removeAttribute('aria-hidden');
+                    console.log('aria-hidden removed after modal is shown');
+                    
+                    // Move focus inside modal to a non-interactive element first
+                    const modalTitle = this.querySelector('.modal-title');
+                    if (modalTitle) {
+                        modalTitle.setAttribute('tabindex', '-1');
+                        modalTitle.focus();
+                    }
+                });
+                
+                // Handle hide event
+                profileModal.addEventListener('hide.bs.modal', function() {
+                    // No need to add aria-hidden during hide, Bootstrap will do it
+                    console.log('Modal is being hidden');
+                });
+                
+                // Handle after modal is hidden
+                profileModal.addEventListener('hidden.bs.modal', function() {
+                    // Restore aria-hidden when modal is fully hidden
+                    this.setAttribute('aria-hidden', 'true');
+                    console.log('aria-hidden restored after modal is hidden');
+                    
+                    // Return focus to the element that opened the modal
+                    const openButton = document.getElementById('profileLink');
+                    if (openButton) {
+                        openButton.focus();
+                    }
+                });
+            }
+            
+            // Make dropzone container clickable
+            const dropzoneContainer = document.querySelector('.dropzone-container');
+            if (dropzoneContainer) {
+                dropzoneContainer.addEventListener('click', function(e) {
+                    console.log('Dropzone click handler set up');
+                    const fileInput = document.getElementById('productImages');
+                    if (fileInput) {
+                        fileInput.click();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>

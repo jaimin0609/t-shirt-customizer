@@ -26,48 +26,6 @@ if (process.env.CLOUDINARY_API_KEY) {
   console.log('API Key prefix:', apiKeyPrefix);
 }
 
-// Validate required environment variables
-const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-// Variable to track if Cloudinary is working
-let cloudinaryEnabled = true;
-
-if (missingEnvVars.length > 0) {
-  console.warn(`⚠️ Missing required Cloudinary environment variables: ${missingEnvVars.join(', ')}`);
-  console.warn('Cloudinary functionality will not be available - falling back to local storage');
-  cloudinaryEnabled = false;
-} else {
-  // Configure Cloudinary
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true
-  });
-  
-  // Test Cloudinary connection
-  try {
-    console.log('Testing Cloudinary connection...');
-    // Let's proceed without waiting for the test - we'll check it later
-    cloudinary.api.ping().then(() => {
-      console.log('✅ Cloudinary connection successful!');
-    }).catch(error => {
-      console.error('❌ Cloudinary connection failed:', error);
-      console.error('Possible issues:');
-      console.error('- Incorrect API credentials');
-      console.error('- Network connectivity issues');
-      console.error('- CORS restrictions (check allowed origins in Cloudinary settings)');
-      cloudinaryEnabled = false;
-      console.warn('Falling back to local storage for file uploads');
-    });
-  } catch (err) {
-    console.error('❌ Cloudinary configuration error:', err);
-    cloudinaryEnabled = false;
-    console.warn('Falling back to local storage for file uploads');
-  }
-}
-
 // Set up local storage directory
 const setupLocalStorage = () => {
   const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'products');
@@ -82,42 +40,97 @@ const setupLocalStorage = () => {
   return uploadDir;
 };
 
-// Configure local storage as a fallback
-const uploadDir = setupLocalStorage();
-
-const localStorage = multer.diskStorage({
+// Configure local storage
+const localStorageConfig = multer.diskStorage({
   destination: function (req, file, cb) {
+    const uploadDir = setupLocalStorage();
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'product-' + uniqueSuffix + ext);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-// Create multer storage - use Cloudinary if available, otherwise local
-let storage;
-if (cloudinaryEnabled) {
-  try {
-    storage = new CloudinaryStorage({
-      cloudinary,
-      params: {
-        folder: 'tshirt-customizer',
-        allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
-        transformation: [{ width: 800, height: 800, crop: 'limit' }]
-      }
-    });
-    console.log('Cloudinary storage configured');
-  } catch (err) {
-    console.error('Error configuring CloudinaryStorage:', err);
-    cloudinaryEnabled = false;
-    storage = localStorage;
-    console.log('Falling back to local storage');
-  }
+// Variable to track if Cloudinary is working
+let cloudinaryEnabled = false;
+let storage = localStorageConfig; // Now localStorageConfig is defined before use
+
+// Validate required environment variables
+const requiredEnvVars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(`⚠️ Missing required Cloudinary environment variables: ${missingEnvVars.join(', ')}`);
+  console.warn('Cloudinary functionality will not be available - falling back to local storage');
+  cloudinaryEnabled = false;
 } else {
-  storage = localStorage;
-  console.log('Using local storage for file uploads');
+  // Configure Cloudinary
+  try {
+    console.log('Attempting to configure Cloudinary with:');
+    console.log('- Cloud name:', process.env.CLOUDINARY_CLOUD_NAME);
+    console.log('- API key length:', process.env.CLOUDINARY_API_KEY.length);
+    console.log('- API secret length:', process.env.CLOUDINARY_API_SECRET.length);
+    
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true
+    });
+    
+    // Test Cloudinary connection with timeout
+    console.log('Testing Cloudinary connection...');
+    const testConnection = async () => {
+      try {
+        const result = await Promise.race([
+          cloudinary.api.ping(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 10000)
+          )
+        ]);
+        console.log('✅ Cloudinary connection successful!', result);
+        cloudinaryEnabled = true;
+        
+        // Configure Cloudinary storage
+        storage = new CloudinaryStorage({
+          cloudinary: cloudinary.v2,
+          params: {
+            folder: 'products',
+            allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+            transformation: [{ width: 1000, crop: "limit" }]
+          }
+        });
+        console.log('✅ Cloudinary storage configured successfully');
+      } catch (error) {
+        console.error('❌ Cloudinary connection failed:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        console.error('Possible issues:');
+        console.error('- Incorrect API credentials');
+        console.error('- Network connectivity issues');
+        console.error('- CORS restrictions (check allowed origins in Cloudinary settings)');
+        console.error('- Firewall or proxy blocking the connection');
+        cloudinaryEnabled = false;
+        console.warn('Falling back to local storage for file uploads');
+      }
+    };
+    
+    // Execute the test
+    testConnection();
+  } catch (err) {
+    console.error('❌ Cloudinary configuration error:', err);
+    console.error('Configuration error details:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
+    cloudinaryEnabled = false;
+    console.warn('Falling back to local storage for file uploads');
+  }
 }
 
 // Function for uploading images to Cloudinary (compatible with v1)
@@ -304,4 +317,23 @@ const getImageUrl = (publicId) => {
   }
 };
 
-export { cloudinary, storage, uploadImage, getCloudinaryConfig, getCloudinaryUrl, getImageUrl, cloudinaryEnabled }; 
+// Helper function to get file URL
+const getFileUrl = (file) => {
+  if (cloudinaryEnabled && file.path) {
+    return file.path;
+  }
+  // For local storage, construct URL
+  return `/uploads/products/${file.filename}`;
+};
+
+export {
+  cloudinary,
+  storage,
+  uploadImage,
+  getCloudinaryConfig,
+  getCloudinaryUrl,
+  getImageUrl,
+  cloudinaryEnabled,
+  getFileUrl,
+  setupLocalStorage
+}; 
