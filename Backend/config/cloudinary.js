@@ -106,7 +106,10 @@ if (missingEnvVars.length > 0) {
     };
     
     // Execute the test
-    testCloudinaryConnection();
+    testCloudinaryConnection().catch(err => {
+      console.error('Error during Cloudinary connection test:', err);
+      cloudinaryEnabled = false;
+    });
   } catch (err) {
     console.error('❌ Cloudinary configuration error:', err);
     console.error('Configuration error details:', {

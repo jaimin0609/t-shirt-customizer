@@ -72,7 +72,9 @@ app.use(cors({
         'http://localhost:5173',
         'https://t-shirt-customizer-backend.onrender.com',
         'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
-        'https://uniqverse.vercel.app'
+        'https://uniqverse-8ub2zql8o-jaimin0609s-projects.vercel.app',
+        'https://uniqverse.vercel.app',
+        'https://uniqverse-five.vercel.app'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
