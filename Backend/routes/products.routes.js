@@ -60,15 +60,12 @@ if (!fs.existsSync(uploadDir)) {
 // Configure multer to use Cloudinary storage
 const upload = multer({
     storage: cloudinaryEnabled ? new CloudinaryStorage({
-        cloudinary: cloudinary,
+        cloudinary: cloudinary.v2,
         params: {
             folder: 'products',
             allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
             transformation: [{ width: 1000, crop: "limit" }],
-            public_id: (req, file) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                return `product-${uniqueSuffix}`;
-            },
+            format: 'jpg',
             resource_type: 'auto'
         }
     }) : storage,
@@ -95,6 +92,7 @@ const upload = multer({
 router.post('/test-cloudinary', auth, isAdmin, upload.single('image'), async (req, res) => {
     try {
         console.log('=== Testing Cloudinary Upload ===');
+        console.log('Cloudinary enabled:', cloudinaryEnabled);
         console.log('Cloudinary config:', {
             cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
             api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
@@ -112,7 +110,8 @@ router.post('/test-cloudinary', auth, isAdmin, upload.single('image'), async (re
             originalname: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size,
-            path: req.file.path // This should be the Cloudinary URL if upload succeeded
+            path: req.file.path,
+            cloudinary: req.file.cloudinary
         });
         
         // Check if the file was uploaded to Cloudinary

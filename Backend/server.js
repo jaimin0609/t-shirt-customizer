@@ -67,88 +67,26 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, Postman)
-        if (!origin) return callback(null, true);
-        
-        // List of allowed origins
-        const allowedOrigins = [
-            'http://localhost:5173',  // Default Vite dev server
-            'http://localhost:5002',  // Backend URL
-            'http://localhost:3000',  // Common React dev server
-            'http://localhost:8080',  // Another common dev port
-            'http://127.0.0.1:5173',  // Also allow access via IP
-            'http://127.0.0.1:5002',
-            'http://127.0.0.1:3000',
-            // Add Vercel domains
-            'https://uniqverse-five.vercel.app',
-            'https://uniqverse-7a3cxn0ti-jaimin0609s-projects.vercel.app',
-            'https://*.vercel.app',  // Allow all Vercel subdomains
-            // Add Render backend domain
-            'https://t-shirt-customizer-backend.onrender.com'
-        ];
-        
-        // Add FRONTEND_URL from environment if it exists
-        if (process.env.FRONTEND_URL) {
-            // Support both exact URL and any subdomain
-            allowedOrigins.push(process.env.FRONTEND_URL);
-            // Extract domain for wildcard support
-            try {
-                const url = new URL(process.env.FRONTEND_URL);
-                const domain = url.hostname;
-                // If not localhost, also allow all subdomains
-                if (!domain.includes('localhost')) {
-                    allowedOrigins.push(`https://*.${domain}`);
-                }
-            } catch (e) {
-                console.error('Invalid FRONTEND_URL format:', e);
-            }
-        }
-        
-        // In development or where needed, print allowed origins for debugging
-        if (process.env.NODE_ENV !== 'production') {
-            // Remove debug logging in production
-            console.log('CORS request from origin:', origin);
-            console.log('Allowed origins:', allowedOrigins);
-        }
-        
-        // Production security check
-        if (process.env.NODE_ENV === 'production') {
-            // Check if the origin is in our allowed list
-            if (allowedOrigins.includes(origin) || 
-                // Check for wildcard domains
-                allowedOrigins.some(allowed => {
-                    if (allowed.includes('*')) {
-                        const wildcardDomain = allowed.replace('*', '').replace('https://*.', '');
-                        return origin.includes(wildcardDomain);
-                    }
-                    return false;
-                })) {
-                return callback(null, true);
-            }
-            
-            // Log blocked request for debugging but still allow in production for now
-            console.warn('CORS request from non-allowed origin:', origin);
-            // Instead of blocking with an error, allow the request and log it
-            return callback(null, true);
-            
-            // Original blocking code - commented out for now
-            // console.warn('CORS blocked production request from:', origin);
-            // return callback(new Error('CORS not allowed'), false);
-        }
-        
-        // More permissive in development
-        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            console.log('CORS blocked development request from:', origin);
-            callback(null, true); // Allow all origins in development
-        }
-    },
-    credentials: true,
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://t-shirt-customizer-backend.onrender.com',
+        'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
+        'https://uniqverse.vercel.app'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
+
+// Log CORS requests in development
+if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+        console.log(`${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+        next();
+    });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

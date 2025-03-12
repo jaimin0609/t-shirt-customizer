@@ -72,55 +72,41 @@ if (missingEnvVars.length > 0) {
     console.log('- API key length:', process.env.CLOUDINARY_API_KEY.length);
     console.log('- API secret length:', process.env.CLOUDINARY_API_SECRET.length);
     
-    cloudinary.config({
+    cloudinary.v2.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
       secure: true
     });
     
-    // Test Cloudinary connection with timeout
-    console.log('Testing Cloudinary connection...');
-    const testConnection = async () => {
+    // Test Cloudinary connection
+    const testCloudinaryConnection = async () => {
       try {
-        const result = await Promise.race([
-          cloudinary.api.ping(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Connection timeout')), 10000)
-          )
-        ]);
-        console.log('✅ Cloudinary connection successful!', result);
+        const result = await cloudinary.v2.api.ping();
+        console.log('✅ Cloudinary connection test successful:', result);
         cloudinaryEnabled = true;
-        
-        // Configure Cloudinary storage
-        storage = new CloudinaryStorage({
-          cloudinary: cloudinary.v2,
-          params: {
-            folder: 'products',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-            transformation: [{ width: 1000, crop: "limit" }]
-          }
-        });
-        console.log('✅ Cloudinary storage configured successfully');
+        return true;
       } catch (error) {
-        console.error('❌ Cloudinary connection failed:', error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-        console.error('Possible issues:');
-        console.error('- Incorrect API credentials');
-        console.error('- Network connectivity issues');
-        console.error('- CORS restrictions (check allowed origins in Cloudinary settings)');
-        console.error('- Firewall or proxy blocking the connection');
+        console.error('❌ Cloudinary connection test failed:', error);
         cloudinaryEnabled = false;
         console.warn('Falling back to local storage for file uploads');
+        return false;
       }
     };
     
+    // Create Cloudinary storage instance
+    const cloudinaryStorage = new CloudinaryStorage({
+      cloudinary: cloudinary.v2,
+      params: {
+        folder: 'products',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+        transformation: [{ width: 1000, crop: "limit" }],
+        resource_type: 'auto'
+      }
+    });
+    
     // Execute the test
-    testConnection();
+    testCloudinaryConnection();
   } catch (err) {
     console.error('❌ Cloudinary configuration error:', err);
     console.error('Configuration error details:', {
@@ -328,12 +314,13 @@ const getFileUrl = (file) => {
 
 export {
   cloudinary,
-  storage,
+  cloudinaryStorage as storage,
   uploadImage,
   getCloudinaryConfig,
   getCloudinaryUrl,
   getImageUrl,
   cloudinaryEnabled,
   getFileUrl,
-  setupLocalStorage
+  setupLocalStorage,
+  testCloudinaryConnection
 }; 
