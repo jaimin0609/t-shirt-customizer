@@ -78,7 +78,7 @@ const Header = () => {
                                                 </button>
 
                                                 {isDesignMenuOpen && (
-                                                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5">
+                                                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5">
                                                         {designItems.map((designItem) => (
                                                             <Link
                                                                 key={designItem.name}
@@ -140,12 +140,21 @@ const Header = () => {
                                 {isAuthenticated && <NotificationDropdown />}
 
                                 {isAuthenticated ? (
-                                    <Menu as="div" className="relative ml-3">
-                                        <Menu.Button className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors duration-200 group">
-                                            <UserCircleIcon className="h-8 w-8 group-hover:text-blue-500 transition-colors duration-200" />
-                                            <span className="text-sm font-medium">{user?.name}</span>
-                                            <ChevronDownIcon className="h-5 w-5 group-hover:text-blue-500 transition-colors duration-200" />
-                                        </Menu.Button>
+                                    <Menu as="div" className="ml-3 relative">
+                                        <div>
+                                            <Menu.Button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                <span className="sr-only">Open user menu</span>
+                                                {user?.avatar ? (
+                                                    <img
+                                                        className="h-8 w-8 rounded-full object-cover"
+                                                        src={user.avatar}
+                                                        alt={`${user.firstName} ${user.lastName}`}
+                                                    />
+                                                ) : (
+                                                    <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                                                )}
+                                            </Menu.Button>
+                                        </div>
                                         <Transition
                                             as={Fragment}
                                             enter="transition ease-out duration-100"
@@ -155,35 +164,68 @@ const Header = () => {
                                             leaveFrom="transform opacity-100 scale-100"
                                             leaveTo="transform opacity-0 scale-95"
                                         >
-                                            <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none">
-                                                <div className="py-1">
-                                                    {userNavigation.map((item) => (
-                                                        <Menu.Item key={item.name}>
+                                            <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                                                {isAuthenticated ? (
+                                                    <>
+                                                        <div className="px-4 py-2 text-xs text-gray-500">
+                                                            Signed in as<br />
+                                                            <span className="font-medium text-gray-900">
+                                                                {user?.email}
+                                                            </span>
+                                                        </div>
+                                                        <hr className="my-1" />
+                                                        {userNavigation.map((item) => (
+                                                            <Menu.Item key={item.name}>
+                                                                {({ active }) => (
+                                                                    <Link
+                                                                        to={item.href}
+                                                                        className={`${active ? 'bg-gray-100' : ''
+                                                                            } block px-4 py-2 text-sm text-gray-700`}
+                                                                    >
+                                                                        {item.name}
+                                                                    </Link>
+                                                                )}
+                                                            </Menu.Item>
+                                                        ))}
+                                                        <hr className="my-1" />
+                                                        <Menu.Item>
+                                                            {({ active }) => (
+                                                                <button
+                                                                    onClick={handleLogout}
+                                                                    className={`${active ? 'bg-gray-100' : ''
+                                                                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                                                                >
+                                                                    Sign out
+                                                                </button>
+                                                            )}
+                                                        </Menu.Item>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Menu.Item>
                                                             {({ active }) => (
                                                                 <Link
-                                                                    to={item.href}
-                                                                    className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                                                                        } block px-4 py-2 text-sm`}
+                                                                    to="/login"
+                                                                    className={`${active ? 'bg-gray-100' : ''
+                                                                        } block px-4 py-2 text-sm text-gray-700`}
                                                                 >
-                                                                    {item.name}
+                                                                    Sign in
                                                                 </Link>
                                                             )}
                                                         </Menu.Item>
-                                                    ))}
-                                                </div>
-                                                <div className="py-1">
-                                                    <Menu.Item>
-                                                        {({ active }) => (
-                                                            <button
-                                                                onClick={handleLogout}
-                                                                className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                                                                    } block w-full text-left px-4 py-2 text-sm`}
-                                                            >
-                                                                Sign out
-                                                            </button>
-                                                        )}
-                                                    </Menu.Item>
-                                                </div>
+                                                        <Menu.Item>
+                                                            {({ active }) => (
+                                                                <Link
+                                                                    to="/register"
+                                                                    className={`${active ? 'bg-gray-100' : ''
+                                                                        } block px-4 py-2 text-sm text-gray-700`}
+                                                                >
+                                                                    Create account
+                                                                </Link>
+                                                            )}
+                                                        </Menu.Item>
+                                                    </>
+                                                )}
                                             </Menu.Items>
                                         </Transition>
                                     </Menu>

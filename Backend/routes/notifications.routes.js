@@ -1,6 +1,7 @@
 import express from 'express';
-import { auth, isAdmin } from '../middleware/auth.js';
-import notificationService from '../services/notification.service.js';
+import { auth } from '../middleware/auth.js';
+import { isAdmin } from '../middleware/isAdmin.js';
+import { Notification } from '../models/index.js';
 import { handleError, asyncHandler } from '../utils/errorHandler.js';
 
 const router = express.Router();
@@ -8,119 +9,121 @@ const router = express.Router();
 // Get unread notifications for the current user
 router.get('/unread', auth, asyncHandler(async (req, res) => {
     try {
-        const notifications = await notificationService.getUnreadNotifications(
-            req.user.id, 
-            req.user.role === 'admin',
-            req.query.limit ? parseInt(req.query.limit) : 10
-        );
+        const notifications = await Notification.findAll({
+            where: {
+                userId: req.user.id,
+                isRead: false
+            },
+            order: [['createdAt', 'DESC']],
+            limit: 10
+        });
         
         res.json(notifications);
     } catch (error) {
         console.error('Error fetching unread notifications:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Failed to fetch notifications', error: error.message });
     }
 }));
 
 // Get notification count for the current user
 router.get('/count', auth, asyncHandler(async (req, res) => {
     try {
-        const counts = await notificationService.getNotificationCount(
-            req.user.id,
-            req.user.role === 'admin'
-        );
+        const count = await Notification.count({
+            where: {
+                userId: req.user.id,
+                isRead: false
+            }
+        });
         
-        res.json(counts);
+        res.json({ count });
     } catch (error) {
         console.error('Error fetching notification count:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Failed to fetch notification count', error: error.message });
     }
 }));
 
-// Get all notifications for admin dashboard
-router.get('/admin/all', auth, isAdmin, asyncHandler(async (req, res) => {
-    try {
-        const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-        const notifications = await notificationService.getRecentNotifications(limit);
-        
-        res.json(notifications);
-    } catch (error) {
-        console.error('Error fetching admin notifications:', error);
-        res.status(500).json({ message: error.message });
-    }
-}));
-
-// Mark notification(s) as read
+// Mark notifications as read
 router.put('/read', auth, asyncHandler(async (req, res) => {
     try {
-        const { ids } = req.body;
+        const { notificationIds } = req.body;
         
-        if (!ids) {
-            return res.status(400).json({ message: 'Notification IDs required' });
+        if (!notificationIds || !Array.isArray(notificationIds)) {
+            return res.status(400).json({ message: 'Notification IDs are required' });
         }
         
-        const updatedCount = await notificationService.markAsRead(
-            ids,
-            req.user.id,
-            req.user.role === 'admin'
+        await Notification.update(
+            { isRead: true },
+            { 
+                where: {
+                    id: notificationIds,
+                    userId: req.user.id
+                }
+            }
         );
         
-        res.json({ 
-            success: true, 
-            message: `Marked ${updatedCount} notification(s) as read` 
-        });
+        res.json({ message: 'Notifications marked as read' });
     } catch (error) {
         console.error('Error marking notifications as read:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Failed to update notifications', error: error.message });
     }
 }));
 
-// Mark all notifications as read
+// Mark all notifications as read for current user
 router.put('/read/all', auth, asyncHandler(async (req, res) => {
     try {
-        const updatedCount = await notificationService.markAllAsRead(
-            req.user.id,
-            req.user.role === 'admin'
+        await Notification.update(
+            { isRead: true },
+            { 
+                where: {
+                    userId: req.user.id,
+                    isRead: false
+                }
+            }
         );
         
-        res.json({ 
-            success: true, 
-            message: `Marked ${updatedCount} notification(s) as read` 
-        });
+        res.json({ message: 'All notifications marked as read' });
     } catch (error) {
         console.error('Error marking all notifications as read:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Failed to update notifications', error: error.message });
     }
 }));
 
-// Create a test notification (for development only)
-router.post('/test', auth, isAdmin, asyncHandler(async (req, res) => {
+// Create a test notification (DEV only)
+router.post('/test', auth, asyncHandler(async (req, res) => {
     try {
-        const { type, title, message, userId, targetId, targetType, icon, color, link } = req.body;
+        const { title, message } = req.body;
         
         if (!title || !message) {
             return res.status(400).json({ message: 'Title and message are required' });
         }
         
-        const notification = await notificationService.createNotification({
-            type: type || 'system',
+        const notification = await Notification.create({
+            userId: req.user.id,
             title,
             message,
-            userId: userId || null, // null = all admins
-            targetId: targetId || null,
-            targetType: targetType || null,
-            icon: icon || 'bell',
-            color: color || 'primary',
-            link: link || null
+            type: 'test',
+            isRead: false
         });
         
-        res.json({ 
-            success: true, 
-            message: 'Test notification created',
-            notification
-        });
+        res.status(201).json(notification);
     } catch (error) {
         console.error('Error creating test notification:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Failed to create notification', error: error.message });
+    }
+}));
+
+// Get all notifications for admin dashboard
+router.get('/admin/all', [auth, isAdmin], asyncHandler(async (req, res) => {
+    try {
+        const notifications = await Notification.findAll({
+            order: [['createdAt', 'DESC']],
+            limit: 50
+        });
+        
+        res.json(notifications);
+    } catch (error) {
+        console.error('Error fetching admin notifications:', error);
+        res.status(500).json({ message: 'Failed to fetch notifications', error: error.message });
     }
 }));
 

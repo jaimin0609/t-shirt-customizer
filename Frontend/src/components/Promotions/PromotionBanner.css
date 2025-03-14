@@ -9,6 +9,7 @@
     font-weight: 600;
     position: relative;
     z-index: 10;
+    /* Keep this modest value so dropdowns can appear above it */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     animation: slideDown 0.5s ease-out;
 }
@@ -74,6 +75,18 @@
         transform: translateY(0);
         opacity: 1;
     }
+}
+
+/* Fix for dropdown menus appearing behind the banner */
+/* Target all dropdown menus in the layout */
+.relative .absolute,
+[data-headlessui-state="open"],
+.dropdown-menu,
+.headlessui-menu-items,
+.dropdown-content,
+nav .absolute {
+    z-index: 50 !important;
+    /* Higher z-index to ensure menus appear above the banner */
 }
 
 @media (max-width: 768px) {

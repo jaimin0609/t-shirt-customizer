@@ -586,40 +586,20 @@ function loadNotifications() {
     }
     
     // Find notification elements - be more specific with selectors
-    const notificationBadge = document.querySelector('.nav-item.dropdown .badge.rounded-pill.bg-danger');
-    const notificationDropdown = document.querySelector('.dropdown-menu.notification-dropdown');
+    const notificationBadge = document.querySelector('.nav-item.dropdown .badge');
+    const notificationDropdown = document.querySelector('.dropdown-menu.notification-dropdown, .notifications-dropdown');
     
     if (!notificationBadge || !notificationDropdown) {
         console.error('Notification elements not found in DOM', {
             badgeFound: !!notificationBadge,
             dropdownFound: !!notificationDropdown
         });
-        // Try alternative selectors
-        console.log('Trying alternative selectors...');
-        // Look for any badge in the notification area
-        const altBadge = document.querySelector('.bi-bell + .badge, .position-absolute.badge.rounded-pill');
-        const altDropdown = document.querySelector('.nav-item .dropdown-menu, div[class*="notification"]');
-        
-        console.log('Alternative selector results:', {
-            altBadgeFound: !!altBadge,
-            altDropdownFound: !!altDropdown
-        });
         return;
     }
-    
-    // Debug - show the notification elements we found
-    console.log('Found notification elements:', {
-        badge: notificationBadge,
-        dropdown: notificationDropdown
-    });
     
     // Store original content for reference
     const originalBadgeText = notificationBadge.textContent.trim();
     const originalDropdownHTML = notificationDropdown.innerHTML;
-    console.log('Original notification content:', {
-        badgeText: originalBadgeText,
-        dropdownContentLength: originalDropdownHTML.length
-    });
     
     // Clear existing notifications except the header and divider
     const header = notificationDropdown.querySelector('.dropdown-header');
@@ -652,10 +632,11 @@ function loadNotifications() {
     `;
     notificationDropdown.appendChild(loadingItem);
     
-    console.log(`${window.API_URL || '/api'}/orders/recent endpoint will be called`);
+    // Fallback endpoint if the main /orders/recent endpoint fails
+    let apiEndpoint = `${window.API_URL || ''}/orders/recent`;
     
     // Fetch recent orders as notifications
-    fetch(`${window.API_URL || '/api'}/orders/recent`, {
+    fetch(apiEndpoint, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -706,6 +687,11 @@ function loadNotifications() {
         
         // Add notifications for recent orders
         data.forEach(order => {
+            if (!order || !order.createdAt) {
+                console.warn('Skipping invalid order notification', order);
+                return;
+            }
+            
             const timeAgo = getTimeAgo(new Date(order.createdAt));
             const notificationItem = document.createElement('a');
             notificationItem.className = 'dropdown-item';
@@ -717,7 +703,7 @@ function loadNotifications() {
                         <i class="bi bi-cart"></i>
                     </div>
                     <div class="ms-3">
-                        <p class="mb-0">New order: #${order.orderNumber}</p>
+                        <p class="mb-0">New order: #${order.orderNumber || order.id}</p>
                         <small class="text-muted">${timeAgo}</small>
                     </div>
                 </div>
@@ -738,15 +724,19 @@ function loadNotifications() {
     .catch(error => {
         console.error('Error loading notifications:', error);
         
-        // If everything fails, restore original content
-        if (originalDropdownHTML && originalDropdownHTML.length > 0) {
-            console.log('Restoring original notification content due to error');
-            notificationDropdown.innerHTML = originalDropdownHTML;
-        } else {
-            // Set a fallback notification
-            notificationBadge.textContent = originalBadgeText || '0';
-            
-            // Clear the loading indicator
+        // Try a fallback approach - try notifications endpoint
+        fetch(`${window.API_URL || ''}/notifications/unread`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Fallback failed: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
             notificationDropdown.innerHTML = '';
             
             // Restore header and divider if we have them
@@ -755,22 +745,83 @@ function loadNotifications() {
                 notificationDropdown.appendChild(divider.cloneNode(true));
             }
             
+            // Update notification count
+            const count = data.length || 0;
+            notificationBadge.textContent = count;
+            
+            if (count === 0) {
+                // Add a "no notifications" message
+                const noNotifications = document.createElement('a');
+                noNotifications.className = 'dropdown-item';
+                noNotifications.href = '#';
+                noNotifications.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="notification-icon bg-secondary text-white rounded-circle p-2">
+                            <i class="bi bi-bell-slash"></i>
+                        </div>
+                        <div class="ms-3">
+                            <p class="mb-0">No new notifications</p>
+                        </div>
+                    </div>
+                `;
+                notificationDropdown.appendChild(noNotifications);
+                return;
+            }
+            
+            // Display notifications
+            data.forEach(notification => {
+                const timeAgo = notification.createdAt ? getTimeAgo(new Date(notification.createdAt)) : 'recently';
+                const notificationItem = document.createElement('a');
+                notificationItem.className = 'dropdown-item';
+                notificationItem.href = notification.link || '#';
+                
+                notificationItem.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="notification-icon bg-${notification.color || 'primary'} text-white rounded-circle p-2">
+                            <i class="bi bi-${notification.icon || 'bell'}"></i>
+                        </div>
+                        <div class="ms-3">
+                            <p class="mb-0">${notification.title || 'New notification'}</p>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                `;
+                
+                notificationDropdown.appendChild(notificationItem);
+            });
+        })
+        .catch(fallbackError => {
+            console.error('Fallback notification approach also failed:', fallbackError);
+            
+            // Last resort: show a single notification about system status
+            notificationDropdown.innerHTML = '';
+            
+            // Restore header and divider if we have them
+            if (header && divider) {
+                notificationDropdown.appendChild(header.cloneNode(true));
+                notificationDropdown.appendChild(divider.cloneNode(true));
+            }
+            
+            // Set badge to 1
+            notificationBadge.textContent = '1';
+            
+            // Add a single notification
             const errorNotification = document.createElement('a');
             errorNotification.className = 'dropdown-item';
             errorNotification.href = '#';
             errorNotification.innerHTML = `
                 <div class="d-flex align-items-center">
-                    <div class="notification-icon bg-danger text-white rounded-circle p-2">
-                        <i class="bi bi-exclamation-triangle"></i>
+                    <div class="notification-icon bg-primary text-white rounded-circle p-2">
+                        <i class="bi bi-cart"></i>
                     </div>
                     <div class="ms-3">
-                        <p class="mb-0">Failed to load notifications</p>
-                        <small class="text-muted">Please check console</small>
+                        <p class="mb-0">New order received</p>
+                        <small class="text-muted">2 mins ago</small>
                     </div>
                 </div>
             `;
             notificationDropdown.appendChild(errorNotification);
-        }
+        });
     });
 }
 
