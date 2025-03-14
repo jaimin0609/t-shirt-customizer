@@ -19,8 +19,16 @@ console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
 console.log('CLOUDINARY_API_KEY exists:', !!process.env.CLOUDINARY_API_KEY);
 console.log('CLOUDINARY_API_SECRET exists:', !!process.env.CLOUDINARY_API_SECRET);
 
-// Variable to track if Cloudinary is working
-let cloudinaryEnabled = false;
+// Set cloudinaryEnabled to true initially if all credentials exist
+// This way the routes will immediately use Cloudinary storage
+let cloudinaryEnabled = !!(
+    process.env.CLOUDINARY_CLOUD_NAME && 
+    process.env.CLOUDINARY_API_KEY && 
+    process.env.CLOUDINARY_API_SECRET
+);
+
+console.log('Initial Cloudinary status:', cloudinaryEnabled ? 'ENABLED' : 'DISABLED');
+
 let cloudinaryStorage = null;
 
 // Test Cloudinary connection function
@@ -71,7 +79,8 @@ try {
         }
     });
     
-    // Execute the connection test
+    // Execute the connection test but don't wait for it to set cloudinaryEnabled
+    // We'll update the flag if the test fails, but start with it enabled
     testCloudinaryConnection().then(success => {
         if (success) {
             console.log('✅ Cloudinary is enabled and ready to use');
