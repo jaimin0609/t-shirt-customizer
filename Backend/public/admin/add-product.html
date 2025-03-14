@@ -292,7 +292,7 @@
                             <div class="mb-4">
                                 <label for="productDescription" class="form-label fw-bold">Description</label>
                                 <textarea class="form-control" id="productDescription" name="description" rows="8" placeholder="Enter product description" required></textarea>
-                                <small class="text-muted">Use the formatting toolbar to style your product description</small>
+                                <small class="text-muted">Use the formatting toolbar to style your product description with rich text features</small>
                             </div>
 
                             <div class="mb-4">
@@ -758,5 +758,9 @@
             }
         });
     </script>
+
+    <!-- Add these scripts right before the closing </body> tag, after other script imports -->
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="/admin/js/rich-text-editor.js"></script>
 </body>
 </html>
