@@ -126,6 +126,9 @@ function loadCategories() {
         visible: categorySelect.style.visibility
     });
     
+    // Log the API URL for debugging
+    console.log('Fetching categories from:', `${window.API_URL}/products/categories/all`);
+    
     // Try fetching from API but have a short timeout to fail gracefully
     const fetchPromise = fetch(`${window.API_URL}/products/categories/all`)
         .then(response => {
@@ -134,11 +137,16 @@ function loadCategories() {
                 throw new Error(`Failed to fetch categories (${response.status})`);
             }
             return response.json();
+        })
+        .then(data => {
+            // Log raw data to help debug format issues
+            console.log('Raw category data from API:', data);
+            return data;
         });
     
     // Set a timeout to avoid hanging if the API is unavailable
     const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Categories fetch timeout")), 5000);
+        setTimeout(() => reject(new Error("Categories fetch timeout (5s)")), 5000);
     });
     
     // Use the faster of the two - successful API call or timeout
@@ -148,7 +156,12 @@ function loadCategories() {
             
             // Check if we have valid data
             if (!Array.isArray(categories)) {
-                throw new Error('Invalid categories data format');
+                throw new Error('Invalid categories data format: Expected array');
+            }
+            
+            if (categories.length === 0) {
+                console.warn('API returned empty categories array, using fallback');
+                throw new Error('Empty categories list');
             }
             
             // Add small delay to ensure DOM is ready
@@ -167,15 +180,16 @@ function loadCategories() {
             
             // Fallback sample categories if API fails
             const sampleCategories = [
-                { id: 1, name: 'T-Shirts' },
-                { id: 2, name: 'Hoodies' },
-                { id: 3, name: 'Sweatshirts' },
-                { id: 4, name: 'Tank Tops' },
-                { id: 5, name: 'Polo Shirts' },
-                { id: 6, name: 'Long Sleeves' },
-                { id: 7, name: 'Accessories' },
-                { id: 8, name: 'Hats & Caps' },
-                { id: 9, name: 'Mugs' }
+                { id: 't-shirts', name: 'T-Shirts' },
+                { id: 'hoodies', name: 'Hoodies' },
+                { id: 'sweatshirts', name: 'Sweatshirts' },
+                { id: 'tank-tops', name: 'Tank Tops' },
+                { id: 'polo-shirts', name: 'Polo Shirts' },
+                { id: 'long-sleeves', name: 'Long Sleeves' },
+                { id: 'caps', name: 'Caps' },
+                { id: 'hats', name: 'Hats' },
+                { id: 'accessories', name: 'Accessories' },
+                { id: 'mugs', name: 'Mugs' }
             ];
             
             populateCategoriesDropdown(sampleCategories);

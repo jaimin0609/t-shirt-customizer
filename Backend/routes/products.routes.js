@@ -595,13 +595,47 @@ router.get('/categories/all', async (req, res) => {
             raw: true
         });
 
-        // Transform to expected format with id and name properties
-        const formattedCategories = categories.map(item => ({
+        // Default categories that should always be available
+        const defaultCategories = [
+            'T-Shirts',
+            'Hoodies',
+            'Sweatshirts',
+            'Tank Tops',
+            'Polo Shirts',
+            'Long Sleeves',
+            'Caps',
+            'Hats',
+            'Accessories',
+            'Mugs'
+        ];
+
+        // Get existing categories from database results
+        const existingCategories = categories.map(item => item.category.toLowerCase());
+        
+        // Add any default categories that don't exist in the database
+        const additionalCategories = defaultCategories.filter(
+            category => !existingCategories.includes(category.toLowerCase())
+        );
+
+        // Create formatted entries for existing categories
+        const formattedExistingCategories = categories.map(item => ({
             id: item.category,
             name: item.category.charAt(0).toUpperCase() + item.category.slice(1) // Capitalize first letter
         }));
         
-        res.json(formattedCategories);
+        // Create formatted entries for additional categories
+        const formattedAdditionalCategories = additionalCategories.map(category => ({
+            id: category.toLowerCase(),
+            name: category // Already properly cased
+        }));
+        
+        // Combine both lists and sort alphabetically
+        const allCategories = [...formattedExistingCategories, ...formattedAdditionalCategories]
+            .sort((a, b) => a.name.localeCompare(b.name));
+        
+        console.log(`Returning ${allCategories.length} categories (${formattedExistingCategories.length} from products, ${formattedAdditionalCategories.length} defaults)`);
+        
+        res.json(allCategories);
     } catch (error) {
         console.error('Error fetching categories:', error);
         res.status(500).json({ message: 'Failed to fetch categories' });
@@ -842,23 +876,47 @@ router.post('/', auth, isAdmin, (req, res) => {
                         let url;
                         
                         if (cloudinaryEnabled) {
-                            // Try to get the Cloudinary URL from the file object
+                            // Format 1: Extract from cloudinary.secure_url if available (best option)
                             if (file.cloudinary && file.cloudinary.secure_url) {
                                 url = file.cloudinary.secure_url;
-                                console.log(`Using Cloudinary secure_url: ${url}`);
-                            } else if (file.path && (file.path.includes('cloudinary.com') || file.path.includes('res.cloudinary.com'))) {
+                                console.log(`Using Cloudinary secure_url property: ${url}`);
+                            } 
+                            // Format 2: If path contains cloudinary URL 
+                            else if (file.path && (file.path.includes('cloudinary.com') || file.path.includes('res.cloudinary.com'))) {
                                 url = file.path;
                                 console.log(`Using Cloudinary URL from path: ${url}`);
-                            } else if (file.cloudinary && file.cloudinary.url) {
+                            }
+                            // Format 3: If file has non-secure Cloudinary URL
+                            else if (file.cloudinary && file.cloudinary.url) {
                                 url = file.cloudinary.url;
                                 console.log(`Using Cloudinary non-secure URL: ${url}`);
-                            } else {
-                                // Fallback to local path but log a warning
-                                url = `/uploads/products/${file.filename}`;
-                                console.warn(`Cloudinary enabled but no Cloudinary URL found for file ${file.originalname}. Using local URL: ${url}`);
+                            }
+                            // Format 4: If local path but could be a Cloudinary public ID
+                            else if (file.filename) {
+                                // Build a proper Cloudinary URL using the cloud name from env
+                                const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
+                                url = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${file.filename}`;
+                                console.log(`Constructing Cloudinary URL from filename: ${url}`);
+                            } 
+                            // Format 5: Last resort - use upload folder path
+                            else {
+                                // If we get here, something is wrong with the Cloudinary upload
+                                console.warn(`⚠️ WARNING: Failed to get Cloudinary URL for ${file.originalname || 'unknown file'}`);
+                                // Try to extract public ID from path if possible
+                                if (file.path && file.path.includes('product-')) {
+                                    const pathParts = file.path.split('/');
+                                    const publicId = pathParts[pathParts.length - 1]; 
+                                    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
+                                    url = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${publicId}`;
+                                    console.log(`Extracted and constructed Cloudinary URL: ${url}`);
+                                } else {
+                                    // Last resort - use local path but log the warning
+                                    url = `/uploads/products/${file.filename || 'unknown'}`;
+                                    console.warn(`❌ Unable to get Cloudinary URL, falling back to local path: ${url}`);
+                                }
                             }
                         } else {
-                            // Local storage
+                            // Local storage mode
                             url = `/uploads/products/${file.filename}`;
                             console.log(`Using local URL: ${url}`);
                         }
