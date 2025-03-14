@@ -9,8 +9,36 @@
     <link href="/admin/css/style.css" rel="stylesheet">
     <!-- Rich Text Editor CSS -->
     <link href="/css/rich-editor.css" rel="stylesheet">
-    <!-- TinyMCE Rich Text Editor -->
+    <!-- TinyMCE Rich Text Editor - DIRECT LOADING -->
     <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        // Direct initialization - keeping it simple to ensure it works
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Direct TinyMCE initialization from add-product.html');
+            
+            // Force cleanup first
+            if (typeof tinymce !== 'undefined') {
+                tinymce.remove('#productDescription');
+            }
+            
+            // Initialize with basic settings
+            tinymce.init({
+                selector: '#productDescription',
+                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                height: 400,
+                menubar: true,
+                statusbar: true,
+                branding: false,
+                elementpath: true,
+                setup: function(editor) {
+                    editor.on('init', function() {
+                        console.log('Editor initialized!');
+                    });
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="wrapper">
@@ -282,6 +310,9 @@
                                 <label for="productDescription" class="form-label fw-bold">Description</label>
                                 <textarea class="form-control" id="productDescription" name="description" rows="8" placeholder="Enter product description" required></textarea>
                                 <small class="text-muted">Use the formatting toolbar to style your product description with rich text features</small>
+                                <button type="button" id="fixRichEditorBtn" class="btn btn-sm btn-outline-secondary mt-2" onclick="forceTinyMCE()" style="display:none;">
+                                    <i class="bi bi-tools"></i> Fix Rich Text Editor
+                                </button>
                             </div>
 
                             <div class="mb-4">
@@ -583,6 +614,64 @@
     <script src="/admin/js/debug-tinymce.js"></script>
 
     <script>
+        // Force TinyMCE initialization function
+        function forceTinyMCE() {
+            console.log("Forcing TinyMCE initialization...");
+            
+            // Remove any existing instances
+            if (typeof tinymce !== 'undefined') {
+                tinymce.remove('#productDescription');
+            }
+            
+            // Re-initialize TinyMCE with basic settings
+            tinymce.init({
+                selector: '#productDescription',
+                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                height: 400,
+                menubar: true,
+                statusbar: true,
+                inline: false,
+                branding: false,
+                setup: function(editor) {
+                    editor.on('init', function() {
+                        console.log('TinyMCE reinitialized!');
+                        
+                        // Force show the toolbar
+                        const toolbar = document.querySelector('.tox-toolbar__primary');
+                        const editor = document.querySelector('.tox-tinymce');
+                        
+                        if (toolbar) {
+                            toolbar.style.display = 'flex';
+                            toolbar.style.visibility = 'visible';
+                            toolbar.style.opacity = '1';
+                        }
+                        
+                        if (editor) {
+                            editor.style.border = '2px solid #28a745';
+                            setTimeout(() => {
+                                editor.style.border = '1px solid #ced4da';
+                            }, 2000);
+                        }
+                        
+                        alert('Rich text editor has been fixed!');
+                    });
+                }
+            });
+        }
+        
+        // Check if TinyMCE toolbar is visible after a short delay
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const toolbar = document.querySelector('.tox-toolbar__primary');
+                const fixButton = document.getElementById('fixRichEditorBtn');
+                
+                if (!toolbar && fixButton) {
+                    fixButton.style.display = 'inline-block';
+                }
+            }, 2000);
+        });
+
         function debugCategoryDropdown() {
             const categorySelect = document.getElementById('productCategory');
             if (!categorySelect) {

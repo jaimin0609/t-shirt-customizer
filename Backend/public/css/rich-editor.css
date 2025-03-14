@@ -1,7 +1,20 @@
 /**
  * Rich Text Editor Custom Styles
  * Ensures proper visibility and styling of TinyMCE
+ * Enhanced with stronger overrides to force toolbar visibility
  */
+
+/* Force TinyMCE to show EVERYTHING */
+.tox:not(.tox-tinymce-inline) .tox-editor-header {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 5px !important;
+    background-color: #f8f9fa !important;
+    z-index: 100 !important;
+}
 
 /* Ensure the editor container is visible and has proper z-index */
 .tox-tinymce {
@@ -12,15 +25,36 @@
     border: 1px solid #ced4da !important;
     border-radius: 0.25rem !important;
     min-height: 300px !important;
+    margin-bottom: 1rem !important;
+    overflow: visible !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Make toolbar more prominent */
+/* Make toolbar more prominent and ensure visibility with !important */
 .tox-toolbar__primary {
     visibility: visible !important;
     display: flex !important;
+    opacity: 1 !important;
     background-color: #f8f9fa !important;
     border-bottom: 1px solid #dee2e6 !important;
     padding: 4px !important;
+    position: relative !important;
+    z-index: 100 !important;
+    min-height: 40px !important;
+}
+
+/* Direct parent of toolbar to ensure it's visible */
+.tox-editor-container {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+}
+
+/* Force toolbar overflow to be visible */
+.tox-toolbar-overlord {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
 }
 
 /* Ensure toolbar buttons are visible */
@@ -28,11 +62,25 @@
     visibility: visible !important;
     display: flex !important;
     opacity: 1 !important;
+    min-height: 34px !important;
+    background-color: transparent !important;
+    margin: 0 4px !important;
 }
 
 /* Increase contrast for toolbar buttons */
 .tox-tbtn {
     color: #212529 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+}
+
+/* Make button icons visible */
+.tox-icon,
+.tox-tbtn__icon-wrap {
+    visibility: visible !important;
+    display: inline-block !important;
+    opacity: 1 !important;
 }
 
 /* Make statusbar visible */
@@ -61,11 +109,6 @@
     border-bottom: 1px solid #dee2e6 !important;
 }
 
-/* Increase contrast for content area */
-.tox-edit-area__iframe {
-    background-color: white !important;
-}
-
 /* Fix any modal dialog issues */
 .tox-dialog {
     z-index: 1100 !important;
@@ -91,4 +134,30 @@ label[for="productDescription"] {
 .modal-open {
     overflow: auto !important;
     padding-right: 0 !important;
+}
+
+/* Force SVG icons to display */
+.tox-collection__item-icon svg,
+.tox-tbtn svg,
+.tox-tbtn__icon-wrap svg {
+    visibility: visible !important;
+    display: inline-block !important;
+    opacity: 1 !important;
+}
+
+/* Make dropdown menus visible */
+.tox-collection--toolbar,
+.tox-menu {
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+}
+
+/* Ensure the textarea is still accessible for form submission */
+textarea#productDescription {
+    visibility: hidden;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
 }
