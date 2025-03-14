@@ -78,7 +78,9 @@
 }
 
 /* Fix for dropdown menus appearing behind the banner */
-/* Target all dropdown menus in the layout - much more aggressive selectors */
+/* Ultra aggressive z-index fixes to ensure NO dropdown is ever behind the banner */
+
+/* 1. Target all dropdown elements using wide variety of selectors */
 .relative .absolute,
 [data-headlessui-state="open"],
 .dropdown-menu,
@@ -98,23 +100,74 @@ nav .absolute,
 .notification-dropdown,
 div[role="menu"],
 div[role="menuitem"],
-div[data-state="open"] {
-    z-index: 100 !important;
-    /* Much higher z-index to ensure menus appear above everything */
+div[data-state="open"],
+nav .dropdown,
+.dropdown-container,
+.categories-dropdown,
+.menu-dropdown,
+.filter-dropdown,
+.search-dropdown,
+.dropdown-panel,
+.absolute[data-headlessui-state] {
+    z-index: 1000 !important;
     position: relative !important;
-    /* Ensure position is respected */
 }
 
-/* Ensure all user menu navigation elements stay on top */
+/* 2. Special case for headless UI dropdowns */
+[data-headlessui-state="open"]>div,
+button[data-headlessui-state="open"]+div,
+[id^="headlessui-menu-items"],
+[id^="headlessui-listbox-options"],
+[id^="headlessui-popover-panel"] {
+    z-index: 2000 !important;
+    position: absolute !important;
+}
+
+/* 3. Special fix for Design dropdown and category menus */
+#design-menu-dropdown,
+.design-dropdown,
+#design-dropdown,
+.3d-designer-dropdown,
+[id$="-dropdown"],
+.filter-categories,
+.category-filter {
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+
+/* 4. User menu and notification dropdowns - highest priority */
 .nav-item.dropdown .dropdown-menu,
 .dropdown-menu[aria-labelledby],
-.navbar .dropdown-menu {
+.navbar .dropdown-menu,
+.user-dropdown,
+.profile-dropdown,
+.account-dropdown,
+.notification-menu,
+nav .dropdown-menu {
     z-index: 9999 !important;
+    position: absolute !important;
 }
 
-/* Global styles to ensure dropdown visibility */
-body {
-    --z-dropdown: 100;
+/* 5. Global fallback that ensures anything with class absolute is above banner */
+.absolute {
+    z-index: 1000 !important;
+}
+
+/* Define global CSS variables for z-index management */
+:root {
+    --z-banner: 5;
+    --z-dropdown: 1000;
+    --z-dropdown-important: 2000;
+    --z-modal: 5000;
+}
+
+/* Make sure menu links in dropdown are clickable */
+.dropdown-menu a,
+.menu a,
+[role="menu"] a,
+.dropdown a {
+    position: relative;
+    z-index: 1005 !important;
 }
 
 @media (max-width: 768px) {

@@ -95,19 +95,70 @@ const MainLayout = () => {
         // Create a style element
         const style = document.createElement('style');
         style.innerHTML = `
+            /* Aggressive z-index fixes injected directly in DOM */
             .dropdown-menu, [role="menu"], [data-headlessui-state="open"], .absolute {
                 z-index: 1000 !important;
+                position: relative !important;
             }
+            
+            /* Special rules for dropdown content */
+            [data-headlessui-state="open"] > div,
+            button[data-headlessui-state="open"] + div,
+            [id^="headlessui-menu-items"],
+            [id^="headlessui-listbox-options"] {
+                z-index: 2000 !important;
+                position: absolute !important;
+            }
+            
+            /* Specific fixes for components we know have issues */
+            #design-menu, .category-dropdown {
+                z-index: 5000 !important;
+                position: relative !important;
+            }
+            
+            /* Force banner to lower z-index */
             .promotion-banner {
                 z-index: 5 !important;
             }
+            
+            /* Force wrappers to respect z-index */
+            .relative {
+                position: relative !important;
+            }
         `;
+
         // Add it to the head
         document.head.appendChild(style);
+
+        // Also add a MutationObserver to ensure dropdowns added dynamically get the proper z-index
+        const fixDropdowns = () => {
+            const dropdowns = document.querySelectorAll('.dropdown-menu, [role="menu"], [data-headlessui-state="open"]');
+            dropdowns.forEach(dropdown => {
+                dropdown.style.zIndex = '2000';
+                if (dropdown.parentElement) {
+                    dropdown.parentElement.style.position = 'relative';
+                }
+            });
+        };
+
+        // Run once right away
+        setTimeout(fixDropdowns, 1000);
+
+        // Set up observer
+        const observer = new MutationObserver(mutations => {
+            fixDropdowns();
+        });
+
+        // Start observing
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
 
         return () => {
             // Clean up on unmount
             document.head.removeChild(style);
+            observer.disconnect();
         };
     }, []);
 

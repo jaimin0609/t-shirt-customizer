@@ -56,7 +56,48 @@ function initNotifications() {
     // Expose global refresh method
     window.refreshNotifications = loadNotifications;
     
+    // Apply proper styling to notification badge
+    fixNotificationBadgeStyle();
+    
     debugLog('Notification system initialized');
+}
+
+/**
+ * Fix notification badge style to ensure it looks professional
+ */
+function fixNotificationBadgeStyle() {
+    // Target all notification badges
+    const badges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification, .position-absolute.badge');
+    
+    badges.forEach(badge => {
+        // Ensure badge has proper position
+        badge.style.zIndex = "1001";
+        badge.style.transform = "translate(-50%, -50%)";
+        
+        // Make sure size is appropriate
+        badge.style.fontSize = "0.65rem";
+        badge.style.padding = "0.25rem 0.4rem";
+        
+        // Ensure it doesn't overlap with other elements
+        badge.style.top = "0";
+        badge.style.right = "0";
+        badge.style.margin = "0";
+        
+        // Add pill shape to ensure text fits
+        badge.classList.add('rounded-pill');
+        
+        // Ensure text doesn't overflow
+        badge.style.whiteSpace = "nowrap";
+        badge.style.overflow = "hidden";
+        badge.style.textOverflow = "ellipsis";
+        badge.style.maxWidth = "30px";
+    });
+    
+    // Fix container elements for notification dropdowns
+    const navItems = document.querySelectorAll('.nav-item.dropdown');
+    navItems.forEach(item => {
+        item.style.position = "relative";
+    });
 }
 
 /**
@@ -64,7 +105,7 @@ function initNotifications() {
  */
 function setupNotificationElements() {
     // Find all notification badges
-    const badges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification');
+    const badges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification, .position-absolute.badge');
     debugLog(`Found ${badges.length} notification badge elements`);
     
     // Find all notification dropdown containers
@@ -136,7 +177,7 @@ function loadNotifications() {
     }
     
     // Find notification elements
-    const notificationBadges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification');
+    const notificationBadges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification, .position-absolute.badge');
     const notificationDropdowns = document.querySelectorAll('.dropdown-menu.notification-dropdown, .notifications-dropdown, [data-notification-container]');
     
     if (notificationBadges.length === 0 || notificationDropdowns.length === 0) {
@@ -186,6 +227,10 @@ function loadNotifications() {
         notificationBadges.forEach(badge => {
             badge.textContent = count || '';
             badge.classList.toggle('d-none', count === 0);
+            // Ensure the badge fits the text
+            if (count > 99) {
+                badge.textContent = '99+';
+            }
         });
         
         // Update all dropdowns
@@ -208,7 +253,10 @@ function loadNotifications() {
             notificationState.retryCount = 0;
         } else {
             // Retry with fallback endpoint
-            loadNotifications();
+            setTimeout(() => {
+                notificationState.isLoading = false;
+                loadNotifications();
+            }, 1000); // Small delay before retry
         }
     })
     .finally(() => {
@@ -241,20 +289,34 @@ function showLoadingState(dropdown) {
  * Show error state in notification dropdown
  */
 function showErrorState(dropdown) {
-    dropdown.innerHTML = `
-        <div class="dropdown-item text-danger">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <span>Unable to load notifications</span>
-            </div>
-        </div>
-        <div class="dropdown-item">
-            <button class="btn btn-sm btn-outline-primary w-100 refresh-notifications">
-                <i class="bi bi-arrow-clockwise me-1"></i> Retry
+    // Clear existing content first
+    dropdown.innerHTML = '';
+
+    // Add header
+    const header = document.createElement('h6');
+    header.className = 'dropdown-header';
+    header.textContent = 'Notifications';
+    dropdown.appendChild(header);
+
+    // Add divider
+    const divider = document.createElement('div');
+    divider.className = 'dropdown-divider';
+    dropdown.appendChild(divider);
+
+    // Add single error message
+    const errorItem = document.createElement('div');
+    errorItem.className = 'dropdown-item text-center py-3';
+    errorItem.innerHTML = `
+        <div class="d-flex flex-column align-items-center">
+            <i class="bi bi-exclamation-circle text-danger fs-4 mb-2"></i>
+            <p class="text-danger mb-2">Unable to load notifications</p>
+            <button class="btn btn-sm btn-outline-primary refresh-notifications">
+                <i class="bi bi-arrow-clockwise me-1"></i> Try Again
             </button>
         </div>
     `;
-    
+    dropdown.appendChild(errorItem);
+
     // Add retry handler
     const retryButton = dropdown.querySelector('.refresh-notifications');
     if (retryButton) {
@@ -314,7 +376,9 @@ function updateNotificationDropdown(dropdown, data) {
                 notificationItem = createUnknownNotificationItem(item);
             }
             
-            dropdown.appendChild(notificationItem);
+            if (notificationItem) {
+                dropdown.appendChild(notificationItem);
+            }
         });
     }
     
@@ -522,8 +586,15 @@ document.addEventListener('visibilitychange', function() {
     }
 });
 
+// Also run on window load to catch any late DOM changes
+window.addEventListener('load', function() {
+    // Apply styling fixes
+    setTimeout(fixNotificationBadgeStyle, 1000);
+});
+
 // Expose global functions
 window.notificationsModule = {
     refresh: loadNotifications,
-    init: initNotifications
+    init: initNotifications,
+    fixBadges: fixNotificationBadgeStyle
 }; 
