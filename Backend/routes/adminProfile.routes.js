@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { User } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 import { cloudinaryEnabled, uploadImage } from '../config/cloudinary.js';
+import cloudinary from 'cloudinary';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,34 +106,55 @@ router.put('/profile', auth, isAdmin, upload.single('profileImage'), async (req,
                 if (cloudinaryEnabled) {
                     console.log('Uploading profile image to Cloudinary');
                     
-                    // Upload to Cloudinary
+                    // Upload to Cloudinary with specific profile image settings
                     const result = await uploadImage(req.file.path, {
                         folder: 'profiles',
                         transformation: [
                             { width: 500, height: 500, crop: 'limit' },
                             { quality: 'auto' }
-                        ]
+                        ],
+                        resource_type: 'auto' // This ensures proper handling of different image types
                     });
                     
-                    // Get the Cloudinary URL
-                    imageUrl = result.secure_url;
+                    // Get the Cloudinary URL and ensure it's using HTTPS
+                    imageUrl = result.secure_url || result.url;
+                    if (imageUrl.startsWith('http://')) {
+                        imageUrl = imageUrl.replace('http://', 'https://');
+                    }
                     console.log('Cloudinary upload successful:', imageUrl);
                     
                     // Clean up local file after Cloudinary upload
-                    fs.unlinkSync(req.file.path);
-                    console.log('Local temporary file cleaned up');
+                    try {
+                        fs.unlinkSync(req.file.path);
+                        console.log('Local temporary file cleaned up');
+                    } catch (unlinkError) {
+                        console.warn('Failed to delete local file:', unlinkError);
+                    }
                 } else {
                     // Use local file storage
                     imageUrl = `/uploads/profiles/${req.file.filename}`;
                     console.log('Using local file storage:', imageUrl);
                 }
                 
-                // Delete old profile image if exists and is a local file
-                if (user.profileImage && user.profileImage.startsWith('/uploads/profiles/')) {
-                    const oldImagePath = path.join(__dirname, '../public', user.profileImage);
-                    if (fs.existsSync(oldImagePath)) {
-                        fs.unlinkSync(oldImagePath);
-                        console.log('Deleted old profile image:', oldImagePath);
+                // Delete old profile image if exists
+                if (user.profileImage) {
+                    try {
+                        // If it's a Cloudinary URL, try to delete from Cloudinary
+                        if (user.profileImage.includes('cloudinary.com')) {
+                            const publicId = user.profileImage.split('/').pop().split('.')[0];
+                            await cloudinary.v2.uploader.destroy(`profiles/${publicId}`);
+                            console.log('Deleted old Cloudinary image');
+                        } 
+                        // If it's a local file, delete from local storage
+                        else if (user.profileImage.startsWith('/uploads/profiles/')) {
+                            const oldImagePath = path.join(__dirname, '../public', user.profileImage);
+                            if (fs.existsSync(oldImagePath)) {
+                                fs.unlinkSync(oldImagePath);
+                                console.log('Deleted old local profile image:', oldImagePath);
+                            }
+                        }
+                    } catch (deleteError) {
+                        console.warn('Failed to delete old profile image:', deleteError);
                     }
                 }
                 

@@ -149,6 +149,7 @@ const uploadImage = async (imagePath, options = {}) => {
         // Ensure we have a folder default
         const uploadOptions = {
             folder: options.folder || 'products',
+            resource_type: 'auto', // This ensures proper handling of different image types
             ...options
         };
 
@@ -161,6 +162,25 @@ const uploadImage = async (imagePath, options = {}) => {
         }
         if (result.url && result.url.startsWith('http://')) {
             result.url = result.url.replace('http://', 'https://');
+        }
+        
+        // For profile images, ensure we have a proper transformation
+        if (options.folder === 'profiles') {
+            const transformation = [
+                { width: 500, height: 500, crop: 'limit' },
+                { quality: 'auto' }
+            ];
+            
+            // Apply transformation to both URLs
+            result.secure_url = cloudinary.v2.url(result.public_id, {
+                secure: true,
+                transformation,
+                folder: 'profiles'
+            });
+            result.url = cloudinary.v2.url(result.public_id, {
+                transformation,
+                folder: 'profiles'
+            });
         }
         
         return result;
