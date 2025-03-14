@@ -220,53 +220,106 @@ const ProductCard = ({ product }) => {
 
         let imagePath = null;
 
+        // For debugging
+        console.log('Product image data:', {
+            hasImages: !!product.images,
+            imagesType: typeof product.images,
+            image: product.image,
+            imageUrl: product.imageUrl
+        });
+
         // Check for images array first (our newest format)
         if (product.images && Array.isArray(product.images) && product.images.length > 0) {
             // Use the first image from the array
             imagePath = product.images[0];
+            console.log('Using first image from images array:', imagePath);
         }
         // Then look for legacy image fields
         else if (product.image) {
             imagePath = product.image;
+            console.log('Using legacy image field:', imagePath);
         }
         // Then check for other possible image fields
         else if (product.imageUrl) {
             imagePath = product.imageUrl;
+            console.log('Using imageUrl field:', imagePath);
         }
         else if (product.images && product.images.front) {
             imagePath = product.images.front;
+            console.log('Using images.front field:', imagePath);
         }
         else if (product.thumbnail) {
             imagePath = product.thumbnail;
+            console.log('Using thumbnail field:', imagePath);
         }
 
         // If no image found, use placeholder
         if (!imagePath) {
+            console.log('No image path found, using placeholder');
             return '/assets/placeholder-product.jpg';
         }
 
-        // If it's a Cloudinary URL, use it directly
-        if (imagePath.includes('cloudinary.com')) {
+        // Try to parse if it's a JSON string
+        if (typeof imagePath === 'string' && (imagePath.startsWith('[') || imagePath.startsWith('{'))) {
+            try {
+                const parsed = JSON.parse(imagePath);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    imagePath = parsed[0];
+                    console.log('Parsed JSON array, using first item:', imagePath);
+                } else if (parsed && typeof parsed === 'object') {
+                    imagePath = parsed.url || parsed.secure_url || parsed;
+                    console.log('Parsed JSON object, using url property:', imagePath);
+                }
+            } catch (e) {
+                console.log('Failed to parse image path as JSON, using as-is');
+            }
+        }
+
+        // If after parsing it's an object with URL properties, extract the URL
+        if (typeof imagePath === 'object' && imagePath !== null) {
+            imagePath = imagePath.secure_url || imagePath.url || imagePath.path || imagePath;
+            console.log('Extracted URL from object:', imagePath);
+        }
+
+        // Ensure we have a string at this point
+        if (typeof imagePath !== 'string') {
+            console.log('Image path is not a string after processing, using placeholder');
+            return '/assets/placeholder-product.jpg';
+        }
+
+        // If it contains 'cloudinary.com', process it as a Cloudinary URL
+        if (imagePath.includes('cloudinary.com') || imagePath.includes('res.cloudinary.com')) {
+            console.log('Using Cloudinary URL:', imagePath);
             return imagePath;
         }
 
         // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
+            console.log('Using full URL:', imagePath);
             return imagePath;
         }
 
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
-            // Don't try to load from backend - use placeholder instead
-            return '/assets/placeholder-product.jpg';
+            // For backend image paths, try to use the full URL if we have a backend URL defined
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            if (apiUrl && !apiUrl.endsWith('/api')) {
+                const baseUrl = apiUrl.replace(/\/api$/, '');
+                console.log(`Converting uploads path to full URL: ${baseUrl}${imagePath}`);
+                return `${baseUrl}${imagePath}`;
+            }
+            console.log('Using uploads path as-is:', imagePath);
+            return imagePath;
         }
 
         // For relative paths
         if (imagePath.startsWith('/')) {
+            console.log('Using relative path with leading slash:', imagePath);
             return imagePath;
         }
 
         // Default case - assume it's a relative path without leading slash
+        console.log('Using relative path without leading slash:', imagePath);
         return `/${imagePath}`;
     };
 

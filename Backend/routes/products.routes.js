@@ -841,13 +841,24 @@ router.post('/', auth, isAdmin, (req, res) => {
                         // For Cloudinary uploads, use the secure URL
                         let url;
                         
-                        if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
-                            url = file.path;
-                            console.log(`Using Cloudinary URL from path: ${url}`);
-                        } else if (cloudinaryEnabled && file.cloudinary) {
-                            url = file.cloudinary.secure_url || file.cloudinary.url;
-                            console.log(`Using Cloudinary URL from cloudinary object: ${url}`);
+                        if (cloudinaryEnabled) {
+                            // Try to get the Cloudinary URL from the file object
+                            if (file.cloudinary && file.cloudinary.secure_url) {
+                                url = file.cloudinary.secure_url;
+                                console.log(`Using Cloudinary secure_url: ${url}`);
+                            } else if (file.path && (file.path.includes('cloudinary.com') || file.path.includes('res.cloudinary.com'))) {
+                                url = file.path;
+                                console.log(`Using Cloudinary URL from path: ${url}`);
+                            } else if (file.cloudinary && file.cloudinary.url) {
+                                url = file.cloudinary.url;
+                                console.log(`Using Cloudinary non-secure URL: ${url}`);
+                            } else {
+                                // Fallback to local path but log a warning
+                                url = `/uploads/products/${file.filename}`;
+                                console.warn(`Cloudinary enabled but no Cloudinary URL found for file ${file.originalname}. Using local URL: ${url}`);
+                            }
                         } else {
+                            // Local storage
                             url = `/uploads/products/${file.filename}`;
                             console.log(`Using local URL: ${url}`);
                         }

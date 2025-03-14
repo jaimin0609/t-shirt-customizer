@@ -644,8 +644,8 @@ function displayProducts(products) {
             console.log(`Processing product ${product.id} images:`, {
                 hasImagesArray: !!product.images,
                 imagesType: typeof product.images,
-                mainImage: product.image,
-                imagesArray: product.images
+                images: product.images,
+                mainImage: product.image
             });
             
             // Handle different image data formats
@@ -656,6 +656,7 @@ function displayProducts(products) {
                 if (typeof imagesArray === 'string') {
                     try {
                         imagesArray = JSON.parse(imagesArray);
+                        console.log('Successfully parsed images JSON:', imagesArray);
                     } catch (e) {
                         console.warn(`Failed to parse images JSON for product ${product.id}:`, e);
                     }
@@ -668,6 +669,15 @@ function displayProducts(products) {
                     if (validImages.length > 0) {
                         mainImage = validImages[0];
                         console.log(`Using image from images array: ${mainImage}`);
+                    }
+                }
+                // If images is an object with properties (like {front: 'url', back: 'url'})
+                else if (imagesArray && typeof imagesArray === 'object' && !Array.isArray(imagesArray)) {
+                    // Try common image property names
+                    const imageValue = imagesArray.front || imagesArray.main || imagesArray.default || imagesArray.url || Object.values(imagesArray)[0];
+                    if (imageValue) {
+                        mainImage = imageValue;
+                        console.log(`Using image from images object property: ${mainImage}`);
                     }
                 }
             }
@@ -697,6 +707,30 @@ function displayProducts(products) {
                         mainImage = '/' + mainImage;
                     }
                     console.log(`Using relative URL: ${mainImage}`);
+                    
+                    // If this URL starts with /uploads, it might be a backend URL
+                    // We could further improve this with a setting for the backend base URL
+                    if (mainImage.startsWith('/uploads') && window.API_URL && window.API_URL.includes('://')) {
+                        // Extract the base URL from the API URL
+                        const baseUrlMatch = window.API_URL.match(/^(https?:\/\/[^\/]+)/);
+                        if (baseUrlMatch && baseUrlMatch[1]) {
+                            const fullUrl = `${baseUrlMatch[1]}${mainImage}`;
+                            console.log(`Converted to full backend URL: ${fullUrl}`);
+                            mainImage = fullUrl;
+                        }
+                    }
+                }
+            } else if (mainImage && typeof mainImage === 'object') {
+                // If the image is an object (like a Cloudinary response), extract the URL
+                if (mainImage.secure_url) {
+                    mainImage = mainImage.secure_url;
+                    console.log(`Extracted secure_url from image object: ${mainImage}`);
+                } else if (mainImage.url) {
+                    mainImage = mainImage.url;
+                    console.log(`Extracted url from image object: ${mainImage}`);
+                } else {
+                    console.warn('Image is an object but has no URL property:', mainImage);
+                    mainImage = '/admin/assets/placeholder.png';
                 }
             }
         } catch (e) {
