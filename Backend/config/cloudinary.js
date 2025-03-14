@@ -15,7 +15,7 @@ dotenv.config({ path: join(__dirname, '..', '.env') });
 // Debug Cloudinary configuration
 console.log('=== CLOUDINARY CONFIGURATION DEBUG ===');
 console.log('Checking Cloudinary environment variables:');
-console.log('CLOUDINARY_CLOUD_NAME exists:', !!process.env.CLOUDINARY_CLOUD_NAME);
+console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
 console.log('CLOUDINARY_API_KEY exists:', !!process.env.CLOUDINARY_API_KEY);
 console.log('CLOUDINARY_API_SECRET exists:', !!process.env.CLOUDINARY_API_SECRET);
 
@@ -26,12 +26,14 @@ let cloudinaryStorage = null;
 // Test Cloudinary connection function
 const testCloudinaryConnection = async () => {
     try {
+        console.log('Testing Cloudinary connection...');
         const result = await cloudinary.v2.api.ping();
         console.log('✅ Cloudinary connection test successful:', result);
         cloudinaryEnabled = true;
         return true;
     } catch (error) {
-        console.error('❌ Cloudinary connection test failed:', error);
+        console.error('❌ Cloudinary connection test failed:', error.message);
+        console.error('Error details:', error);
         cloudinaryEnabled = false;
         console.warn('Falling back to local storage for file uploads');
         return false;
@@ -43,7 +45,6 @@ try {
     console.log('Attempting to configure Cloudinary with:');
     console.log('- Cloud name:', process.env.CLOUDINARY_CLOUD_NAME);
     console.log('- API key length:', process.env.CLOUDINARY_API_KEY?.length);
-    console.log('- API secret length:', process.env.CLOUDINARY_API_SECRET?.length);
     
     // Configure Cloudinary
     cloudinary.v2.config({
@@ -53,19 +54,31 @@ try {
         secure: true
     });
     
-    // Create Cloudinary storage instance
+    // Create Cloudinary storage instance with direct configuration
     cloudinaryStorage = new CloudinaryStorage({
         cloudinary: cloudinary.v2,
         params: {
             folder: 'products',
             allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+            format: 'jpg', // Force consistent format
             transformation: [{ width: 1000, crop: "limit" }],
-            resource_type: 'auto'
+            public_id: (req, file) => {
+                // Generate a unique ID using timestamp and random string
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const filename = file.originalname.split('.')[0];
+                return `product-${filename}-${uniqueSuffix}`;
+            }
         }
     });
     
     // Execute the connection test
-    testCloudinaryConnection().catch(err => {
+    testCloudinaryConnection().then(success => {
+        if (success) {
+            console.log('✅ Cloudinary is enabled and ready to use');
+        } else {
+            console.warn('⚠️ Using local storage fallback');
+        }
+    }).catch(err => {
         console.error('Error during Cloudinary connection test:', err);
         cloudinaryEnabled = false;
     });

@@ -60,13 +60,27 @@ if (!fs.existsSync(uploadDir)) {
 // Initialize multer with appropriate storage
 let storage;
 if (cloudinaryEnabled) {
-    console.log('Configuring multer with Cloudinary storage');
+    console.log('🚀 Configuring multer with Cloudinary storage');
+    console.log('Cloudinary config:', {
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        hasApiKey: !!process.env.CLOUDINARY_API_KEY,
+        hasApiSecret: !!process.env.CLOUDINARY_API_SECRET
+    });
+    
+    // Make sure we're using cloudinary v2 and not the old version
     storage = new CloudinaryStorage({
-        cloudinary: cloudinary,
+        cloudinary: cloudinary.v2,
         params: {
             folder: 'products',
             allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-            transformation: [{ width: 1000, crop: "limit" }]
+            format: 'jpg', // Force consistent format
+            transformation: [{ width: 1000, crop: "limit" }],
+            public_id: (req, file) => {
+                // Generate a unique ID using timestamp and random string
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const filename = file.originalname.split('.')[0];
+                return `product-${filename}-${uniqueSuffix}`;
+            }
         }
     });
 } else {
@@ -87,7 +101,7 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB size limit
     fileFilter: (req, file, cb) => {
-        console.log('Processing file upload:', {
+        console.log('🔍 Processing file upload:', {
             originalname: file.originalname,
             mimetype: file.mimetype,
             size: file.size
@@ -109,6 +123,7 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
     console.log('Request headers:', JSON.stringify(req.headers, null, 2));
     console.log('Content-Type:', req.headers['content-type']);
     
+    // Important: Use the multer middleware directly here
     upload.array('images', 5)(req, res, async function(err) {
         try {
             console.log('=== Testing Cloudinary Upload ===');
@@ -127,7 +142,8 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
                 
                 return res.status(400).json({ 
                     success: false, 
-                    message: err.message 
+                    message: err.message,
+                    error: err.toString()
                 });
             }
             
@@ -147,24 +163,36 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
                 originalname: file.originalname,
                 mimetype: file.mimetype,
                 size: file.size,
-                path: file.path,
-                cloudinary: file.cloudinary
+                path: file.path || 'No path',
+                filename: file.filename || 'No filename',
+                destination: file.destination || 'No destination',
+                cloudinary: file.cloudinary || 'No cloudinary data'
             })));
             
             // Check if the files were uploaded to Cloudinary
             const uploadedFiles = req.files.map(file => {
+                // For Cloudinary uploads, the file will have a path property with the Cloudinary URL
+                // or the file.cloudinary object will contain the Cloudinary details
                 if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
                     return {
                         success: true,
                         originalname: file.originalname,
                         cloudinaryUrl: file.path,
-                        cloudinaryDetails: file.cloudinary
+                        fullFile: file
+                    };
+                } else if (cloudinaryEnabled && file.cloudinary) {
+                    return {
+                        success: true,
+                        originalname: file.originalname,
+                        cloudinaryUrl: file.cloudinary.secure_url || file.cloudinary.url,
+                        fullFile: file
                     };
                 } else {
                     return {
                         success: false,
                         originalname: file.originalname,
-                        localPath: file.path
+                        localPath: file.path,
+                        fullFile: file
                     };
                 }
             });
@@ -186,7 +214,8 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
             return res.status(500).json({
                 success: false,
                 message: 'Error processing upload',
-                error: error.message
+                error: error.message,
+                stack: process.env.NODE_ENV === 'production' ? null : error.stack
             });
         }
     });
@@ -641,9 +670,14 @@ router.post('/', auth, isAdmin, (req, res) => {
             
             if (err) {
                 console.error('Error during file upload:', err);
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({ 
                     success: false, 
-                    message: err.message 
+                    message: err.message,
+                    error: err.toString()
                 });
             }
             
@@ -665,6 +699,10 @@ router.post('/', auth, isAdmin, (req, res) => {
             
             if (missingFields.length > 0) {
                 console.error('Missing required fields:', missingFields);
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({
                     success: false,
                     message: `Missing required fields: ${missingFields.join(', ')}`
@@ -677,22 +715,40 @@ router.post('/', auth, isAdmin, (req, res) => {
                 try {
                     console.log('Processing uploaded images...');
                     console.log('Files received:', req.files.map(f => ({
-                        filename: f.filename,
+                        originalname: f.originalname,
                         mimetype: f.mimetype,
                         size: f.size,
-                        path: f.path
+                        path: f.path || 'No path',
+                        filename: f.filename || 'No filename',
+                        destination: f.destination || 'No destination',
+                        cloudinary: f.cloudinary || 'No cloudinary data'
                     })));
                     
                     imageUrls = req.files.map(file => {
                         // For Cloudinary uploads, use the secure URL
-                        const url = cloudinaryEnabled && file.path ? file.path : `/uploads/products/${file.filename}`;
-                        console.log(`Processed image URL: ${url}`);
+                        let url;
+                        
+                        if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
+                            url = file.path;
+                            console.log(`Using Cloudinary URL from path: ${url}`);
+                        } else if (cloudinaryEnabled && file.cloudinary) {
+                            url = file.cloudinary.secure_url || file.cloudinary.url;
+                            console.log(`Using Cloudinary URL from cloudinary object: ${url}`);
+                        } else {
+                            url = `/uploads/products/${file.filename}`;
+                            console.log(`Using local URL: ${url}`);
+                        }
+                        
                         return url;
                     });
                     
                     console.log('Final image URLs:', imageUrls);
                 } catch (imageError) {
                     console.error('Error processing images:', imageError);
+                    
+                    // Ensure proper Content-Type header even on error
+                    res.setHeader('Content-Type', 'application/json');
+                    
                     return res.status(500).json({
                         success: false,
                         message: 'Error processing uploaded images',
