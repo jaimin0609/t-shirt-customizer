@@ -45,6 +45,37 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeForm() {
     console.log('Initializing form...');
     
+    // Set default values for form controls
+    document.getElementById('productStatus').checked = true;
+    document.getElementById('productFeatured').checked = false;
+    
+    // Reset form handler - to properly reset TinyMCE when form is reset
+    const form = document.getElementById('addProductForm');
+    if (form) {
+        form.addEventListener('reset', function() {
+            // Give time for the form to reset, then reset TinyMCE
+            setTimeout(() => {
+                if (tinymce.get('productDescription')) {
+                    tinymce.get('productDescription').setContent('');
+                }
+            }, 100);
+        });
+    }
+    
+    // Add input event listeners to update validation states in real-time
+    const requiredInputs = document.querySelectorAll('input[required], select[required], textarea[required]');
+    requiredInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        });
+    });
+    
     const stockInput = document.getElementById('productStock');
     const priceInput = document.getElementById('productPrice');
     const customizableCheckbox = document.getElementById('productCustomizable');
@@ -491,7 +522,10 @@ async function handleFormSubmit(e) {
         // Manually add all the form fields to ensure proper values
         // This avoids issues with disabled fields, checkboxes, etc.
         formData.append('name', document.getElementById('productName').value);
-        formData.append('description', document.getElementById('productDescription').value);
+        
+        // Get content from TinyMCE editor instead of directly from textarea
+        formData.append('description', tinymce.get('productDescription') ? tinymce.get('productDescription').getContent() : document.getElementById('productDescription').value);
+        
         formData.append('price', document.getElementById('productPrice').value);
         formData.append('stock', document.getElementById('productStock').value);
         

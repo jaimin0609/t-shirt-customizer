@@ -111,276 +111,112 @@ function showAddProductModal() {
 }
 
 // Edit Product
-async function editProduct(productId) {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showToast('error', 'Authentication required');
-            return;
-        }
-
-        editingProductId = productId;
-        const response = await fetch(`${window.API_URL}/products/${productId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch product details');
-        }
-        const product = await response.json();
-        
-        // Fill the form with product details
-        document.getElementById('productName').value = product.name;
-        document.getElementById('productDescription').value = product.description;
-        document.getElementById('productPrice').value = product.price;
-        document.getElementById('productCategory').value = product.category;
-        document.getElementById('productStock').value = product.stock;
-        document.getElementById('productStatus').value = product.status;
-        
-        // Set gender and age group if they exist
-        if (document.getElementById('productGender')) {
-            document.getElementById('productGender').value = product.gender || 'unisex';
-        }
-        
-        if (document.getElementById('productAgeGroup')) {
-            document.getElementById('productAgeGroup').value = product.ageGroup || 'adult';
-        }
-        
-        // Set isCustomizable checkbox
-        if (document.getElementById('productCustomizable')) {
-            document.getElementById('productCustomizable').checked = product.isCustomizable || false;
-        }
-
-        // Show image preview if exists
-        let mainImage = null;
-
-        // Check for images array first
-        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            mainImage = product.images[0];
-            console.log(`Edit mode: Using image from images array: ${mainImage}`);
-        } 
-        // Fall back to legacy image field
-        else if (product.image) {
-            mainImage = product.image;
-            console.log(`Edit mode: Using legacy image field: ${mainImage}`);
-        }
-
-        if (mainImage) {
-            // Ensure the image URL starts with a slash if it's a relative path
-            if (!mainImage.startsWith('/') && !mainImage.startsWith('http')) {
-                mainImage = '/' + mainImage;
-            }
-            
-            console.log(`Edit mode: Setting image preview to: ${mainImage}`);
-            
-            // Set the preview image
-            document.getElementById('imagePreviewElement').src = mainImage;
-            document.getElementById('imagePreviewElement').onerror = function() {
-                console.log('Edit mode: Image failed to load, using placeholder');
-                this.onerror = null;
-                this.src = '/admin/assets/placeholder.png';
-            };
-            document.getElementById('imagePreview').style.display = 'block';
-        } else {
-            document.getElementById('imagePreview').style.display = 'none';
-        }
-
-        // Update modal title
-        document.getElementById('productModalTitle').textContent = 'Edit Product';
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('productModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error editing product:', error);
-        showToast('error', 'Failed to load product details');
+function editProduct(id) {
+    editingProductId = id;
+    document.getElementById('productModalTitle').textContent = 'Edit Product';
+    
+    // Find the product in the products array
+    const product = products.find(p => p.id === id);
+    if (!product) {
+        console.error(`Product with ID ${id} not found!`);
+        return;
     }
+    
+    // Populate the form fields
+    document.getElementById('productName').value = product.name || '';
+    document.getElementById('productPrice').value = product.price || '';
+    document.getElementById('productStock').value = product.stock || '';
+    document.getElementById('productCategory').value = product.category || '';
+    document.getElementById('productGender').value = product.gender || 'unisex';
+    document.getElementById('productAgeGroup').value = product.ageGroup || 'adult';
+    document.getElementById('productStatus').value = product.status || 'active';
+    document.getElementById('productCustomizable').checked = product.isCustomizable || false;
+    
+    // Set description in the textarea
+    const descriptionTextarea = document.getElementById('productDescription');
+    if (descriptionTextarea) {
+        descriptionTextarea.value = product.description || '';
+        
+        // Also update TinyMCE content if initialized
+        setTimeout(() => {
+            if (tinymce.get('productDescription')) {
+                tinymce.get('productDescription').setContent(product.description || '');
+            }
+        }, 300); // Delay slightly to ensure TinyMCE has initialized
+    }
+    
+    // Show image preview if available
+    const imagePreview = document.getElementById('imagePreview');
+    const imagePreviewElement = document.getElementById('imagePreviewElement');
+    if (imagePreview && imagePreviewElement && product.image) {
+        imagePreviewElement.src = product.image;
+        imagePreview.style.display = 'block';
+    } else if (imagePreview) {
+        imagePreview.style.display = 'none';
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('productModal'));
+    modal.show();
 }
 
 // Save Product
 async function saveProduct() {
-    let timerStart = Date.now();
-    console.log('⏱️ Starting product save operation at:', new Date().toISOString());
-    
     try {
-        // Show loading indicator
-        const saveButton = document.getElementById('saveProductBtn');
-        const originalButtonText = saveButton.textContent;
-        saveButton.textContent = 'Saving...';
-        saveButton.disabled = true;
-        
         const token = localStorage.getItem('token');
         if (!token) {
             showToast('error', 'Authentication required');
-            saveButton.textContent = originalButtonText;
-            saveButton.disabled = false;
-            console.error('❌ Authentication required - no token found');
             return;
         }
-
-        // Get form and create FormData
-        console.log('📝 Creating form data...');
+        
         const form = document.getElementById('productForm');
         const formData = new FormData(form);
         
-        // Log form data contents with more details
-        console.log('📦 Form data contents:');
-        const formDataEntries = [];
-        for (let [key, value] of formData.entries()) {
-            const valueDetails = value instanceof File 
-                ? `File: ${value.name} (${value.size} bytes, ${value.type})` 
-                : value;
-            console.log(`${key}: ${valueDetails}`);
-            formDataEntries.push({ key, value: valueDetails });
+        // Get TinyMCE content if editor is initialized
+        if (tinymce.get('productDescription')) {
+            formData.set('description', tinymce.get('productDescription').getContent());
         }
         
-        // Check if there are image files and validate them
-        console.log('🖼️ Checking for image files...');
-        const imageFiles = [];
-        for (let [key, value] of formData.entries()) {
-            if (key === 'images' && value instanceof File && value.size > 0) {
-                imageFiles.push(value);
-                
-                // Validate file type
-                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (!validTypes.includes(value.type)) {
-                    showToast('error', `Invalid file type: ${value.name}. Only JPEG, PNG, GIF, and WebP are supported.`);
-                    saveButton.textContent = originalButtonText;
-                    saveButton.disabled = false;
-                    console.error(`❌ Invalid file type: ${value.name} (${value.type})`);
-                    return;
-                }
-                
-                // Validate file size (max 5MB)
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                if (value.size > maxSize) {
-                    showToast('error', `File too large: ${value.name}. Maximum size is 5MB.`);
-                    saveButton.textContent = originalButtonText;
-                    saveButton.disabled = false;
-                    console.error(`❌ File too large: ${value.name} (${value.size} bytes)`);
-                    return;
-                }
-            }
+        // Check if customizable is checked and add it to formData
+        const isCustomizable = document.getElementById('productCustomizable').checked;
+        formData.set('isCustomizable', isCustomizable);
+        
+        // Add or remove the isCustomizable field
+        if (!formData.has('isCustomizable')) {
+            formData.append('isCustomizable', false);
         }
         
-        console.log(`📸 Found ${imageFiles.length} valid image files to upload`);
+        // Prepare URL and method based on whether we're editing or adding
+        let url = `${window.API_URL}/products`;
+        let method = 'POST';
         
-        // Prepare URL and method based on whether we're editing or creating
-        const url = editingProductId ? 
-            `${window.API_URL}/products/${editingProductId}` : 
-            `${window.API_URL}/products`;
-            
-        const method = editingProductId ? 'PUT' : 'POST';
-
-        console.log(`⬆️ ${method === 'POST' ? 'Creating' : 'Updating'} product...`, {
-            url,
-            method,
-            editingProductId,
-            token: token.substring(0, 10) + '...',
-            imageCount: imageFiles.length,
-            apiUrl: window.API_URL
+        if (editingProductId) {
+            url = `${window.API_URL}/products/${editingProductId}`;
+            method = 'PUT';
+        }
+        
+        // Send request
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
         });
-
-        console.log('⏱️ Starting fetch at:', new Date().toISOString());
-        console.log('⏱️ Time elapsed:', Date.now() - timerStart, 'ms');
         
-        try {
-            const response = await fetch(url, {
-                method: method,
-                body: formData,
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            const fetchTime = Date.now() - timerStart;
-            console.log(`⏱️ Fetch completed in ${fetchTime}ms at:`, new Date().toISOString());
-            console.log('📡 Response status:', response.status, response.statusText);
-            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-            // First check if the response is JSON
-            const contentType = response.headers.get("content-type");
-            console.log('📡 Response content type:', contentType);
-            
-            // Check for error response
-            if (!response.ok) {
-                let errorMessage = 'Failed to save product';
-                
-                // Try to get detailed error from JSON response
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
-                    console.error('❌ Server error:', errorData);
-                } else {
-                    // If not JSON, try to get text
-                    const errorText = await response.text();
-                    console.error('❌ Server response:', errorText);
-                }
-                
-                // Handle specific HTTP status codes
-                if (response.status === 401 || response.status === 403) {
-                    errorMessage = 'You do not have permission to perform this action';
-                } else if (response.status === 400) {
-                    errorMessage = 'Invalid product data. Please check your inputs.';
-                } else if (response.status === 413) {
-                    errorMessage = 'Image file too large. Maximum total size is 10MB.';
-                } else if (response.status === 415) {
-                    errorMessage = 'Unsupported file type. Use JPG, PNG, GIF, or WebP images.';
-                } else if (response.status === 500) {
-                    errorMessage = 'Server error while saving product. Try again later.';
-                } else if (response.status === 0) {
-                    errorMessage = 'Network error. Check your internet connection or CORS settings.';
-                }
-                
-                throw new Error(errorMessage);
-            }
-
-            // Get the response data
-            let data = {};
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                try {
-                    data = await response.json();
-                    console.log('✅ Save response data:', data);
-                } catch (e) {
-                    console.warn('⚠️ Could not parse JSON response:', e);
-                }
-            }
-
-            // Show success message
-            const message = editingProductId ? 'Product updated successfully' : 'Product added successfully';
-            showToast('success', message);
-            console.log(`✅ ${message}`);
-            
-            // Close the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
-            modal.hide();
-            
-            // Reload products
-            loadProducts();
-        } catch (fetchError) {
-            console.error('❌ Fetch error:', fetchError);
-            throw fetchError;
+        if (!response.ok) {
+            throw new Error('Failed to save product');
         }
+        
+        // Show success message
+        showToast('success', editingProductId ? 'Product updated successfully' : 'Product added successfully');
+        
+        // Close modal and refresh products
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+        loadProducts();
     } catch (error) {
-        console.error('❌ Error saving product:', error);
-        showToast('error', error.message || 'Failed to save product');
-        
-        // Log additional debugging information
-        console.error('🔍 Additional debugging info:');
-        console.error('- API URL:', window.API_URL);
-        console.error('- Current origin:', window.location.origin);
-        console.error('- Browser:', navigator.userAgent);
-        console.error('- Time of error:', new Date().toISOString());
-    } finally {
-        // Reset button state
-        const saveButton = document.getElementById('saveProductBtn');
-        saveButton.textContent = 'Save Product';
-        saveButton.disabled = false;
-        
-        const totalTime = Date.now() - timerStart;
-        console.log(`⏱️ Total operation time: ${totalTime}ms`);
+        console.error('Error saving product:', error);
+        showToast('error', 'Failed to save product');
     }
 }
 

@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/admin/css/style.css" rel="stylesheet">
+    <!-- TinyMCE Rich Text Editor -->
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 </head>
 <body>
     <div class="wrapper">
@@ -402,6 +404,40 @@
                 console.error('Product management functions not loaded properly');
             }
         });
+
+        // Initialize TinyMCE on modal shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const productModal = document.getElementById('productModal');
+            if (productModal) {
+                productModal.addEventListener('shown.bs.modal', function() {
+                    if (tinymce.get('productDescription')) {
+                        tinymce.remove('#productDescription');
+                    }
+                    
+                    tinymce.init({
+                        selector: '#productDescription',
+                        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                        height: 200,
+                        menubar: false,
+                        branding: false,
+                        promotion: false,
+                    });
+                });
+            }
+        });
+        
+        // Update saveProduct function to get content from TinyMCE
+        const originalSaveProduct = window.saveProduct;
+        window.saveProduct = function() {
+            // Get content from TinyMCE before submitting form
+            if (tinymce.get('productDescription')) {
+                document.getElementById('productDescription').value = tinymce.get('productDescription').getContent();
+            }
+            
+            // Call the original function
+            originalSaveProduct();
+        };
     </script>
 </body>
 </html> 
