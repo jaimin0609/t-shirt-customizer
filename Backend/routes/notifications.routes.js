@@ -1,6 +1,5 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
-import { isAdmin } from '../middleware/isAdmin.js';
+import { auth, isAdmin } from '../middleware/auth.js';
 import { Notification } from '../models/index.js';
 import { handleError, asyncHandler } from '../utils/errorHandler.js';
 
