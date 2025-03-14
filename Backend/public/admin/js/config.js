@@ -16,8 +16,15 @@ window.API_URL = isLocalhost ? 'http://localhost:5002/api' : 'https://t-shirt-cu
 window.SHOW_DEBUG = isLocalhost;
 
 // Cloudinary configuration
-window.CLOUDINARY_CLOUD_NAME = 'dopvs93sl'; // Your Cloudinary cloud name
+// Note: These should match your Backend .env CLOUDINARY_CLOUD_NAME
+// For production, make sure to set these values in your Render environment variables
+window.CLOUDINARY_CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'; // Replace with your new cloud name
 window.CLOUDINARY_URL_PREFIX = `https://res.cloudinary.com/${window.CLOUDINARY_CLOUD_NAME}`;
+
+// Extra debugging for Cloudinary
+console.log('======= Cloudinary Configuration =======');
+console.log('Cloud Name:', window.CLOUDINARY_CLOUD_NAME);
+console.log('URL Prefix:', window.CLOUDINARY_URL_PREFIX);
 
 // Configure the API URL based on the current location
 if (window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')) {
@@ -49,18 +56,22 @@ window.API_URL = window.API_URL || '/api';
 
 // Helper function to extract Cloudinary ID from various URL formats
 window.getCloudinaryId = function(url) {
+    console.log('Extracting Cloudinary ID from:', url);
     if (!url) return null;
     
     // Already a Cloudinary public ID with no path
     if (!url.includes('/')) {
+        console.log('URL has no path, treating as direct public ID:', url);
         return url;
     }
     
     // Full Cloudinary URL
     if (url.includes('cloudinary.com')) {
+        console.log('Detected Cloudinary URL, extracting ID');
         // Extract the relevant portion after upload/
         const uploadMatch = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
         if (uploadMatch && uploadMatch[1]) {
+            console.log('Extracted Cloudinary ID:', uploadMatch[1]);
             return uploadMatch[1];
         }
     }
@@ -68,13 +79,17 @@ window.getCloudinaryId = function(url) {
     // Local path format with product- prefix
     if (url.includes('/product-')) {
         const parts = url.split('/');
-        return parts[parts.length - 1];
+        const id = parts[parts.length - 1];
+        console.log('Extracted product ID from path:', id);
+        return id;
     }
     
     // If it's a path, return the last segment
     if (url.includes('/')) {
         const parts = url.split('/');
-        return parts[parts.length - 1];
+        const id = parts[parts.length - 1];
+        console.log('Extracted ID from path segments:', id);
+        return id;
     }
     
     return url;
@@ -82,16 +97,20 @@ window.getCloudinaryId = function(url) {
 
 // Helper function to create proper Cloudinary URLs
 window.formatCloudinaryUrl = function(url, options = {}) {
+    console.log('Formatting Cloudinary URL:', url);
     if (!url) return null;
     
     // If it's already a full Cloudinary URL, ensure it uses HTTPS
     if (url.includes('cloudinary.com')) {
+        console.log('URL already contains cloudinary.com');
         if (url.startsWith('http://')) {
+            console.log('Converting HTTP to HTTPS');
             return url.replace('http://', 'https://');
         }
         
         // If we have options, need to rebuild the URL with them
         if (Object.keys(options).length > 0) {
+            console.log('Rebuilding Cloudinary URL with options:', options);
             const id = window.getCloudinaryId(url);
             if (id) {
                 return buildCloudinaryUrl(id, options);
@@ -104,9 +123,11 @@ window.formatCloudinaryUrl = function(url, options = {}) {
     // Extract ID and build URL
     const id = window.getCloudinaryId(url);
     if (id) {
+        console.log('Building Cloudinary URL from ID:', id);
         return buildCloudinaryUrl(id, options);
     }
     
+    console.log('Unable to format as Cloudinary URL, returning original:', url);
     return url;
 };
 
@@ -129,7 +150,10 @@ function buildCloudinaryUrl(id, options = {}) {
         }
     }
     
-    return `${window.CLOUDINARY_URL_PREFIX}/image/upload/v1/${transformations}${id}`;
+    // Make sure the URL uses the correct format: https://res.cloudinary.com/cloud_name/image/upload/v1/id
+    const url = `${window.CLOUDINARY_URL_PREFIX}/image/upload/v1/${transformations}${id}`;
+    console.log('Built Cloudinary URL:', url);
+    return url;
 }
 
 // Add a utility to test image URLs

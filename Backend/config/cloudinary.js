@@ -35,6 +35,11 @@ let cloudinaryStorage = null;
 const testCloudinaryConnection = async () => {
     try {
         console.log('Testing Cloudinary connection...');
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+            console.error('❌ Cloudinary credentials are missing. Check your .env file');
+            cloudinaryEnabled = false;
+            return false;
+        }
         const result = await cloudinary.v2.api.ping();
         console.log('✅ Cloudinary connection test successful:', result);
         cloudinaryEnabled = true;
@@ -155,30 +160,54 @@ const getCloudinaryUrl = (publicId) => {
     if (!cloudinaryEnabled || !publicId) {
         return '/uploads/products/placeholder.jpg';
     }
-    return cloudinary.v2.url(publicId, {
-        secure: true,
-        transformation: [{ width: 1000, crop: "limit" }]
-    });
+    
+    // If it's already a full Cloudinary URL, return it
+    if (publicId.includes('cloudinary.com')) {
+        // Ensure URL uses HTTPS
+        return publicId.replace('http://', 'https://');
+    }
+    
+    // Build a proper Cloudinary URL
+    try {
+        return cloudinary.v2.url(publicId, {
+            secure: true,
+            transformation: [{ width: 1000, crop: "limit" }]
+        });
+    } catch (error) {
+        console.error(`Error generating Cloudinary URL for ${publicId}:`, error);
+        return '/uploads/products/placeholder.jpg';
+    }
 };
 
 // Function to get image URL for a public ID
 const getImageUrl = (publicId) => {
     if (!publicId) {
-        return getCloudinaryUrl();
+        console.log('No publicId provided, returning placeholder');
+        return '/uploads/products/placeholder.jpg';
     }
 
     if (!cloudinaryEnabled) {
+        console.log(`Cloudinary not enabled, using local URL for: ${publicId}`);
         return publicId.startsWith('/uploads/') ? publicId : `/uploads/products/${publicId}`;
     }
 
     if (publicId.startsWith('http')) {
-        return publicId;
+        console.log(`Using existing URL: ${publicId}`);
+        return publicId.startsWith('http://') ? publicId.replace('http://', 'https://') : publicId;
     }
-
-    return cloudinary.v2.url(publicId, {
-        secure: true,
-        transformation: [{ width: 1000, crop: "limit" }]
-    });
+    
+    // For Cloudinary public IDs
+    try {
+        const url = cloudinary.v2.url(publicId, {
+            secure: true,
+            transformation: [{ width: 1000, crop: "limit" }]
+        });
+        console.log(`Generated Cloudinary URL: ${url} for ID: ${publicId}`);
+        return url;
+    } catch (error) {
+        console.error(`Error generating Cloudinary URL for ${publicId}:`, error);
+        return '/uploads/products/placeholder.jpg';
+    }
 };
 
 export {
