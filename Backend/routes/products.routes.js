@@ -117,110 +117,6 @@ const upload = multer({
     }
 });
 
-// Test endpoint for Cloudinary uploads
-router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
-    console.log('POST /products/test-cloudinary - Request received');
-    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Content-Type:', req.headers['content-type']);
-    
-    // Important: Use the multer middleware directly here
-    upload.array('images', 5)(req, res, async function(err) {
-        try {
-            console.log('=== Testing Cloudinary Upload ===');
-            console.log('Cloudinary enabled:', cloudinaryEnabled);
-            console.log('Cloudinary config:', {
-                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-                api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
-                api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : 'not set'
-            });
-            
-            if (err) {
-                console.error('Error during file upload:', err);
-                
-                // Ensure proper Content-Type header even on error
-                res.setHeader('Content-Type', 'application/json');
-                
-                return res.status(400).json({ 
-                    success: false, 
-                    message: err.message,
-                    error: err.toString()
-                });
-            }
-            
-            if (!req.files || req.files.length === 0) {
-                console.error('No image files provided');
-                
-                // Ensure proper Content-Type header even on error
-                res.setHeader('Content-Type', 'application/json');
-                
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'No image files provided' 
-                });
-            }
-            
-            console.log('Files received:', req.files.map(file => ({
-                originalname: file.originalname,
-                mimetype: file.mimetype,
-                size: file.size,
-                path: file.path || 'No path',
-                filename: file.filename || 'No filename',
-                destination: file.destination || 'No destination',
-                cloudinary: file.cloudinary || 'No cloudinary data'
-            })));
-            
-            // Check if the files were uploaded to Cloudinary
-            const uploadedFiles = req.files.map(file => {
-                // For Cloudinary uploads, the file will have a path property with the Cloudinary URL
-                // or the file.cloudinary object will contain the Cloudinary details
-                if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
-                    return {
-                        success: true,
-                        originalname: file.originalname,
-                        cloudinaryUrl: file.path,
-                        fullFile: file
-                    };
-                } else if (cloudinaryEnabled && file.cloudinary) {
-                    return {
-                        success: true,
-                        originalname: file.originalname,
-                        cloudinaryUrl: file.cloudinary.secure_url || file.cloudinary.url,
-                        fullFile: file
-                    };
-                } else {
-                    return {
-                        success: false,
-                        originalname: file.originalname,
-                        localPath: file.path,
-                        fullFile: file
-                    };
-                }
-            });
-            
-            // Ensure proper Content-Type header
-            res.setHeader('Content-Type', 'application/json');
-            
-            return res.status(200).json({
-                success: true,
-                message: cloudinaryEnabled ? 'Files uploaded to Cloudinary' : 'Files saved locally',
-                files: uploadedFiles
-            });
-        } catch (error) {
-            console.error('Error in test-cloudinary endpoint:', error);
-            
-            // Ensure proper Content-Type header even on error
-            res.setHeader('Content-Type', 'application/json');
-            
-            return res.status(500).json({
-                success: false,
-                message: 'Error processing upload',
-                error: error.message,
-                stack: process.env.NODE_ENV === 'production' ? null : error.stack
-            });
-        }
-    });
-});
-
 // Get all products - Removed auth middleware to make it public
 router.get('/', async (req, res) => {
     try {
@@ -474,85 +370,111 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get single product - Move this BEFORE other routes with :id parameter
-router.get('/:id', async (req, res) => {
-    try {
-        const productId = req.params.id;
-        console.log(`Fetching product with ID: ${productId}`);
-        
-        // Create include array - make it resilient against association issues
-        let includeOptions = [];
+// Test endpoint for Cloudinary uploads - MUST be before /:id route to avoid conflict!
+router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
+    console.log('POST /products/test-cloudinary - Request received');
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    
+    // Important: Use the multer middleware directly here
+    upload.array('images', 5)(req, res, async function(err) {
         try {
-            // Check if the association exists
-            if (Product.associations && Product.associations.variants) {
-                includeOptions.push({
-                    model: ProductVariant,
-                    as: 'variants',
-                    required: false
-                });
-            } else {
-                console.log('Warning: variants association is not defined on Product model');
-                // Try to define it dynamically
-                Product.hasMany(ProductVariant, {
-                    foreignKey: 'productId',
-                    as: 'variants'
-                });
+            console.log('=== Testing Cloudinary Upload ===');
+            console.log('Cloudinary enabled:', cloudinaryEnabled);
+            console.log('Cloudinary config:', {
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
+                api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : 'not set'
+            });
+            
+            if (err) {
+                console.error('Error during file upload:', err);
                 
-                ProductVariant.belongsTo(Product, {
-                    foreignKey: 'productId',
-                    as: 'product'
-                });
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
                 
-                // Try to include it now
-                includeOptions.push({
-                    model: ProductVariant,
-                    as: 'variants',
-                    required: false
+                return res.status(400).json({ 
+                    success: false, 
+                    message: err.message,
+                    error: err.toString()
                 });
             }
-        } catch (associationError) {
-            console.error('Error setting up Product-ProductVariant association:', associationError);
-            // Continue without including variants
-        }
-        
-        // Try to fetch the product with variants
-        let product;
-        try {
-            product = await Product.findByPk(productId, {
-                include: includeOptions
+            
+            if (!req.files || req.files.length === 0) {
+                console.error('No image files provided');
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'No image files provided' 
+                });
+            }
+            
+            console.log('Files received:', req.files.map(file => ({
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                path: file.path || 'No path',
+                filename: file.filename || 'No filename',
+                destination: file.destination || 'No destination',
+                cloudinary: file.cloudinary || 'No cloudinary data'
+            })));
+            
+            // Check if the files were uploaded to Cloudinary
+            const uploadedFiles = req.files.map(file => {
+                // For Cloudinary uploads, the file will have a path property with the Cloudinary URL
+                // or the file.cloudinary object will contain the Cloudinary details
+                if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
+                    return {
+                        success: true,
+                        originalname: file.originalname,
+                        cloudinaryUrl: file.path,
+                        fullFile: file
+                    };
+                } else if (cloudinaryEnabled && file.cloudinary) {
+                    return {
+                        success: true,
+                        originalname: file.originalname,
+                        cloudinaryUrl: file.cloudinary.secure_url || file.cloudinary.url,
+                        fullFile: file
+                    };
+                } else {
+                    return {
+                        success: false,
+                        originalname: file.originalname,
+                        localPath: file.path,
+                        fullFile: file
+                    };
+                }
             });
-        } catch (queryError) {
-            console.error('Error fetching product with variants, trying without:', queryError);
-            // Fallback without variants
-            product = await Product.findByPk(productId);
+            
+            // Ensure proper Content-Type header
+            res.setHeader('Content-Type', 'application/json');
+            
+            return res.status(200).json({
+                success: true,
+                message: cloudinaryEnabled ? 'Files uploaded to Cloudinary' : 'Files saved locally',
+                files: uploadedFiles
+            });
+        } catch (error) {
+            console.error('Error in test-cloudinary endpoint:', error);
+            
+            // Ensure proper Content-Type header even on error
+            res.setHeader('Content-Type', 'application/json');
+            
+            return res.status(500).json({
+                success: false,
+                message: 'Error processing upload',
+                error: error.message,
+                stack: process.env.NODE_ENV === 'production' ? null : error.stack
+            });
         }
-        
-        if (!product) {
-            console.log(`Product with ID ${productId} not found`);
-            return res.status(404).json({ message: 'Product not found' });
-        }
-        
-        // Fix for images column - ensure product has an images array
-        const productData = product.toJSON();
-        
-        // If images is null/undefined or empty array, but image exists, use image instead
-        if ((!productData.images || productData.images.length === 0) && productData.image) {
-            productData.images = [productData.image];
-        }
-        
-        // Ensure images is always at least an empty array
-        if (!productData.images) {
-            productData.images = [];
-        }
-        
-        res.json(productData);
-    } catch (error) {
-        console.error('Error fetching product:', error);
-        res.status(500).json({ message: 'Error fetching product details' });
-    }
+    });
 });
 
-// Add a diagnostic route for testing image uploads
+// Add a diagnostic route for testing image uploads - MUST be before /:id route
 router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
     console.log('POST /products/diagnostic-upload - Request received');
     console.log('Request headers:', JSON.stringify(req.headers, null, 2));
@@ -655,6 +577,196 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
             });
         }
     });
+});
+
+// Get all product categories
+router.get('/categories/all', async (req, res) => {
+    try {
+        // Get distinct categories from all products
+        const categories = await Product.findAll({
+            attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
+            where: {
+                category: {
+                    [Op.not]: null,
+                    [Op.ne]: ''
+                }
+            },
+            raw: true
+        });
+
+        // Transform to expected format with id and name properties
+        const formattedCategories = categories.map(item => ({
+            id: item.category,
+            name: item.category.charAt(0).toUpperCase() + item.category.slice(1) // Capitalize first letter
+        }));
+        
+        res.json(formattedCategories);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ message: 'Failed to fetch categories' });
+    }
+});
+
+// Get all product genders
+router.get('/genders/all', async (req, res) => {
+    try {
+        // Get distinct genders from all products
+        const genders = await Product.findAll({
+            attributes: [[sequelize.fn('DISTINCT', sequelize.col('gender')), 'gender']],
+            where: {
+                gender: {
+                    [Op.not]: null,
+                    [Op.ne]: ''
+                }
+            },
+            raw: true
+        });
+
+        // Transform to expected format with id and name properties
+        const formattedGenders = genders.map(item => ({
+            id: item.gender,
+            name: item.gender.charAt(0).toUpperCase() + item.gender.slice(1) // Capitalize first letter
+        }));
+        
+        // Ensure we have these basic genders
+        const defaultGenders = [
+            { id: 'men', name: 'Men' },
+            { id: 'women', name: 'Women' },
+            { id: 'unisex', name: 'Unisex' }
+        ];
+        
+        // Add any default genders that might be missing
+        defaultGenders.forEach(gender => {
+            if (!formattedGenders.some(g => g.id === gender.id)) {
+                formattedGenders.push(gender);
+            }
+        });
+        
+        res.json(formattedGenders);
+    } catch (error) {
+        console.error('Error fetching genders:', error);
+        res.status(500).json({ message: 'Failed to fetch genders' });
+    }
+});
+
+// Get all product age groups
+router.get('/age-groups/all', async (req, res) => {
+    try {
+        // Get distinct age groups from all products
+        const ageGroups = await Product.findAll({
+            attributes: [[sequelize.fn('DISTINCT', sequelize.col('ageGroup')), 'ageGroup']],
+            where: {
+                ageGroup: {
+                    [Op.not]: null,
+                    [Op.ne]: ''
+                }
+            },
+            raw: true
+        });
+
+        // Transform to expected format with id and name properties
+        const formattedAgeGroups = ageGroups.map(item => ({
+            id: item.ageGroup,
+            name: item.ageGroup.charAt(0).toUpperCase() + item.ageGroup.slice(1) // Capitalize first letter
+        }));
+        
+        // Ensure we have these basic age groups
+        const defaultAgeGroups = [
+            { id: 'adult', name: 'Adults' },
+            { id: 'youth', name: 'Youth' },
+            { id: 'kids', name: 'Kids' }
+        ];
+        
+        // Add any default age groups that might be missing
+        defaultAgeGroups.forEach(ageGroup => {
+            if (!formattedAgeGroups.some(a => a.id === ageGroup.id)) {
+                formattedAgeGroups.push(ageGroup);
+            }
+        });
+        
+        res.json(formattedAgeGroups);
+    } catch (error) {
+        console.error('Error fetching age groups:', error);
+        res.status(500).json({ message: 'Failed to fetch age groups' });
+    }
+});
+
+// Get single product - Now this comes AFTER all other routes with specific endpoints
+router.get('/:id', async (req, res) => {
+    try {
+        const productId = req.params.id;
+        console.log(`Fetching product with ID: ${productId}`);
+        
+        // Create include array - make it resilient against association issues
+        let includeOptions = [];
+        try {
+            // Check if the association exists
+            if (Product.associations && Product.associations.variants) {
+                includeOptions.push({
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false
+                });
+            } else {
+                console.log('Warning: variants association is not defined on Product model');
+                // Try to define it dynamically
+                Product.hasMany(ProductVariant, {
+                    foreignKey: 'productId',
+                    as: 'variants'
+                });
+                
+                ProductVariant.belongsTo(Product, {
+                    foreignKey: 'productId',
+                    as: 'product'
+                });
+                
+                // Try to include it now
+                includeOptions.push({
+                    model: ProductVariant,
+                    as: 'variants',
+                    required: false
+                });
+            }
+        } catch (associationError) {
+            console.error('Error setting up Product-ProductVariant association:', associationError);
+            // Continue without including variants
+        }
+        
+        // Try to fetch the product with variants
+        let product;
+        try {
+            product = await Product.findByPk(productId, {
+                include: includeOptions
+            });
+        } catch (queryError) {
+            console.error('Error fetching product with variants, trying without:', queryError);
+            // Fallback without variants
+            product = await Product.findByPk(productId);
+        }
+        
+        if (!product) {
+            console.log(`Product with ID ${productId} not found`);
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        
+        // Fix for images column - ensure product has an images array
+        const productData = product.toJSON();
+        
+        // If images is null/undefined or empty array, but image exists, use image instead
+        if ((!productData.images || productData.images.length === 0) && productData.image) {
+            productData.images = [productData.image];
+        }
+        
+        // Ensure images is always at least an empty array
+        if (!productData.images) {
+            productData.images = [];
+        }
+        
+        res.json(productData);
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).json({ message: 'Error fetching product details' });
+    }
 });
 
 // Create new product endpoint
@@ -1166,118 +1278,6 @@ router.delete('/:id', auth, isAdmin, async (req, res) => {
             message: 'Error deleting product',
             error: error.message
         });
-    }
-});
-
-// Get all product categories
-router.get('/categories/all', async (req, res) => {
-    try {
-        // Get distinct categories from all products
-        const categories = await Product.findAll({
-            attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
-            where: {
-                category: {
-                    [Op.not]: null,
-                    [Op.ne]: ''
-                }
-            },
-            raw: true
-        });
-
-        // Transform to expected format with id and name properties
-        const formattedCategories = categories.map(item => ({
-            id: item.category,
-            name: item.category.charAt(0).toUpperCase() + item.category.slice(1) // Capitalize first letter
-        }));
-        
-        res.json(formattedCategories);
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        res.status(500).json({ message: 'Failed to fetch categories' });
-    }
-});
-
-// Get all product genders
-router.get('/genders/all', async (req, res) => {
-    try {
-        // Get distinct genders from all products
-        const genders = await Product.findAll({
-            attributes: [[sequelize.fn('DISTINCT', sequelize.col('gender')), 'gender']],
-            where: {
-                gender: {
-                    [Op.not]: null,
-                    [Op.ne]: ''
-                }
-            },
-            raw: true
-        });
-
-        // Transform to expected format with id and name properties
-        const formattedGenders = genders.map(item => ({
-            id: item.gender,
-            name: item.gender.charAt(0).toUpperCase() + item.gender.slice(1) // Capitalize first letter
-        }));
-        
-        // Ensure we have these basic genders
-        const defaultGenders = [
-            { id: 'men', name: 'Men' },
-            { id: 'women', name: 'Women' },
-            { id: 'unisex', name: 'Unisex' }
-        ];
-        
-        // Add any default genders that might be missing
-        defaultGenders.forEach(gender => {
-            if (!formattedGenders.some(g => g.id === gender.id)) {
-                formattedGenders.push(gender);
-            }
-        });
-        
-        res.json(formattedGenders);
-    } catch (error) {
-        console.error('Error fetching genders:', error);
-        res.status(500).json({ message: 'Failed to fetch genders' });
-    }
-});
-
-// Get all product age groups
-router.get('/age-groups/all', async (req, res) => {
-    try {
-        // Get distinct age groups from all products
-        const ageGroups = await Product.findAll({
-            attributes: [[sequelize.fn('DISTINCT', sequelize.col('ageGroup')), 'ageGroup']],
-            where: {
-                ageGroup: {
-                    [Op.not]: null,
-                    [Op.ne]: ''
-                }
-            },
-            raw: true
-        });
-
-        // Transform to expected format with id and name properties
-        const formattedAgeGroups = ageGroups.map(item => ({
-            id: item.ageGroup,
-            name: item.ageGroup.charAt(0).toUpperCase() + item.ageGroup.slice(1) // Capitalize first letter
-        }));
-        
-        // Ensure we have these basic age groups
-        const defaultAgeGroups = [
-            { id: 'adult', name: 'Adults' },
-            { id: 'youth', name: 'Youth' },
-            { id: 'kids', name: 'Kids' }
-        ];
-        
-        // Add any default age groups that might be missing
-        defaultAgeGroups.forEach(ageGroup => {
-            if (!formattedAgeGroups.some(a => a.id === ageGroup.id)) {
-                formattedAgeGroups.push(ageGroup);
-            }
-        });
-        
-        res.json(formattedAgeGroups);
-    } catch (error) {
-        console.error('Error fetching age groups:', error);
-        res.status(500).json({ message: 'Failed to fetch age groups' });
     }
 });
 
