@@ -264,38 +264,30 @@ const CheckoutPage = () => {
                                     <div key={`${item.productId}-${item.color}-${item.size}`}
                                         className="flex items-center gap-4 border-b pb-4">
                                         <div className="w-20 h-20 bg-gray-100 rounded">
-                                            {item.thumbnail ? (
-                                                <img
-                                                    src={item.thumbnail}
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover rounded"
-                                                    onError={(e) => {
-                                                        console.log(`Failed to load image: ${item.thumbnail}`);
-                                                        e.target.onerror = null;
-                                                        e.target.src = item.image || '/assets/placeholder-product.jpg';
-                                                    }}
-                                                />
-                                            ) : item.image ? (
-                                                <img
-                                                    src={item.image}
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover rounded"
-                                                    onError={(e) => {
-                                                        console.log(`Failed to load image: ${item.image}`);
-                                                        e.target.onerror = null;
-                                                        e.target.src = '/assets/placeholder-product.jpg';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
-                                                    No image
-                                                </div>
-                                            )}
+                                            <img
+                                                src={item.thumbnail || item.image || `/assets/placeholder-product.jpg`}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover rounded"
+                                                onError={(e) => {
+                                                    console.log(`Failed to load product image for ${item.name}`);
+                                                    // Try with API URL prefix if the path is relative
+                                                    if (!e.target.src.startsWith('http')) {
+                                                        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+                                                        const baseUrl = apiBaseUrl.replace('/api', '');
+                                                        e.target.src = `${baseUrl}${e.target.src}`;
+                                                        console.log(`Retrying with full URL: ${e.target.src}`);
+                                                    } else {
+                                                        // If that fails too, use placeholder
+                                                        e.target.onerror = null; // Prevent infinite loop
+                                                        e.target.src = 'https://placehold.co/200x200?text=No+Image';
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div className="flex-1">
                                             <h3 className="font-medium">{item.name}</h3>
                                             <p className="text-sm text-gray-500">
-                                                Color: {item.color}, Size: {item.size}
+                                                Color: {item.color || 'Default'}, Size: {item.size || 'Default'}
                                             </p>
                                             <p className="text-sm text-gray-500">
                                                 Quantity: {item.quantity}

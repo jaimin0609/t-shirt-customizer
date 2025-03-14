@@ -218,6 +218,20 @@ const CartPage = () => {
                                                 src={item.thumbnail || item.image || '/assets/placeholder-product.jpg'}
                                                 alt={item.name}
                                                 className="w-20 h-20 object-cover rounded"
+                                                onError={(e) => {
+                                                    console.log(`Failed to load product image for ${item.name}`);
+                                                    // Try with API URL prefix if the path is relative
+                                                    if (!e.target.src.startsWith('http')) {
+                                                        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+                                                        const baseUrl = apiBaseUrl.replace('/api', '');
+                                                        e.target.src = `${baseUrl}${e.target.src}`;
+                                                        console.log(`Retrying with full URL: ${e.target.src}`);
+                                                    } else {
+                                                        // If that fails too, use placeholder
+                                                        e.target.onerror = null; // Prevent infinite loop
+                                                        e.target.src = 'https://placehold.co/200x200?text=No+Image';
+                                                    }
+                                                }}
                                             />
 
                                             {/* Product Details */}
@@ -298,7 +312,21 @@ const CartPage = () => {
                                                 <img
                                                     src={item.thumbnail || item.image || '/assets/placeholder-product.jpg'}
                                                     alt={item.name}
-                                                    className="w-16 h-16 object-cover rounded"
+                                                    className="w-20 h-20 object-cover rounded"
+                                                    onError={(e) => {
+                                                        console.log(`Failed to load product image for ${item.name}`);
+                                                        // Try with API URL prefix if the path is relative
+                                                        if (!e.target.src.startsWith('http')) {
+                                                            const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+                                                            const baseUrl = apiBaseUrl.replace('/api', '');
+                                                            e.target.src = `${baseUrl}${e.target.src}`;
+                                                            console.log(`Retrying with full URL: ${e.target.src}`);
+                                                        } else {
+                                                            // If that fails too, use placeholder
+                                                            e.target.onerror = null; // Prevent infinite loop
+                                                            e.target.src = 'https://placehold.co/200x200?text=No+Image';
+                                                        }
+                                                    }}
                                                 />
                                                 <div className="ml-4">
                                                     <h3 className="font-medium text-gray-900">{item.name}</h3>
