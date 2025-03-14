@@ -462,20 +462,43 @@
         </div>
     </div>
 
-    <!-- Make sure these scripts are in the correct order -->
+    <!-- JavaScript Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
     <script src="/admin/js/config.js"></script>
     <script src="/admin/js/utils.js"></script>
-    <script src="/admin/js/layout.js"></script>
-    <script src="/admin/js/profile.js"></script>
-    <script src="/admin/js/language.js"></script>
     <script src="/admin/js/main.js"></script>
-    <script src="/admin/js/auth.js"></script>
-
-    <!-- Global functions -->
+    <script src="/admin/js/language.js"></script>
+    <script src="/admin/js/notifications.js"></script>
+    
+    <!-- Initialize notifications directly -->
     <script>
-        // The logout function is now provided by utils.js
-        // No need to define it here
+        // Wait for everything to be fully loaded
+        window.addEventListener('load', function() {
+            console.log('Page fully loaded, initializing notifications...');
+            
+            // Give time for API_URL and other configs to be set
+            setTimeout(function() {
+                // Check if window.API_URL is defined
+                if (!window.API_URL) {
+                    console.warn('API_URL not set, using default: /api');
+                    window.API_URL = '/api';
+                }
+                
+                console.log('Loading notifications with API_URL:', window.API_URL);
+                
+                // Try to run loadNotifications if it exists
+                if (typeof window.initNotifications === 'function') {
+                    window.initNotifications();
+                } else if (typeof window.refreshNotifications === 'function') {
+                    window.refreshNotifications();
+                } else if (typeof loadNotifications === 'function') {
+                    loadNotifications();
+                } else {
+                    console.error('No notification functions found!');
+                }
+            }, 2000);
+        });
     </script>
 </body>
 </html> 

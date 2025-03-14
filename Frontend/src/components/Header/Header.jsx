@@ -14,6 +14,7 @@ import { HeartIcon } from '@heroicons/react/24/outline';
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 import Logo from './Logo';
 import SearchBar from './SearchBar';
+import NotificationDropdown from './NotificationDropdown';
 
 const Header = () => {
     const { user, logout, isAuthenticated } = useAuth();
@@ -135,6 +136,8 @@ const Header = () => {
                                         </span>
                                     )}
                                 </Link>
+
+                                {isAuthenticated && <NotificationDropdown />}
 
                                 {isAuthenticated ? (
                                     <Menu as="div" className="relative ml-3">

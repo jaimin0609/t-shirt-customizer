@@ -585,14 +585,41 @@ function loadNotifications() {
         return;
     }
     
-    // Find notification elements
-    const notificationBadge = document.querySelector('.nav-item.dropdown .badge');
+    // Find notification elements - be more specific with selectors
+    const notificationBadge = document.querySelector('.nav-item.dropdown .badge.rounded-pill.bg-danger');
     const notificationDropdown = document.querySelector('.dropdown-menu.notification-dropdown');
     
     if (!notificationBadge || !notificationDropdown) {
-        console.error('Notification elements not found in DOM');
+        console.error('Notification elements not found in DOM', {
+            badgeFound: !!notificationBadge,
+            dropdownFound: !!notificationDropdown
+        });
+        // Try alternative selectors
+        console.log('Trying alternative selectors...');
+        // Look for any badge in the notification area
+        const altBadge = document.querySelector('.bi-bell + .badge, .position-absolute.badge.rounded-pill');
+        const altDropdown = document.querySelector('.nav-item .dropdown-menu, div[class*="notification"]');
+        
+        console.log('Alternative selector results:', {
+            altBadgeFound: !!altBadge,
+            altDropdownFound: !!altDropdown
+        });
         return;
     }
+    
+    // Debug - show the notification elements we found
+    console.log('Found notification elements:', {
+        badge: notificationBadge,
+        dropdown: notificationDropdown
+    });
+    
+    // Store original content for reference
+    const originalBadgeText = notificationBadge.textContent.trim();
+    const originalDropdownHTML = notificationDropdown.innerHTML;
+    console.log('Original notification content:', {
+        badgeText: originalBadgeText,
+        dropdownContentLength: originalDropdownHTML.length
+    });
     
     // Clear existing notifications except the header and divider
     const header = notificationDropdown.querySelector('.dropdown-header');
@@ -601,9 +628,31 @@ function loadNotifications() {
     if (header && divider) {
         // Keep only header and divider
         notificationDropdown.innerHTML = '';
-        notificationDropdown.appendChild(header);
-        notificationDropdown.appendChild(divider);
+        notificationDropdown.appendChild(header.cloneNode(true));
+        notificationDropdown.appendChild(divider.cloneNode(true));
+    } else {
+        // If we can't find header and divider, save the full HTML and restore later if needed
+        console.log('Could not find header/divider, clearing dropdown completely');
+        notificationDropdown.innerHTML = '';
     }
+    
+    // Add a loading indicator
+    const loadingItem = document.createElement('a');
+    loadingItem.className = 'dropdown-item';
+    loadingItem.href = '#';
+    loadingItem.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="notification-icon bg-primary text-white rounded-circle p-2">
+                <i class="bi bi-arrow-clockwise"></i>
+            </div>
+            <div class="ms-3">
+                <p class="mb-0">Loading notifications...</p>
+            </div>
+        </div>
+    `;
+    notificationDropdown.appendChild(loadingItem);
+    
+    console.log(`${window.API_URL || '/api'}/orders/recent endpoint will be called`);
     
     // Fetch recent orders as notifications
     fetch(`${window.API_URL || '/api'}/orders/recent`, {
@@ -614,12 +663,24 @@ function loadNotifications() {
         }
     })
     .then(response => {
+        console.log('Notification API response:', response.status);
         if (!response.ok) {
             throw new Error(`Failed to load notifications: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
+        console.log('Notifications data received:', data);
+        
+        // Clear the loading indicator
+        notificationDropdown.innerHTML = '';
+        
+        // Restore header and divider
+        if (header && divider) {
+            notificationDropdown.appendChild(header.cloneNode(true));
+            notificationDropdown.appendChild(divider.cloneNode(true));
+        }
+        
         // Update notification count
         const count = data.length;
         notificationBadge.textContent = count || '0';
@@ -671,28 +732,45 @@ function loadNotifications() {
         viewAll.href = '/admin/orders.html';
         viewAll.innerHTML = `<strong>View all orders</strong>`;
         notificationDropdown.appendChild(viewAll);
+        
+        console.log('Notifications updated successfully');
     })
     .catch(error => {
         console.error('Error loading notifications:', error);
         
-        // Set a fallback notification
-        notificationBadge.textContent = '0';
-        
-        const errorNotification = document.createElement('a');
-        errorNotification.className = 'dropdown-item';
-        errorNotification.href = '#';
-        errorNotification.innerHTML = `
-            <div class="d-flex align-items-center">
-                <div class="notification-icon bg-danger text-white rounded-circle p-2">
-                    <i class="bi bi-exclamation-triangle"></i>
+        // If everything fails, restore original content
+        if (originalDropdownHTML && originalDropdownHTML.length > 0) {
+            console.log('Restoring original notification content due to error');
+            notificationDropdown.innerHTML = originalDropdownHTML;
+        } else {
+            // Set a fallback notification
+            notificationBadge.textContent = originalBadgeText || '0';
+            
+            // Clear the loading indicator
+            notificationDropdown.innerHTML = '';
+            
+            // Restore header and divider if we have them
+            if (header && divider) {
+                notificationDropdown.appendChild(header.cloneNode(true));
+                notificationDropdown.appendChild(divider.cloneNode(true));
+            }
+            
+            const errorNotification = document.createElement('a');
+            errorNotification.className = 'dropdown-item';
+            errorNotification.href = '#';
+            errorNotification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="notification-icon bg-danger text-white rounded-circle p-2">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="mb-0">Failed to load notifications</p>
+                        <small class="text-muted">Please check console</small>
+                    </div>
                 </div>
-                <div class="ms-3">
-                    <p class="mb-0">Failed to load notifications</p>
-                    <small class="text-muted">Please refresh</small>
-                </div>
-            </div>
-        `;
-        notificationDropdown.appendChild(errorNotification);
+            `;
+            notificationDropdown.appendChild(errorNotification);
+        }
     });
 }
 
@@ -721,8 +799,20 @@ function getTimeAgo(date) {
     return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
-// Call loadNotifications when the DOM is loaded
+// Call loadNotifications when the DOM is loaded, with a better timing strategy
 document.addEventListener('DOMContentLoaded', function() {
-    // Wait a short time to ensure other scripts have loaded
-    setTimeout(loadNotifications, 1000);
-}); 
+    // First wait for the DOM to be fully loaded
+    setTimeout(() => {
+        console.log('Initial loadNotifications attempt...');
+        loadNotifications();
+        
+        // Try again after 3 seconds to ensure everything is loaded
+        setTimeout(() => {
+            console.log('Second loadNotifications attempt...');
+            loadNotifications();
+        }, 3000);
+    }, 1000);
+});
+
+// Add a global function to reload notifications manually
+window.reloadNotifications = loadNotifications; 
