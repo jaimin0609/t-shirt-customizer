@@ -214,113 +214,86 @@ const ProductCard = ({ product }) => {
         }
     };
 
-    // A helper function to get a proper image URL
+    /**
+     * Helper function to get the proper image URL
+     * This handles multiple image formats and sources
+     */
     const getImageUrl = (product) => {
-        if (!product) return '/assets/placeholder-product.jpg';
+        if (!product) return '/assets/placeholder.png';
 
-        let imagePath = null;
-
-        // For debugging
-        console.log('Product image data:', {
-            hasImages: !!product.images,
-            imagesType: typeof product.images,
-            image: product.image,
-            imageUrl: product.imageUrl
-        });
-
-        // Check for images array first (our newest format)
+        // First try images array
         if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            // Use the first image from the array
-            imagePath = product.images[0];
-            console.log('Using first image from images array:', imagePath);
-        }
-        // Then look for legacy image fields
-        else if (product.image) {
-            imagePath = product.image;
-            console.log('Using legacy image field:', imagePath);
-        }
-        // Then check for other possible image fields
-        else if (product.imageUrl) {
-            imagePath = product.imageUrl;
-            console.log('Using imageUrl field:', imagePath);
-        }
-        else if (product.images && product.images.front) {
-            imagePath = product.images.front;
-            console.log('Using images.front field:', imagePath);
-        }
-        else if (product.thumbnail) {
-            imagePath = product.thumbnail;
-            console.log('Using thumbnail field:', imagePath);
-        }
+            const mainImage = product.images[0];
 
-        // If no image found, use placeholder
-        if (!imagePath) {
-            console.log('No image path found, using placeholder');
-            return '/assets/placeholder-product.jpg';
-        }
-
-        // Try to parse if it's a JSON string
-        if (typeof imagePath === 'string' && (imagePath.startsWith('[') || imagePath.startsWith('{'))) {
-            try {
-                const parsed = JSON.parse(imagePath);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    imagePath = parsed[0];
-                    console.log('Parsed JSON array, using first item:', imagePath);
-                } else if (parsed && typeof parsed === 'object') {
-                    imagePath = parsed.url || parsed.secure_url || parsed;
-                    console.log('Parsed JSON object, using url property:', imagePath);
+            // If the mainImage is a full URL (including Cloudinary URLs), return it directly
+            if (typeof mainImage === 'string') {
+                if (mainImage.startsWith('http://') || mainImage.startsWith('https://')) {
+                    console.log(`Using absolute URL from images array: ${mainImage}`);
+                    // Ensure Cloudinary URLs use HTTPS
+                    if (mainImage.includes('cloudinary.com') && mainImage.startsWith('http://')) {
+                        return mainImage.replace('http://', 'https://');
+                    }
+                    return mainImage;
                 }
-            } catch (e) {
-                console.log('Failed to parse image path as JSON, using as-is');
+
+                // Handle Cloudinary URLs that might be stored without the protocol/domain
+                if (mainImage.includes('/image/upload/')) {
+                    console.log(`Found partial Cloudinary URL: ${mainImage}`);
+                    // Add the domain if missing
+                    if (!mainImage.includes('cloudinary.com')) {
+                        const cloudName = 'dopvs93sl'; // You could store this in a config
+                        return `https://res.cloudinary.com/${cloudName}${mainImage.startsWith('/') ? mainImage : '/' + mainImage}`;
+                    }
+                }
+
+                // Handle relative paths
+                if (mainImage.startsWith('/uploads/')) {
+                    console.log(`Using backend upload path: ${mainImage}`);
+                    // If API_URL is available, use it to build the full URL
+                    const backendUrl = window.API_URL || process.env.REACT_APP_API_URL;
+                    if (backendUrl && backendUrl.includes('://')) {
+                        // Extract the base URL
+                        const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
+                        if (baseUrlMatch && baseUrlMatch[1]) {
+                            return `${baseUrlMatch[1]}${mainImage}`;
+                        }
+                    }
+                    return mainImage;
+                }
             }
+
+            return mainImage;
         }
 
-        // If after parsing it's an object with URL properties, extract the URL
-        if (typeof imagePath === 'object' && imagePath !== null) {
-            imagePath = imagePath.secure_url || imagePath.url || imagePath.path || imagePath;
-            console.log('Extracted URL from object:', imagePath);
-        }
+        // Fallback to legacy image field
+        if (product.image) {
+            console.log(`Using legacy image field: ${product.image}`);
+            // Apply the same URL processing logic as above
+            if (typeof product.image === 'string') {
+                if (product.image.startsWith('http://') || product.image.startsWith('https://')) {
+                    // Ensure Cloudinary URLs use HTTPS
+                    if (product.image.includes('cloudinary.com') && product.image.startsWith('http://')) {
+                        return product.image.replace('http://', 'https://');
+                    }
+                    return product.image;
+                }
 
-        // Ensure we have a string at this point
-        if (typeof imagePath !== 'string') {
-            console.log('Image path is not a string after processing, using placeholder');
-            return '/assets/placeholder-product.jpg';
-        }
-
-        // If it contains 'cloudinary.com', process it as a Cloudinary URL
-        if (imagePath.includes('cloudinary.com') || imagePath.includes('res.cloudinary.com')) {
-            console.log('Using Cloudinary URL:', imagePath);
-            return imagePath;
-        }
-
-        // If it's already a full URL, use it
-        if (imagePath.startsWith('http')) {
-            console.log('Using full URL:', imagePath);
-            return imagePath;
-        }
-
-        // If it's a backend image path (starts with /uploads)
-        if (imagePath.startsWith('/uploads')) {
-            // For backend image paths, try to use the full URL if we have a backend URL defined
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            if (apiUrl && !apiUrl.endsWith('/api')) {
-                const baseUrl = apiUrl.replace(/\/api$/, '');
-                console.log(`Converting uploads path to full URL: ${baseUrl}${imagePath}`);
-                return `${baseUrl}${imagePath}`;
+                // Handle relative paths
+                if (product.image.startsWith('/uploads/')) {
+                    const backendUrl = window.API_URL || process.env.REACT_APP_API_URL;
+                    if (backendUrl && backendUrl.includes('://')) {
+                        const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
+                        if (baseUrlMatch && baseUrlMatch[1]) {
+                            return `${baseUrlMatch[1]}${product.image}`;
+                        }
+                    }
+                }
             }
-            console.log('Using uploads path as-is:', imagePath);
-            return imagePath;
+            return product.image;
         }
 
-        // For relative paths
-        if (imagePath.startsWith('/')) {
-            console.log('Using relative path with leading slash:', imagePath);
-            return imagePath;
-        }
-
-        // Default case - assume it's a relative path without leading slash
-        console.log('Using relative path without leading slash:', imagePath);
-        return `/${imagePath}`;
+        // No image found
+        return '/assets/placeholder.png';
     };
 
     // Get the proper image URL for this product

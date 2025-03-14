@@ -7,6 +7,12 @@ if (typeof window.API_URL === 'undefined') {
     window.API_URL = '/api'; // Fallback value
 }
 
+// Add global configuration for Cloudinary
+if (typeof window.CLOUDINARY_CLOUD_NAME === 'undefined') {
+    console.warn('CLOUDINARY_CLOUD_NAME not found on window object, using default value');
+    window.CLOUDINARY_CLOUD_NAME = 'dopvs93sl'; // Default cloud name
+}
+
 // Products Management
 let products = [];
 let editingProductId = null;
@@ -638,15 +644,18 @@ function displayProducts(products) {
     products.forEach(product => {
         // Get the main image from either images array or legacy image field
         let mainImage = '/admin/assets/placeholder.png';
+        let originalImagePath = null; // Store original for debugging
         
         try {
-            // Improved image URL handling to support all formats
-            console.log(`Processing product ${product.id} images:`, {
+            // Store all information about available images for debugging
+            const imageInfo = {
                 hasImagesArray: !!product.images,
                 imagesType: typeof product.images,
-                images: product.images,
-                mainImage: product.image
-            });
+                imagesContent: product.images,
+                legacyImage: product.image,
+                productId: product.id
+            };
+            console.log(`📷 Product ${product.id} image info:`, imageInfo);
             
             // Handle different image data formats
             if (product.images) {
@@ -656,7 +665,7 @@ function displayProducts(products) {
                 if (typeof imagesArray === 'string') {
                     try {
                         imagesArray = JSON.parse(imagesArray);
-                        console.log('Successfully parsed images JSON:', imagesArray);
+                        console.log(`Parsed images JSON for product ${product.id}:`, imagesArray);
                     } catch (e) {
                         console.warn(`Failed to parse images JSON for product ${product.id}:`, e);
                     }
@@ -668,6 +677,7 @@ function displayProducts(products) {
                     const validImages = imagesArray.filter(img => img);
                     if (validImages.length > 0) {
                         mainImage = validImages[0];
+                        originalImagePath = mainImage; // Store original path
                         console.log(`Using image from images array: ${mainImage}`);
                     }
                 }
@@ -677,6 +687,7 @@ function displayProducts(products) {
                     const imageValue = imagesArray.front || imagesArray.main || imagesArray.default || imagesArray.url || Object.values(imagesArray)[0];
                     if (imageValue) {
                         mainImage = imageValue;
+                        originalImagePath = mainImage; // Store original path
                         console.log(`Using image from images object property: ${mainImage}`);
                     }
                 }
@@ -685,23 +696,49 @@ function displayProducts(products) {
             // Fallback to the legacy image field if images array didn't work
             if (mainImage === '/admin/assets/placeholder.png' && product.image) {
                 mainImage = product.image;
+                originalImagePath = mainImage; // Store original path
                 console.log(`Using legacy image field: ${mainImage}`);
             }
             
-            // Ensure the image URL is correctly formatted
+            // ⚠️ CRITICAL: Process the image URL correctly
             if (mainImage && typeof mainImage === 'string') {
+                console.log(`Processing image URL for product ${product.id}. Original:`, mainImage);
+                
                 // Handle different image URL formats
                 if (mainImage.includes('cloudinary.com') || mainImage.includes('res.cloudinary.com')) {
-                    // Already a full Cloudinary URL, no change needed
-                    console.log(`Using Cloudinary URL: ${mainImage}`);
+                    // Already a full Cloudinary URL, ensure it uses HTTPS
+                    if (mainImage.startsWith('http://')) {
+                        mainImage = mainImage.replace('http://', 'https://');
+                    }
+                    console.log(`✅ Using Cloudinary URL: ${mainImage}`);
                 }
                 else if (mainImage.startsWith('http') || mainImage.startsWith('https')) {
                     // Already a full URL, no change needed
-                    console.log(`Using absolute URL: ${mainImage}`);
-                } else if (mainImage.startsWith('data:image')) {
+                    console.log(`✅ Using absolute URL: ${mainImage}`);
+                } 
+                else if (mainImage.startsWith('data:image')) {
                     // Data URL, no change needed
-                    console.log(`Using data URL (truncated): ${mainImage.substring(0, 30)}...`);
-                } else {
+                    console.log(`✅ Using data URL (truncated): ${mainImage.substring(0, 30)}...`);
+                } 
+                // Check for Cloudinary ID patterns - crucial for persistence
+                else if (mainImage.includes('/product-') || mainImage.includes('/v1/') || 
+                         mainImage.includes('/upload/') || mainImage.includes('images-')) {
+                    // This is likely a Cloudinary image with a partial path
+                    // Extract the ID/filename part
+                    let cloudinaryId = mainImage;
+                    
+                    // If it's a path with slashes, extract the last part as the filename
+                    if (mainImage.includes('/')) {
+                        const pathParts = mainImage.split('/');
+                        cloudinaryId = pathParts[pathParts.length - 1];
+                    }
+                    
+                    const cloudName = window.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
+                    mainImage = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${cloudinaryId}`;
+                    console.log(`🔄 Constructed Cloudinary URL: ${mainImage}`);
+                }
+                else {
+                    // Not a Cloudinary URL or absolute URL, handle as local path
                     // Ensure the image URL starts with a slash if it's a relative path
                     if (!mainImage.startsWith('/')) {
                         mainImage = '/' + mainImage;
@@ -709,7 +746,6 @@ function displayProducts(products) {
                     console.log(`Using relative URL: ${mainImage}`);
                     
                     // If this URL starts with /uploads, it might be a backend URL
-                    // We could further improve this with a setting for the backend base URL
                     if (mainImage.startsWith('/uploads') && window.API_URL && window.API_URL.includes('://')) {
                         // Extract the base URL from the API URL
                         const baseUrlMatch = window.API_URL.match(/^(https?:\/\/[^\/]+)/);
@@ -740,6 +776,28 @@ function displayProducts(products) {
         
         // Log the final image URL for debugging
         console.log(`Final image URL for product ${product.id}: ${mainImage}`);
+        if (originalImagePath && originalImagePath !== mainImage) {
+            console.log(`Transformed from original: ${originalImagePath}`);
+        }
+
+        // Validate Cloudinary URL
+        if (mainImage.includes('cloudinary.com')) {
+            console.log(`✅ Valid Cloudinary URL detected for product ${product.id}`);
+            try {
+                // Try to fetch the image to verify it exists (via HEAD request only)
+                fetch(mainImage, { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log(`✅ Cloudinary image verified accessible for product ${product.id}`);
+                        } else {
+                            console.warn(`⚠️ Cloudinary image might not be accessible for product ${product.id} - Status: ${response.status}`);
+                        }
+                    })
+                    .catch(err => console.warn(`⚠️ Could not verify Cloudinary image for product ${product.id}:`, err));
+            } catch (e) {
+                console.warn('Failed to verify image URL:', e);
+            }
+        }
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -748,6 +806,7 @@ function displayProducts(products) {
                 <img src="${mainImage}" 
                      alt="${product.name}" 
                      class="product-thumbnail"
+                     data-original-src="${originalImagePath || ''}"
                      onerror="this.onerror=null; this.src='/admin/assets/placeholder.png'; console.log('Image load error for product ${product.id}, using placeholder');"
                      style="width: 50px; height: 50px; object-fit: cover;">
             </td>
@@ -955,4 +1014,33 @@ window.showConfig = function() {
     }
     
     return 'Configuration displayed in console.';
+};
+
+// Add utility function for proper Cloudinary URL formatting
+window.formatCloudinaryUrl = function(url) {
+    if (!url) return null;
+    
+    // If it's already a full Cloudinary URL, ensure it uses HTTPS
+    if (url.includes('cloudinary.com')) {
+        if (url.startsWith('http://')) {
+            return url.replace('http://', 'https://');
+        }
+        return url;
+    }
+    
+    // If it's a partial Cloudinary path, construct full URL
+    if (url.includes('/image/upload/') || url.includes('/product-')) {
+        // Extract filename if needed
+        let filename = url;
+        if (url.includes('/')) {
+            const parts = url.split('/');
+            filename = parts[parts.length - 1];
+        }
+        
+        // Build proper Cloudinary URL
+        const cloudName = window.CLOUDINARY_CLOUD_NAME;
+        return `https://res.cloudinary.com/${cloudName}/image/upload/v1/${filename}`;
+    }
+    
+    return url;
 };

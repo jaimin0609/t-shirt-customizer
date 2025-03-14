@@ -871,49 +871,54 @@ router.post('/', auth, isAdmin, (req, res) => {
                         cloudinary: f.cloudinary || 'No cloudinary data'
                     })));
                     
+                    // Enhanced image URL extraction with better logging
                     imageUrls = req.files.map(file => {
-                        // For Cloudinary uploads, use the secure URL
-                        let url;
+                        let url = null;
+                        
+                        // Log all available file properties to help diagnose issues
+                        console.log(`Full file object keys for ${file.originalname}:`, Object.keys(file));
+                        if (file.cloudinary) {
+                            console.log(`Cloudinary object keys for ${file.originalname}:`, Object.keys(file.cloudinary));
+                        }
                         
                         if (cloudinaryEnabled) {
-                            // Format 1: Extract from cloudinary.secure_url if available (best option)
+                            // 1. First priority: Use secure_url from cloudinary object (most reliable)
                             if (file.cloudinary && file.cloudinary.secure_url) {
                                 url = file.cloudinary.secure_url;
-                                console.log(`Using Cloudinary secure_url property: ${url}`);
+                                console.log(`✅ [BEST] Using secure_url from cloudinary object: ${url}`);
                             } 
-                            // Format 2: If path contains cloudinary URL 
+                            // 2. Second priority: Use the path property containing full Cloudinary URL
                             else if (file.path && (file.path.includes('cloudinary.com') || file.path.includes('res.cloudinary.com'))) {
                                 url = file.path;
-                                console.log(`Using Cloudinary URL from path: ${url}`);
+                                console.log(`✅ [GOOD] Using Cloudinary URL from path: ${url}`);
                             }
-                            // Format 3: If file has non-secure Cloudinary URL
+                            // 3. Third priority: Use regular URL from cloudinary object
                             else if (file.cloudinary && file.cloudinary.url) {
                                 url = file.cloudinary.url;
-                                console.log(`Using Cloudinary non-secure URL: ${url}`);
+                                console.log(`⚠️ [OK] Using non-secure cloudinary URL: ${url}`);
+                                // Try to convert to secure URL
+                                if (url.startsWith('http://')) {
+                                    const secureUrl = url.replace('http://', 'https://');
+                                    console.log(`🔄 Converting to secure URL: ${secureUrl}`);
+                                    url = secureUrl;
+                                }
                             }
-                            // Format 4: If local path but could be a Cloudinary public ID
+                            // 4. Fourth priority: If we have a public_id, build the URL
+                            else if (file.cloudinary && file.cloudinary.public_id) {
+                                const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
+                                url = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${file.cloudinary.public_id}`;
+                                console.log(`⚠️ [FALLBACK] Constructing URL from public_id: ${url}`);
+                            }
+                            // 5. Last priority: Build URL from filename
                             else if (file.filename) {
-                                // Build a proper Cloudinary URL using the cloud name from env
                                 const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
                                 url = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${file.filename}`;
-                                console.log(`Constructing Cloudinary URL from filename: ${url}`);
-                            } 
-                            // Format 5: Last resort - use upload folder path
-                            else {
-                                // If we get here, something is wrong with the Cloudinary upload
-                                console.warn(`⚠️ WARNING: Failed to get Cloudinary URL for ${file.originalname || 'unknown file'}`);
-                                // Try to extract public ID from path if possible
-                                if (file.path && file.path.includes('product-')) {
-                                    const pathParts = file.path.split('/');
-                                    const publicId = pathParts[pathParts.length - 1]; 
-                                    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
-                                    url = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${publicId}`;
-                                    console.log(`Extracted and constructed Cloudinary URL: ${url}`);
-                                } else {
-                                    // Last resort - use local path but log the warning
-                                    url = `/uploads/products/${file.filename || 'unknown'}`;
-                                    console.warn(`❌ Unable to get Cloudinary URL, falling back to local path: ${url}`);
-                                }
+                                console.log(`⚠️ [LAST RESORT] Constructing URL from filename: ${url}`);
+                            } else {
+                                // Complete failure path - use local URL with warning
+                                console.error(`❌ [FAILED] Could not extract Cloudinary URL for ${file.originalname}`);
+                                url = `/uploads/products/${file.filename || 'unknown'}`;
+                                console.warn(`❌ Falling back to local path (NOT RECOMMENDED): ${url}`);
                             }
                         } else {
                             // Local storage mode
@@ -921,8 +926,28 @@ router.post('/', auth, isAdmin, (req, res) => {
                             console.log(`Using local URL: ${url}`);
                         }
                         
+                        // Final validation - ensure we have a proper URL before returning
+                        if (!url) {
+                            console.error(`❌ Failed to generate URL for ${file.originalname}`);
+                            return null;
+                        }
+                        
+                        // If this isn't actually a URL or path, log a warning
+                        if (!url.includes('/')) {
+                            console.warn(`⚠️ Generated URL doesn't look valid: ${url}`);
+                        }
+                        
+                        // Ensure cloudinary URLs start with https:// not http://
+                        if (url.startsWith('http://') && url.includes('cloudinary.com')) {
+                            url = url.replace('http://', 'https://');
+                            console.log(`🔄 Converted to secure URL: ${url}`);
+                        }
+                        
+                        // Make sure the URL doesn't have double slashes (except after http:)
+                        url = url.replace(/([^:])\/\//g, '$1/');
+                        
                         return url;
-                    });
+                    }).filter(url => url); // Remove any null/undefined values
                     
                     console.log('Final image URLs:', imageUrls);
                 } catch (imageError) {
