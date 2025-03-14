@@ -2,6 +2,7 @@ import express from 'express';
 import { Customer, Order, User, OrderItem, Product } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 import { Op } from 'sequelize';
+import { cloudinary, testCloudinaryConnection } from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -82,6 +83,50 @@ router.get('/test-associations', auth, isAdmin, async (req, res) => {
             message: 'Error testing associations', 
             error: error.message,
             stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+        });
+    }
+});
+
+// Test Cloudinary configuration
+router.get('/cloudinary', auth, isAdmin, async (req, res) => {
+    try {
+        console.log('Testing Cloudinary configuration...');
+        console.log('Environment variables:', {
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME ? '✓ Set' : '✗ Missing',
+            apiKey: process.env.CLOUDINARY_API_KEY ? '✓ Set' : '✗ Missing',
+            apiSecret: process.env.CLOUDINARY_API_SECRET ? '✓ Set' : '✗ Missing'
+        });
+
+        // Test the connection
+        const isConnected = await testCloudinaryConnection();
+
+        if (isConnected) {
+            return res.json({
+                success: true,
+                message: 'Cloudinary configuration is working correctly',
+                config: {
+                    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+                    apiKeyLength: process.env.CLOUDINARY_API_KEY?.length,
+                    isConfigured: true
+                }
+            });
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: 'Cloudinary connection test failed',
+                config: {
+                    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+                    apiKeyLength: process.env.CLOUDINARY_API_KEY?.length,
+                    isConfigured: false
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Cloudinary diagnostic error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error testing Cloudinary configuration',
+            error: error.message
         });
     }
 });
