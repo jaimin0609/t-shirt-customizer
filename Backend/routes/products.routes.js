@@ -67,9 +67,10 @@ if (cloudinaryEnabled) {
         hasApiSecret: !!process.env.CLOUDINARY_API_SECRET
     });
     
-    // Make sure we're using cloudinary v2 and not the old version
+    // The correct way to initialize CloudinaryStorage
+    // The package expects the cloudinary object directly, not cloudinary.v2
     storage = new CloudinaryStorage({
-        cloudinary: cloudinary.v2,
+        cloudinary: cloudinary,
         params: {
             folder: 'products',
             allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
