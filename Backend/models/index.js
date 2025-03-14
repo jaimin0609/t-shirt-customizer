@@ -34,6 +34,8 @@ const models = {
     ProductVariant,
     Analytics,
     Category,
+    Notification,
+    ProductReview,
     sequelize,
     Sequelize,
     // Comment out models that don't exist
