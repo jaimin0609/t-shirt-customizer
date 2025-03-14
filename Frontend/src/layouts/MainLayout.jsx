@@ -25,6 +25,7 @@ import DesignGalleryPage from '../pages/DesignGalleryPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
 import ProductSearchPage from '../pages/ProductSearchPage';
 import WishlistPage from '../pages/WishlistPage';
+import NotificationsPage from '../pages/NotificationsPage';
 import ContactPage from '../pages/ContactPage';
 import FAQPage from '../pages/FAQPage';
 import ShippingInfoPage from '../pages/ShippingInfoPage';
@@ -153,6 +154,13 @@ const MainLayout = () => {
                             <Route path="/wishlist" element={
                                 <ProtectedRoute>
                                     <WishlistPage />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Notifications Page */}
+                            <Route path="/notifications" element={
+                                <ProtectedRoute>
+                                    <NotificationsPage />
                                 </ProtectedRoute>
                             } />
 

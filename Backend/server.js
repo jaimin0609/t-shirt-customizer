@@ -54,6 +54,7 @@ import promotionRoutes from './routes/promotions.routes.js';
 import productVariantsRoutes from './routes/productVariants.routes.js';
 import diagnosticsRoutes from './routes/diagnostics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -351,6 +352,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/product-variants', productVariantsRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/admin-tools', adminRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Error handler - should be after all routes
 app.use(errorHandler);

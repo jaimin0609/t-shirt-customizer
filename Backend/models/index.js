@@ -11,8 +11,10 @@ import Coupon from './Coupon.js';
 import Promotion from './Promotion.js';
 import ProductVariant from './ProductVariant.js';
 import Analytics from './Analytics.js';
+import Category from './Category.js';
+import ProductReview from './ProductReview.js';
+import Notification from './Notification.js';
 // Comment out imports for models that don't exist
-// import Category from './Category.js';
 // import Review from './Review.js';
 // import ShippingAddress from './ShippingAddress.js';
 // import CouponCode from './CouponCode.js';
@@ -31,10 +33,10 @@ const models = {
     Promotion,
     ProductVariant,
     Analytics,
+    Category,
     sequelize,
     Sequelize,
     // Comment out models that don't exist
-    // Category,
     // Review,
     // ShippingAddress,
     // CouponCode
@@ -171,11 +173,16 @@ if (typeof Promotion.associate === 'function') {
     Promotion.associate(models);
 }
 
+// Notification associations
+models.User.hasMany(models.Notification, { foreignKey: 'userId' });
+models.Notification.belongsTo(models.User, { foreignKey: 'userId' });
+
 export default models;
 export { 
     sequelize,
     User,
     Product,
+    Category,
     Cart,
     CartItem,
     Order,
@@ -185,8 +192,9 @@ export {
     Promotion,
     ProductVariant,
     Analytics,
+    ProductReview,
+    Notification,
     // Comment out exports for models that don't exist
-    // Category,
     // Review,
     // ShippingAddress,
     // CouponCode

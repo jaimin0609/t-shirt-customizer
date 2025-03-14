@@ -1,6 +1,7 @@
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import MainLayout from './layouts/MainLayout';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -19,8 +20,10 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            <MainLayout />
-            <ToastContainer position="bottom-right" autoClose={3000} />
+            <NotificationProvider>
+              <MainLayout />
+              <ToastContainer position="bottom-right" autoClose={3000} />
+            </NotificationProvider>
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
