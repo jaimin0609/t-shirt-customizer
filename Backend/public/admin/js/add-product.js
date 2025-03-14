@@ -718,6 +718,18 @@ async function handleFormSubmit(e) {
         // Make the API request to create the product with timeout protection
         console.log('Sending product data to API:', window.API_URL);
         
+        // Log complete form data for debugging image uploads
+        console.log('Form data being sent:');
+        const formEntries = Array.from(formData.entries());
+        formEntries.forEach(entry => {
+            const [key, value] = entry;
+            if (key === 'images') {
+                console.log(`- ${key}: File(s) of type ${value.type}, size ${value.size} bytes`);
+            } else {
+                console.log(`- ${key}: ${value}`);
+            }
+        });
+        
         // Check if token exists
         const token = localStorage.getItem('token');
         if (!token) {

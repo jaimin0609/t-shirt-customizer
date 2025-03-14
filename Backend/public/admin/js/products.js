@@ -645,6 +645,7 @@ function displayProducts(products) {
                 hasImagesArray: !!product.images,
                 imagesType: typeof product.images,
                 mainImage: product.image,
+                imagesArray: product.images
             });
             
             // Handle different image data formats
@@ -680,7 +681,11 @@ function displayProducts(products) {
             // Ensure the image URL is correctly formatted
             if (mainImage && typeof mainImage === 'string') {
                 // Handle different image URL formats
-                if (mainImage.startsWith('http') || mainImage.startsWith('https')) {
+                if (mainImage.includes('cloudinary.com') || mainImage.includes('res.cloudinary.com')) {
+                    // Already a full Cloudinary URL, no change needed
+                    console.log(`Using Cloudinary URL: ${mainImage}`);
+                }
+                else if (mainImage.startsWith('http') || mainImage.startsWith('https')) {
                     // Already a full URL, no change needed
                     console.log(`Using absolute URL: ${mainImage}`);
                 } else if (mainImage.startsWith('data:image')) {
@@ -692,16 +697,6 @@ function displayProducts(products) {
                         mainImage = '/' + mainImage;
                     }
                     console.log(`Using relative URL: ${mainImage}`);
-                    
-                    // Check if this is a Cloudinary ID without the full URL
-                    if (mainImage.includes('/v1/') || mainImage.includes('/upload/')) {
-                        // This might be a Cloudinary ID without the domain
-                        // Try to construct a full Cloudinary URL
-                        if (window.CLOUDINARY_CLOUD_NAME) {
-                            mainImage = `https://res.cloudinary.com/${window.CLOUDINARY_CLOUD_NAME}/image/upload${mainImage}`;
-                            console.log(`Converted to full Cloudinary URL: ${mainImage}`);
-                        }
-                    }
                 }
             }
         } catch (e) {
