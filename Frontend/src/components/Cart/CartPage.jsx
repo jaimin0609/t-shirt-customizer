@@ -39,13 +39,8 @@ const CartPage = () => {
     // Calculate discount amount when subtotal or applied coupon changes
     useEffect(() => {
         if (appliedCoupon && subtotal > 0) {
-            // If the backend already calculated the discount amount, use that
-            if (appliedCoupon.discountAmount) {
-                // Make sure we parse the string to a number correctly
-                const discountValue = parseFloat(appliedCoupon.discountAmount);
-                setDiscountAmount(discountValue);
-                console.log(`Using backend discount amount: ${discountValue} (from ${appliedCoupon.discountAmount})`);
-            } else if (appliedCoupon.discountType === 'percentage') {
+            // Calculate the discount amount properly based on coupon type
+            if (appliedCoupon.discountType === 'percentage') {
                 // Calculate percentage discount
                 const discount = (subtotal * parseFloat(appliedCoupon.discountValue)) / 100;
                 setDiscountAmount(parseFloat(discount.toFixed(2)));
@@ -184,14 +179,14 @@ const CartPage = () => {
         );
     }
 
-    // Calculate shipping (free for orders over $50)
+    // Calculate shipping cost based on subtotal
     const shippingCost = subtotal >= 50 ? 0 : 5.99;
 
-    // Calculate tax (estimated at 8%)
+    // Calculate tax based on subtotal
     const taxEstimate = subtotal * 0.08;
 
-    // Calculate final total
-    const orderTotal = subtotal + shippingCost + taxEstimate - discountAmount;
+    // Calculate final order total including discount
+    const orderTotal = subtotal - discountAmount + shippingCost + taxEstimate;
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 mt-16">

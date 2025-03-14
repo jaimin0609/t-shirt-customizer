@@ -264,12 +264,32 @@ const CheckoutPage = () => {
                                     <div key={`${item.productId}-${item.color}-${item.size}`}
                                         className="flex items-center gap-4 border-b pb-4">
                                         <div className="w-20 h-20 bg-gray-100 rounded">
-                                            {item.thumbnail && (
+                                            {item.thumbnail ? (
                                                 <img
                                                     src={item.thumbnail}
                                                     alt={item.name}
                                                     className="w-full h-full object-cover rounded"
+                                                    onError={(e) => {
+                                                        console.log(`Failed to load image: ${item.thumbnail}`);
+                                                        e.target.onerror = null;
+                                                        e.target.src = item.image || '/assets/placeholder-product.jpg';
+                                                    }}
                                                 />
+                                            ) : item.image ? (
+                                                <img
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    className="w-full h-full object-cover rounded"
+                                                    onError={(e) => {
+                                                        console.log(`Failed to load image: ${item.image}`);
+                                                        e.target.onerror = null;
+                                                        e.target.src = '/assets/placeholder-product.jpg';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
+                                                    No image
+                                                </div>
                                             )}
                                         </div>
                                         <div className="flex-1">

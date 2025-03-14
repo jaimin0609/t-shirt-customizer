@@ -238,8 +238,20 @@ export const CartProvider = ({ children }) => {
         let total = subtotal + shippingCost + taxAmount;
 
         if (appliedCoupon) {
-            discountAmount = parseFloat(appliedCoupon.discountAmount);
-            total = parseFloat(appliedCoupon.newTotal) + shippingCost + taxAmount;
+            // Calculate the discount amount properly based on coupon type
+            if (appliedCoupon.discountType === 'percentage') {
+                discountAmount = (subtotal * parseFloat(appliedCoupon.discountValue)) / 100;
+            } else {
+                // Fixed amount discount
+                discountAmount = parseFloat(appliedCoupon.discountValue);
+            }
+
+            // Ensure discount amount is formatted properly
+            discountAmount = parseFloat(discountAmount.toFixed(2));
+
+            // Calculate the new total after discount
+            const discountedSubtotal = subtotal - discountAmount;
+            total = discountedSubtotal + shippingCost + taxAmount;
         }
 
         // Use provided shipping address or default to user info

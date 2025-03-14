@@ -131,23 +131,42 @@ export const productService = {
             const token = localStorage.getItem('token');
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
             
-            // Use the dedicated similar products endpoint
-            const response = await fetch(`${API_URL}/products/${productId}/similar`, {
+            // Try the dedicated similar products endpoint first
+            try {
+                const response = await fetch(`${API_URL}/products/${productId}/similar`, {
+                    headers
+                });
+                
+                if (response.ok) {
+                    // Get similar products
+                    const data = await response.json();
+                    console.log(`[ProductService] Retrieved ${data.length} similar products from dedicated endpoint`);
+                    return Array.isArray(data) ? data : [];
+                }
+                
+                // If endpoint returns 404, the backend might not have implemented this endpoint
+                console.log(`[ProductService] Similar products endpoint failed, status: ${response.status}`);
+            } catch (error) {
+                console.error('[ProductService] Error using similar products endpoint:', error);
+            }
+            
+            // Fallback to using the recommended products endpoint
+            console.log('[ProductService] Falling back to recommended products endpoint');
+            
+            // Get recommended products as fallback
+            const fallbackResponse = await fetch(`${API_URL}/products?recommended=true&limit=8`, {
                 headers
             });
             
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error(`[ProductService] Failed to fetch similar products: ${response.status} ${response.statusText}`, errorData);
-                // Return empty array instead of throwing error
+            if (!fallbackResponse.ok) {
+                console.error(`[ProductService] Failed to fetch recommended products as fallback: ${fallbackResponse.status}`);
                 return [];
             }
             
-            // Get similar products
-            const data = await response.json();
-            console.log(`[ProductService] Retrieved ${data.length} similar products`);
+            const fallbackData = await fallbackResponse.json();
+            console.log(`[ProductService] Retrieved ${fallbackData.length} recommended products as fallback`);
             
-            return Array.isArray(data) ? data : [];
+            return Array.isArray(fallbackData) ? fallbackData : [];
         } catch (error) {
             console.error('[ProductService] Error in getSimilarProducts:', error);
             // Return empty array instead of throwing error
