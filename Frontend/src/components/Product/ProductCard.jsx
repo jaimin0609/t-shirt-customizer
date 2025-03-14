@@ -221,43 +221,44 @@ const ProductCard = ({ product }) => {
     const getImageUrl = (product) => {
         if (!product) return '/assets/placeholder.png';
 
+        console.log('ProductCard - Getting image URL for:', {
+            id: product._id || product.id,
+            name: product.name
+        });
+
         // First try images array
         if (product.images && Array.isArray(product.images) && product.images.length > 0) {
             const mainImage = product.images[0];
+            console.log('Using first image from images array:', mainImage);
 
-            // If the mainImage is a full URL (including Cloudinary URLs), return it directly
             if (typeof mainImage === 'string') {
-                if (mainImage.startsWith('http://') || mainImage.startsWith('https://')) {
-                    console.log(`Using absolute URL from images array: ${mainImage}`);
-                    // Ensure Cloudinary URLs use HTTPS
-                    if (mainImage.includes('cloudinary.com') && mainImage.startsWith('http://')) {
+                // Cloudinary URL handling
+                if (mainImage.includes('cloudinary.com')) {
+                    console.log('Detected Cloudinary URL:', mainImage);
+                    // Ensure HTTPS
+                    if (mainImage.startsWith('http://')) {
                         return mainImage.replace('http://', 'https://');
                     }
                     return mainImage;
                 }
 
-                // Handle Cloudinary URLs that might be stored without the protocol/domain
-                if (mainImage.includes('/image/upload/')) {
-                    console.log(`Found partial Cloudinary URL: ${mainImage}`);
-                    // Add the domain if missing
-                    if (!mainImage.includes('cloudinary.com')) {
-                        const cloudName = 'dopvs93sl'; // You could store this in a config
-                        return `https://res.cloudinary.com/${cloudName}${mainImage.startsWith('/') ? mainImage : '/' + mainImage}`;
-                    }
+                // Full URL handling
+                if (mainImage.startsWith('http://') || mainImage.startsWith('https://')) {
+                    console.log('Using full URL image:', mainImage);
+                    return mainImage;
                 }
 
                 // Handle relative paths
                 if (mainImage.startsWith('/uploads/')) {
                     console.log(`Using backend upload path: ${mainImage}`);
-                    // If API_URL is available, use it to build the full URL
-                    const backendUrl = window.API_URL || process.env.REACT_APP_API_URL;
-                    if (backendUrl && backendUrl.includes('://')) {
-                        // Extract the base URL
-                        const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
-                        if (baseUrlMatch && baseUrlMatch[1]) {
-                            return `${baseUrlMatch[1]}${mainImage}`;
-                        }
+                    // Use the proper API URL to build the full image URL
+                    const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
+                    // Extract base URL (domain)
+                    const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
+                    if (baseUrlMatch && baseUrlMatch[1]) {
+                        return `${baseUrlMatch[1]}${mainImage}`;
                     }
+                    console.log('Could not extract base URL, returning path as is:', mainImage);
                     return mainImage;
                 }
             }
@@ -270,29 +271,40 @@ const ProductCard = ({ product }) => {
             console.log(`Using legacy image field: ${product.image}`);
             // Apply the same URL processing logic as above
             if (typeof product.image === 'string') {
-                if (product.image.startsWith('http://') || product.image.startsWith('https://')) {
-                    // Ensure Cloudinary URLs use HTTPS
-                    if (product.image.includes('cloudinary.com') && product.image.startsWith('http://')) {
+                // Cloudinary URL handling
+                if (product.image.includes('cloudinary.com')) {
+                    console.log('Detected Cloudinary URL in image field:', product.image);
+                    // Ensure HTTPS
+                    if (product.image.startsWith('http://')) {
                         return product.image.replace('http://', 'https://');
                     }
                     return product.image;
                 }
 
+                // Full URL handling
+                if (product.image.startsWith('http://') || product.image.startsWith('https://')) {
+                    console.log('Using full URL from image field:', product.image);
+                    return product.image;
+                }
+
                 // Handle relative paths
                 if (product.image.startsWith('/uploads/')) {
-                    const backendUrl = window.API_URL || process.env.REACT_APP_API_URL;
-                    if (backendUrl && backendUrl.includes('://')) {
+                    console.log(`Using backend upload path from image field: ${product.image}`);
+                    const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
+                    if (backendUrl) {
                         const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
                         if (baseUrlMatch && baseUrlMatch[1]) {
                             return `${baseUrlMatch[1]}${product.image}`;
                         }
                     }
+                    return product.image;
                 }
             }
             return product.image;
         }
 
         // No image found
+        console.log('No image found for product, using placeholder');
         return '/assets/placeholder.png';
     };
 
@@ -318,6 +330,7 @@ const ProductCard = ({ product }) => {
                         alt={safeProduct.name}
                         className="product-image"
                         onError={(e) => {
+                            console.error(`Image load error for product ${safeProduct.name}: ${productImageUrl}`);
                             e.target.src = '/assets/placeholder-product.jpg';
                             e.target.onerror = null; // Prevent infinite error loop
                         }}
