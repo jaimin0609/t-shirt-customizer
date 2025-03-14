@@ -533,4 +533,21 @@ router.put('/:id', auth, asyncHandler(async (req, res) => {
     res.json(formatOrder(updatedOrder));
 }));
 
+// Get recent orders for notifications (admin only)
+router.get('/recent', auth, asyncHandler(async (req, res) => {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Unauthorized access' });
+    }
+
+    // Get the 5 most recent orders
+    const recentOrders = await Order.findAll({
+        order: [['createdAt', 'DESC']],
+        limit: 5,
+        attributes: ['id', 'orderNumber', 'total', 'status', 'createdAt']
+    });
+
+    res.json(recentOrders);
+}));
+
 export default router; 

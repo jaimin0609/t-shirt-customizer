@@ -570,4 +570,159 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Also call it after dynamic content is loaded
     document.addEventListener('contentLoaded', setupModalAccessibility);
+});
+
+/**
+ * Load and display real notifications in the navbar
+ */
+function loadNotifications() {
+    console.log('Loading notifications...');
+    
+    // Get authentication token
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('No token found, cannot load notifications');
+        return;
+    }
+    
+    // Find notification elements
+    const notificationBadge = document.querySelector('.nav-item.dropdown .badge');
+    const notificationDropdown = document.querySelector('.dropdown-menu.notification-dropdown');
+    
+    if (!notificationBadge || !notificationDropdown) {
+        console.error('Notification elements not found in DOM');
+        return;
+    }
+    
+    // Clear existing notifications except the header and divider
+    const header = notificationDropdown.querySelector('.dropdown-header');
+    const divider = notificationDropdown.querySelector('.dropdown-divider');
+    
+    if (header && divider) {
+        // Keep only header and divider
+        notificationDropdown.innerHTML = '';
+        notificationDropdown.appendChild(header);
+        notificationDropdown.appendChild(divider);
+    }
+    
+    // Fetch recent orders as notifications
+    fetch(`${window.API_URL || '/api'}/orders/recent`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to load notifications: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update notification count
+        const count = data.length;
+        notificationBadge.textContent = count || '0';
+        
+        if (count === 0) {
+            // Add a "no notifications" message
+            const noNotifications = document.createElement('a');
+            noNotifications.className = 'dropdown-item';
+            noNotifications.href = '#';
+            noNotifications.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="notification-icon bg-secondary text-white rounded-circle p-2">
+                        <i class="bi bi-bell-slash"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="mb-0">No new notifications</p>
+                    </div>
+                </div>
+            `;
+            notificationDropdown.appendChild(noNotifications);
+            return;
+        }
+        
+        // Add notifications for recent orders
+        data.forEach(order => {
+            const timeAgo = getTimeAgo(new Date(order.createdAt));
+            const notificationItem = document.createElement('a');
+            notificationItem.className = 'dropdown-item';
+            notificationItem.href = `/admin/orders.html?id=${order.id}`;
+            
+            notificationItem.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="notification-icon bg-primary text-white rounded-circle p-2">
+                        <i class="bi bi-cart"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="mb-0">New order: #${order.orderNumber}</p>
+                        <small class="text-muted">${timeAgo}</small>
+                    </div>
+                </div>
+            `;
+            
+            notificationDropdown.appendChild(notificationItem);
+        });
+        
+        // Add a "view all" link at the bottom
+        const viewAll = document.createElement('a');
+        viewAll.className = 'dropdown-item text-center';
+        viewAll.href = '/admin/orders.html';
+        viewAll.innerHTML = `<strong>View all orders</strong>`;
+        notificationDropdown.appendChild(viewAll);
+    })
+    .catch(error => {
+        console.error('Error loading notifications:', error);
+        
+        // Set a fallback notification
+        notificationBadge.textContent = '0';
+        
+        const errorNotification = document.createElement('a');
+        errorNotification.className = 'dropdown-item';
+        errorNotification.href = '#';
+        errorNotification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="notification-icon bg-danger text-white rounded-circle p-2">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="ms-3">
+                    <p class="mb-0">Failed to load notifications</p>
+                    <small class="text-muted">Please refresh</small>
+                </div>
+            </div>
+        `;
+        notificationDropdown.appendChild(errorNotification);
+    });
+}
+
+/**
+ * Format a date as a time ago string (e.g. "2 mins ago")
+ */
+function getTimeAgo(date) {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) {
+        return 'just now';
+    }
+    
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+        return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    }
+    
+    const days = Math.floor(hours / 24);
+    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+}
+
+// Call loadNotifications when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a short time to ensure other scripts have loaded
+    setTimeout(loadNotifications, 1000);
 }); 
