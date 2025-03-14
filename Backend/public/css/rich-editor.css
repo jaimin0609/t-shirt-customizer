@@ -1,0 +1,94 @@
+/**
+ * Rich Text Editor Custom Styles
+ * Ensures proper visibility and styling of TinyMCE
+ */
+
+/* Ensure the editor container is visible and has proper z-index */
+.tox-tinymce {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+    z-index: 10 !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    min-height: 300px !important;
+}
+
+/* Make toolbar more prominent */
+.tox-toolbar__primary {
+    visibility: visible !important;
+    display: flex !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 4px !important;
+}
+
+/* Ensure toolbar buttons are visible */
+.tox-toolbar__group {
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+}
+
+/* Increase contrast for toolbar buttons */
+.tox-tbtn {
+    color: #212529 !important;
+}
+
+/* Make statusbar visible */
+.tox-statusbar {
+    visibility: visible !important;
+    display: flex !important;
+    border-top: 1px solid #dee2e6 !important;
+}
+
+/* Ensure the editor content area is properly sized */
+.tox-edit-area {
+    display: block !important;
+    min-height: 200px !important;
+}
+
+/* Ensure the editor content iframe is visible */
+.tox-edit-area__iframe {
+    background-color: white !important;
+}
+
+/* Fix for menubar if enabled */
+.tox-menubar {
+    visibility: visible !important;
+    display: flex !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+/* Increase contrast for content area */
+.tox-edit-area__iframe {
+    background-color: white !important;
+}
+
+/* Fix any modal dialog issues */
+.tox-dialog {
+    z-index: 1100 !important;
+}
+
+/* Make sure the description label is clear */
+label[for="productDescription"] {
+    font-weight: bold !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Fix for TinyMCE in modal dialogs */
+.modal .tox-tinymce {
+    z-index: 1056 !important;
+    /* Above modal backdrop (1055) */
+}
+
+/* Reset Bootstrap's overflow: hidden on modals which can break TinyMCE dropdowns */
+.modal {
+    overflow-y: auto !important;
+}
+
+.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
