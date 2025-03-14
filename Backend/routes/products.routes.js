@@ -77,58 +77,75 @@ const upload = multer({
             cb(new Error('Only image files are allowed!'), false);
         }
     }
-});
+}).array('images', 5);
 
 // Test endpoint for Cloudinary uploads
-router.post('/test-cloudinary', auth, isAdmin, upload.single('image'), async (req, res) => {
-    try {
-        console.log('=== Testing Cloudinary Upload ===');
-        console.log('Cloudinary enabled:', cloudinaryEnabled);
-        console.log('Cloudinary config:', {
-            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
-            api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : 'not set'
-        });
-        
-        if (!req.file) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'No image file provided' 
+router.post('/test-cloudinary', auth, isAdmin, async (req, res) => {
+    upload(req, res, async function(err) {
+        try {
+            console.log('=== Testing Cloudinary Upload ===');
+            console.log('Cloudinary enabled:', cloudinaryEnabled);
+            console.log('Cloudinary config:', {
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY ? '***' : 'not set',
+                api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : 'not set'
             });
-        }
-        
-        console.log('File received:', {
-            originalname: req.file.originalname,
-            mimetype: req.file.mimetype,
-            size: req.file.size,
-            path: req.file.path,
-            cloudinary: req.file.cloudinary
-        });
-        
-        // Check if the file was uploaded to Cloudinary
-        if (req.file.path && req.file.path.includes('cloudinary.com')) {
-            console.log('✅ Image successfully uploaded to Cloudinary');
+            
+            if (err) {
+                console.error('Error during file upload:', err);
+                return res.status(400).json({ 
+                    success: false, 
+                    message: err.message 
+                });
+            }
+            
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'No image files provided' 
+                });
+            }
+            
+            console.log('Files received:', req.files.map(file => ({
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                path: file.path,
+                cloudinary: file.cloudinary
+            })));
+            
+            // Check if the files were uploaded to Cloudinary
+            const uploadedFiles = req.files.map(file => {
+                if (cloudinaryEnabled && file.path && file.path.includes('cloudinary.com')) {
+                    return {
+                        success: true,
+                        originalname: file.originalname,
+                        cloudinaryUrl: file.path,
+                        cloudinaryDetails: file.cloudinary
+                    };
+                } else {
+                    return {
+                        success: false,
+                        originalname: file.originalname,
+                        localPath: file.path
+                    };
+                }
+            });
+            
             return res.status(200).json({
                 success: true,
-                message: 'Image uploaded to Cloudinary successfully',
-                imageUrl: req.file.path
+                message: cloudinaryEnabled ? 'Files uploaded to Cloudinary' : 'Files saved locally',
+                files: uploadedFiles
             });
-        } else {
-            console.log('❌ Image not uploaded to Cloudinary');
+        } catch (error) {
+            console.error('Error in test-cloudinary endpoint:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Image was not uploaded to Cloudinary',
-                localPath: req.file.path
+                message: 'Error processing upload',
+                error: error.message
             });
         }
-    } catch (error) {
-        console.error('Error testing Cloudinary upload:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error testing Cloudinary upload',
-            error: error.message
-        });
-    }
+    });
 });
 
 // Get all products - Removed auth middleware to make it public
@@ -549,110 +566,102 @@ router.post('/diagnostic-upload', auth, isAdmin, upload.single('testImage'), asy
   }
 });
 
-// Create new product endpoint with better error handling
-router.post('/', auth, isAdmin, upload.array('images', 5), async (req, res) => {
-    try {
-        console.log('Creating new product...');
-        console.log('Storage mode:', cloudinaryEnabled ? 'Cloudinary' : 'Local Storage');
-        
-        // Log request details
-        console.log('Request details:', {
-            ip: req.ip,
-            user: req.user ? req.user.email : 'Unknown',
-            origin: req.get('origin') || 'No origin header',
-            filesReceived: req.files ? req.files.length : 0,
-            contentType: req.get('content-type')
-        });
-        
-        // Log detailed information about received files
-        if (req.files && req.files.length > 0) {
-            req.files.forEach((file, index) => {
-                console.log(`File ${index + 1}:`, {
-                    filename: file.filename,
-                    originalname: file.originalname,
-                    mimetype: file.mimetype,
-                    size: file.size,
-                    path: file.path || 'No path',
-                    destination: file.destination || 'No destination',
-                    cloudinaryUrl: file.path || null,
-                    cloudinaryDetails: file.cloudinary || null
-                });
-            });
-        } else {
-            console.warn('⚠️ No files received in request');
-        }
-        
-        // Validate required fields
-        const requiredFields = ['name', 'price', 'description', 'category'];
-        const missingFields = requiredFields.filter(field => !req.body[field]);
-        
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Missing required fields: ${missingFields.join(', ')}`
-            });
-        }
-        
-        // Process uploaded images
-        let imageUrls = [];
-        if (req.files && req.files.length > 0) {
-            try {
-                console.log('Processing uploaded images...');
-                imageUrls = req.files.map(file => {
-                    // For Cloudinary uploads, the URL will be in file.path
-                    const url = file.path;
-                    console.log(`Processed image URL: ${url}`);
-                    return url;
-                });
-                
-                console.log('Final image URLs:', imageUrls);
-            } catch (imageError) {
-                console.error('Error processing images:', imageError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Error processing uploaded images',
-                    error: imageError.message
+// Create new product endpoint
+router.post('/', auth, isAdmin, async (req, res) => {
+    upload(req, res, async function(err) {
+        try {
+            console.log('Creating new product...');
+            console.log('Storage mode:', cloudinaryEnabled ? 'Cloudinary' : 'Local Storage');
+            
+            if (err) {
+                console.error('Error during file upload:', err);
+                return res.status(400).json({ 
+                    success: false, 
+                    message: err.message 
                 });
             }
+            
+            // Log request details
+            console.log('Request details:', {
+                ip: req.ip,
+                user: req.user ? req.user.email : 'Unknown',
+                origin: req.get('origin') || 'No origin header',
+                filesReceived: req.files ? req.files.length : 0,
+                contentType: req.get('content-type')
+            });
+            
+            // Validate required fields
+            const requiredFields = ['name', 'price', 'description', 'category'];
+            const missingFields = requiredFields.filter(field => !req.body[field]);
+            
+            if (missingFields.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Missing required fields: ${missingFields.join(', ')}`
+                });
+            }
+            
+            // Process uploaded images
+            let imageUrls = [];
+            if (req.files && req.files.length > 0) {
+                try {
+                    console.log('Processing uploaded images...');
+                    imageUrls = req.files.map(file => {
+                        // For Cloudinary uploads, use the secure URL
+                        const url = cloudinaryEnabled && file.path ? file.path : `/uploads/products/${file.filename}`;
+                        console.log(`Processed image URL: ${url}`);
+                        return url;
+                    });
+                    
+                    console.log('Final image URLs:', imageUrls);
+                } catch (imageError) {
+                    console.error('Error processing images:', imageError);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Error processing uploaded images',
+                        error: imageError.message
+                    });
+                }
+            }
+            
+            // Create product in database
+            const product = await Product.create({
+                name: req.body.name,
+                description: req.body.description,
+                price: req.body.price,
+                category: req.body.category,
+                gender: req.body.gender || 'unisex',
+                ageGroup: req.body.ageGroup || 'adult',
+                stock: parseInt(req.body.stock) || 0,
+                status: req.body.status || 'active',
+                isCustomizable: req.body.isCustomizable === 'true',
+                hasVariants: req.body.hasVariants === 'true',
+                images: imageUrls,
+                image: imageUrls.length > 0 ? imageUrls[0] : null // Set first image as main image
+            });
+            
+            console.log('Product created successfully:', {
+                id: product.id,
+                name: product.name,
+                imageCount: imageUrls.length,
+                imageUrls: imageUrls
+            });
+            
+            return res.status(201).json({
+                success: true,
+                message: 'Product created successfully',
+                product: product
+            });
+            
+        } catch (error) {
+            console.error('Error creating product:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error creating product',
+                error: error.message
+            });
         }
-        
-        // Create product in database
-        const product = await Product.create({
-            name: req.body.name,
-            description: req.body.description,
-            price: req.body.price,
-            category: req.body.category,
-            gender: req.body.gender || 'unisex',
-            ageGroup: req.body.ageGroup || 'adult',
-            stock: parseInt(req.body.stock) || 0,
-            status: req.body.status || 'active',
-            isCustomizable: req.body.isCustomizable === 'true',
-            hasVariants: req.body.hasVariants === 'true',
-            images: imageUrls,
-            image: imageUrls.length > 0 ? imageUrls[0] : null // Set first image as main image
-        });
-        
-        console.log('Product created successfully:', {
-            id: product.id,
-            name: product.name,
-            imageCount: imageUrls.length,
-            imageUrls: imageUrls
-        });
-        
-        return res.status(201).json({
-            success: true,
-            message: 'Product created successfully',
-            product: product
-        });
-        
-    } catch (error) {
-        console.error('Error creating product:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error creating product',
-            error: error.message
-        });
-    }
+    });
 });
 
 // Update product
