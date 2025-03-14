@@ -90,6 +90,27 @@ const MainLayout = () => {
         });
     }, [user, isAuthenticated, cart, cartCount]);
 
+    // Add a style tag to ensure proper dropdown layering
+    useEffect(() => {
+        // Create a style element
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .dropdown-menu, [role="menu"], [data-headlessui-state="open"], .absolute {
+                z-index: 1000 !important;
+            }
+            .promotion-banner {
+                z-index: 5 !important;
+            }
+        `;
+        // Add it to the head
+        document.head.appendChild(style);
+
+        return () => {
+            // Clean up on unmount
+            document.head.removeChild(style);
+        };
+    }, []);
+
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
             {/* Toast notifications */}
@@ -107,7 +128,9 @@ const MainLayout = () => {
             />
 
             <Header />
-            <PromotionBanner />
+            <div style={{ position: 'relative', zIndex: 5 }}>
+                <PromotionBanner />
+            </div>
 
             <main className="flex-1">
                 <Transition

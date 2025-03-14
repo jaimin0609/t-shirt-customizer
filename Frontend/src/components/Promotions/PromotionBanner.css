@@ -8,8 +8,8 @@
     color: white;
     font-weight: 600;
     position: relative;
-    z-index: 10;
-    /* Keep this modest value so dropdowns can appear above it */
+    z-index: 5;
+    /* Lowered from 10 to ensure dropdowns can appear above it */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     animation: slideDown 0.5s ease-out;
 }
@@ -78,15 +78,43 @@
 }
 
 /* Fix for dropdown menus appearing behind the banner */
-/* Target all dropdown menus in the layout */
+/* Target all dropdown menus in the layout - much more aggressive selectors */
 .relative .absolute,
 [data-headlessui-state="open"],
 .dropdown-menu,
 .headlessui-menu-items,
 .dropdown-content,
-nav .absolute {
-    z-index: 50 !important;
-    /* Higher z-index to ensure menus appear above the banner */
+nav .absolute,
+[role="menu"],
+.menu-items,
+.dropdown,
+.popover,
+.dropdown-wrapper,
+.dropdown-panel,
+.nav-item .dropdown-menu,
+.headlessui-menu-button+div,
+.headlessui-menu-items,
+.user-menu,
+.notification-dropdown,
+div[role="menu"],
+div[role="menuitem"],
+div[data-state="open"] {
+    z-index: 100 !important;
+    /* Much higher z-index to ensure menus appear above everything */
+    position: relative !important;
+    /* Ensure position is respected */
+}
+
+/* Ensure all user menu navigation elements stay on top */
+.nav-item.dropdown .dropdown-menu,
+.dropdown-menu[aria-labelledby],
+.navbar .dropdown-menu {
+    z-index: 9999 !important;
+}
+
+/* Global styles to ensure dropdown visibility */
+body {
+    --z-dropdown: 100;
 }
 
 @media (max-width: 768px) {
