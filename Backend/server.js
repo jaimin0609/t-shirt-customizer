@@ -103,16 +103,24 @@ if (process.env.NODE_ENV === 'production') {
                 imgSrc: [
                     "'self'", 
                     "data:", 
+                    "blob:",
                     "https://cdn.jsdelivr.net", 
                     "https://img.icons8.com", 
                     "https://res.cloudinary.com",
+                    "https://*.cloudinary.com",
                     "http://localhost:5002",
                     "https://t-shirt-customizer-backend.onrender.com"
                 ],
-                connectSrc: ["'self'", "https://api.cloudinary.com", "*"],
+                connectSrc: [
+                    "'self'", 
+                    "https://api.cloudinary.com",
+                    "https://*.cloudinary.com",
+                    "https://t-shirt-customizer-backend.onrender.com",
+                    "*"
+                ],
                 fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
                 objectSrc: ["'none'"],
-                mediaSrc: ["'self'"],
+                mediaSrc: ["'self'", "https://res.cloudinary.com"],
                 frameSrc: ["'self'"],
                 scriptSrcAttr: ["'unsafe-inline'"],  // Allow inline event handlers
                 upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
@@ -120,9 +128,10 @@ if (process.env.NODE_ENV === 'production') {
         },
         crossOriginEmbedderPolicy: false,
         crossOriginOpenerPolicy: false,
+        crossOriginResourcePolicy: { policy: "cross-origin" },
         xssFilter: true,
         noSniff: true,
-        referrerPolicy: { policy: 'same-origin' }
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
     }));
     
     // Add rate limiting in production
