@@ -105,6 +105,10 @@ const upload = multer({
 
 // Test endpoint for Cloudinary uploads
 router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
+    console.log('POST /products/test-cloudinary - Request received');
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    
     upload.array('images', 5)(req, res, async function(err) {
         try {
             console.log('=== Testing Cloudinary Upload ===');
@@ -117,6 +121,10 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
             
             if (err) {
                 console.error('Error during file upload:', err);
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({ 
                     success: false, 
                     message: err.message 
@@ -124,6 +132,11 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
             }
             
             if (!req.files || req.files.length === 0) {
+                console.error('No image files provided');
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({ 
                     success: false, 
                     message: 'No image files provided' 
@@ -156,6 +169,9 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
                 }
             });
             
+            // Ensure proper Content-Type header
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(200).json({
                 success: true,
                 message: cloudinaryEnabled ? 'Files uploaded to Cloudinary' : 'Files saved locally',
@@ -163,6 +179,10 @@ router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
             });
         } catch (error) {
             console.error('Error in test-cloudinary endpoint:', error);
+            
+            // Ensure proper Content-Type header even on error
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(500).json({
                 success: false,
                 message: 'Error processing upload',
@@ -505,6 +525,10 @@ router.get('/:id', async (req, res) => {
 
 // Add a diagnostic route for testing image uploads
 router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
+    console.log('POST /products/diagnostic-upload - Request received');
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    
     upload.single('testImage')(req, res, async function(err) {
         try {
             console.log('=== UPLOAD DIAGNOSTIC TEST ===');
@@ -515,6 +539,10 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
             
             if (err) {
                 console.error('❌ Upload error:', err);
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({
                     success: false,
                     message: err.message,
@@ -529,6 +557,10 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
             // Check if file was received
             if (!req.file) {
                 console.error('❌ No file received');
+                
+                // Ensure proper Content-Type header even on error
+                res.setHeader('Content-Type', 'application/json');
+                
                 return res.status(400).json({
                     success: false,
                     message: 'No file received',
@@ -561,6 +593,9 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
                 console.log('Using local URL:', imageUrl);
             }
             
+            // Ensure proper Content-Type header
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(200).json({
                 success: true,
                 message: 'Diagnostic upload test successful',
@@ -579,6 +614,10 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
             });
         } catch (error) {
             console.error('❌ Diagnostic upload test error:', error);
+            
+            // Ensure proper Content-Type header even on error
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(500).json({
                 success: false,
                 message: 'Diagnostic upload test failed',
@@ -591,6 +630,10 @@ router.post('/diagnostic-upload', auth, isAdmin, (req, res) => {
 
 // Create new product endpoint
 router.post('/', auth, isAdmin, (req, res) => {
+    console.log('POST /products - Product creation request received');
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    
     upload.array('images', 5)(req, res, async function(err) {
         try {
             console.log('Creating new product...');
@@ -613,11 +656,15 @@ router.post('/', auth, isAdmin, (req, res) => {
                 contentType: req.get('content-type')
             });
             
+            // Log body details
+            console.log('Request body keys:', Object.keys(req.body));
+            
             // Validate required fields
             const requiredFields = ['name', 'price', 'description', 'category'];
             const missingFields = requiredFields.filter(field => !req.body[field]);
             
             if (missingFields.length > 0) {
+                console.error('Missing required fields:', missingFields);
                 return res.status(400).json({
                     success: false,
                     message: `Missing required fields: ${missingFields.join(', ')}`
@@ -629,6 +676,13 @@ router.post('/', auth, isAdmin, (req, res) => {
             if (req.files && req.files.length > 0) {
                 try {
                     console.log('Processing uploaded images...');
+                    console.log('Files received:', req.files.map(f => ({
+                        filename: f.filename,
+                        mimetype: f.mimetype,
+                        size: f.size,
+                        path: f.path
+                    })));
+                    
                     imageUrls = req.files.map(file => {
                         // For Cloudinary uploads, use the secure URL
                         const url = cloudinaryEnabled && file.path ? file.path : `/uploads/products/${file.filename}`;
@@ -645,6 +699,8 @@ router.post('/', auth, isAdmin, (req, res) => {
                         error: imageError.message
                     });
                 }
+            } else {
+                console.warn('No image files received with the product');
             }
             
             // Create product in database
@@ -670,6 +726,9 @@ router.post('/', auth, isAdmin, (req, res) => {
                 imageUrls: imageUrls
             });
             
+            // Ensure proper Content-Type header
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(201).json({
                 success: true,
                 message: 'Product created successfully',
@@ -678,6 +737,10 @@ router.post('/', auth, isAdmin, (req, res) => {
             
         } catch (error) {
             console.error('Error creating product:', error);
+            
+            // Ensure proper Content-Type header even on error
+            res.setHeader('Content-Type', 'application/json');
+            
             return res.status(500).json({
                 success: false,
                 message: 'Error creating product',
