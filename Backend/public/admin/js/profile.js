@@ -77,6 +77,12 @@ function getImageUrl(imagePath) {
     
     console.log('Processing image path:', imagePath);
     
+    // Check if it's a Cloudinary URL - make sure it uses HTTPS
+    if (imagePath.includes('cloudinary.com')) {
+        console.log('Detected Cloudinary URL:', imagePath);
+        return imagePath.replace('http://', 'https://');
+    }
+    
     // Check if it's already a full URL 
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         // Handle specifically the render.com domain
@@ -158,7 +164,20 @@ function setupAvatarErrorHandling() {
             
             // Try different fallback strategies
             
-            // 1. If from render.com, try local path
+            // 1. If it's a Cloudinary URL that failed, try a different format
+            if (currentSrc.includes('cloudinary.com')) {
+                console.log('Cloudinary URL failed, trying alternative format');
+                // Extract public ID from URL
+                const match = currentSrc.match(/\/upload\/(?:v\d+\/)?(.+?)$/);
+                if (match && match[1]) {
+                    const publicId = match[1];
+                    // Build a simpler URL without transformations
+                    this.src = `https://res.cloudinary.com/${window.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/${publicId}`;
+                    return;
+                }
+            }
+            
+            // 2. If from render.com, try local path
             if (currentSrc.includes('t-shirt-customizer-backend.onrender.com')) {
                 const parts = currentSrc.split('/');
                 const filename = parts[parts.length - 1];
@@ -173,7 +192,7 @@ function setupAvatarErrorHandling() {
                 return;
             }
             
-            // 2. If it was a local path that failed, try the API server path
+            // 3. If it was a local path that failed, try the API server path
             if (currentSrc.includes('/uploads/') && !currentSrc.includes('http')) {
                 const filename = currentSrc.split('/').pop();
                 console.log(`Local path failed, trying API server for: ${filename}`);
@@ -187,7 +206,7 @@ function setupAvatarErrorHandling() {
                 return;
             }
             
-            // 3. As a last resort, use the default avatar
+            // 4. As a last resort, use the default avatar
             console.log('Using default avatar as final fallback');
             this.src = '/admin/img/default-avatar.png';
             this.onerror = null;

@@ -132,22 +132,37 @@ const localStorageConfig = multer.diskStorage({
 const uploadImage = async (imagePath, options = {}) => {
     if (!cloudinaryEnabled) {
         console.log('Cloudinary is not enabled, using local storage');
+        // Determine the correct path based on the folder option
+        const folder = options.folder || 'products';
+        const uploadPath = `/uploads/${folder}/${path.basename(imagePath)}`;
         return {
             public_id: path.basename(imagePath),
-            secure_url: `/uploads/products/${path.basename(imagePath)}`,
-            url: `/uploads/products/${path.basename(imagePath)}`
+            secure_url: uploadPath,
+            url: uploadPath
         };
     }
 
     try {
-        console.log(`Attempting to upload image: ${imagePath}`);
+        console.log(`Attempting to upload image to Cloudinary: ${imagePath}`);
+        console.log('Upload options:', JSON.stringify(options));
+        
+        // Ensure we have a folder default
         const uploadOptions = {
-            folder: 'products',
+            folder: options.folder || 'products',
             ...options
         };
 
         const result = await cloudinary.v2.uploader.upload(imagePath, uploadOptions);
-        console.log('✅ Image uploaded successfully:', result.secure_url);
+        console.log('✅ Image uploaded successfully to Cloudinary:', result.secure_url);
+        
+        // Make sure Cloudinary URLs use HTTPS
+        if (result.secure_url && result.secure_url.startsWith('http://')) {
+            result.secure_url = result.secure_url.replace('http://', 'https://');
+        }
+        if (result.url && result.url.startsWith('http://')) {
+            result.url = result.url.replace('http://', 'https://');
+        }
+        
         return result;
     } catch (error) {
         console.error('❌ Error uploading image to Cloudinary:', error);
