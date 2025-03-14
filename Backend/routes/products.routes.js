@@ -104,8 +104,8 @@ const upload = multer({
 });
 
 // Test endpoint for Cloudinary uploads
-router.post('/test-cloudinary', auth, isAdmin, async (req, res) => {
-    upload(req, res, async function(err) {
+router.post('/test-cloudinary', auth, isAdmin, (req, res) => {
+    upload.array('images', 5)(req, res, async function(err) {
         try {
             console.log('=== Testing Cloudinary Upload ===');
             console.log('Cloudinary enabled:', cloudinaryEnabled);
