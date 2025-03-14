@@ -730,6 +730,12 @@ router.get('/age-groups/all', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const productId = req.params.id;
+        
+        // Check if productId is undefined, "undefined", or otherwise invalid
+        if (!productId || productId === 'undefined' || productId === 'null') {
+            return res.status(400).json({ message: 'Invalid product ID' });
+        }
+        
         console.log(`Fetching product with ID: ${productId}`);
         
         // Create include array - make it resilient against association issues
@@ -1424,8 +1430,15 @@ router.post('/:id/discount', auth, isAdmin, async (req, res) => {
 // Get similar products
 router.get('/:id/similar', async (req, res) => {
     try {
+        const productId = req.params.id;
+        
+        // Check if productId is undefined, "undefined", or otherwise invalid
+        if (!productId || productId === 'undefined' || productId === 'null') {
+            return res.status(400).json({ message: 'Invalid product ID' });
+        }
+        
         // Find the reference product
-        const product = await Product.findByPk(req.params.id);
+        const product = await Product.findByPk(productId);
         
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -1435,7 +1448,7 @@ router.get('/:id/similar', async (req, res) => {
         let similarProducts = await Product.findAll({
             where: {
                 category: product.category,
-                id: { [Op.ne]: req.params.id } // Not equal to current product
+                id: { [Op.ne]: productId } // Not equal to current product
             },
             limit: 8
         });
@@ -1447,7 +1460,7 @@ router.get('/:id/similar', async (req, res) => {
             const additionalProducts = await Product.findAll({
                 where: {
                     id: { 
-                        [Op.ne]: req.params.id, // Not equal to current product
+                        [Op.ne]: productId, // Not equal to current product
                         [Op.notIn]: similarProducts.map(p => p.id) // Not already in similar products
                     }
                 },

@@ -217,20 +217,45 @@ router.get('/by-number/:orderNumber', auth, asyncHandler(async (req, res) => {
 
 // Get order by ID
 router.get('/:id', auth, asyncHandler(async (req, res) => {
-    const order = await Order.findByPk(req.params.id, {
-        include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))]
-    });
-
-    if (!order) {
-        return res.status(404).json({ message: 'Order not found' });
+    // Special case for "recent" - get the most recent order
+    if (req.params.id === 'recent') {
+        const recentOrder = await Order.findOne({
+            include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))],
+            order: [['createdAt', 'DESC']]
+        });
+        
+        if (!recentOrder) {
+            return res.status(404).json({ message: 'No orders found' });
+        }
+        
+        // Check if user is authorized to view this order (admin or order owner)
+        if (req.user.role !== 'admin' && recentOrder.userId !== req.user.id) {
+            return res.status(403).json({ message: 'Unauthorized to view this order' });
+        }
+        
+        return res.json(formatOrder(recentOrder));
     }
+    
+    // Normal case - find by ID
+    try {
+        const order = await Order.findByPk(req.params.id, {
+            include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))]
+        });
 
-    // Check if user is authorized to view this order (admin or order owner)
-    if (req.user.role !== 'admin' && order.userId !== req.user.id) {
-        return res.status(403).json({ message: 'Unauthorized to view this order' });
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check if user is authorized to view this order (admin or order owner)
+        if (req.user.role !== 'admin' && order.userId !== req.user.id) {
+            return res.status(403).json({ message: 'Unauthorized to view this order' });
+        }
+
+        res.json(formatOrder(order));
+    } catch (error) {
+        console.error('Error fetching order:', error);
+        res.status(500).json({ message: 'Error fetching order details' });
     }
-
-    res.json(formatOrder(order));
 }));
 
 // Create a new order
@@ -342,15 +367,35 @@ router.get('/admin/:id', auth, asyncHandler(async (req, res) => {
         return res.status(403).json({ message: 'Unauthorized access' });
     }
 
-    const order = await Order.findByPk(req.params.id, {
-        include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))]
-    });
-
-    if (!order) {
-        return res.status(404).json({ message: 'Order not found' });
+    // Special case for "recent" - get the most recent order
+    if (req.params.id === 'recent') {
+        const recentOrder = await Order.findOne({
+            include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))],
+            order: [['createdAt', 'DESC']]
+        });
+        
+        if (!recentOrder) {
+            return res.status(404).json({ message: 'No orders found' });
+        }
+        
+        return res.json(formatOrder(recentOrder));
     }
 
-    res.json(formatOrder(order));
+    // Normal case - find by ID
+    try {
+        const order = await Order.findByPk(req.params.id, {
+            include: [...includePatterns.fullOrderIncludes.map(include => ({...include}))]
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json(formatOrder(order));
+    } catch (error) {
+        console.error('Error fetching admin order:', error);
+        res.status(500).json({ message: 'Error fetching order details' });
+    }
 }));
 
 // Update order status
