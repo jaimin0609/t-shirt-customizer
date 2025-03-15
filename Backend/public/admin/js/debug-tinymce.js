@@ -5,6 +5,64 @@
  */
 
 (function() {
+    // Define a safe global debug function to prevent errors
+    window.debugTinyMCE = function() {
+        console.group('TinyMCE Debug Information');
+        
+        // Check if TinyMCE is loaded
+        console.log('TinyMCE loaded:', typeof tinymce !== 'undefined');
+        
+        if (typeof tinymce !== 'undefined') {
+            console.log('TinyMCE version:', tinymce.majorVersion + '.' + tinymce.minorVersion);
+            
+            // Safely get editor instances
+            let editorCount = 0;
+            try {
+                // Modern way to get editors in TinyMCE 6+
+                const editors = tinymce.get();
+                editorCount = editors.length;
+                console.log('Active editors:', editorCount);
+                
+                // List all editor instances
+                editors.forEach((editor, index) => {
+                    console.group(`Editor #${index + 1}: ${editor.id}`);
+                    console.log('Initialized:', editor.initialized);
+                    console.log('Settings:', editor.settings);
+                    try {
+                        console.log('Content preview:', editor.getContent().substring(0, 100) + '...');
+                    } catch (e) {
+                        console.log('Could not get content');
+                    }
+                    console.groupEnd();
+                });
+            } catch (e) {
+                console.error('Error accessing editors:', e);
+            }
+            
+            // If no editors are found, suggest fixes
+            if (editorCount === 0) {
+                console.warn('No active TinyMCE editors found. Initialization might have failed.');
+                console.log('Try using the "Fix TinyMCE" button in the debug panel or reload the page.');
+            }
+        } else {
+            console.error('TinyMCE is not loaded! Script might be missing or blocked.');
+        }
+        
+        // Check DOM for editor elements
+        const editorTextareas = document.querySelectorAll('textarea[id="productDescription"]');
+        console.log('Editor textareas found:', editorTextareas.length);
+        
+        // Check for TinyMCE UI elements
+        const editorContainers = document.querySelectorAll('.tox-tinymce');
+        console.log('Editor containers found:', editorContainers.length);
+        
+        const toolbars = document.querySelectorAll('.tox-toolbar__primary');
+        console.log('Toolbars found:', toolbars.length);
+        
+        console.groupEnd();
+        return 'TinyMCE debug information logged to console';
+    };
+
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', function() {
         console.log('------------------ TinyMCE Debug Utility ------------------');
@@ -18,6 +76,20 @@
         debugContainer.style.backgroundColor = '#f8f9fa';
         debugContainer.style.fontFamily = 'monospace';
         debugContainer.style.fontSize = '14px';
+        
+        // Add debug button to manually trigger debug info
+        const debugButton = document.createElement('button');
+        debugButton.textContent = 'Log Debug Info';
+        debugButton.style.marginBottom = '15px';
+        debugButton.style.padding = '8px 15px';
+        debugButton.style.backgroundColor = '#ffc107';
+        debugButton.style.color = 'black';
+        debugButton.style.border = 'none';
+        debugButton.style.borderRadius = '4px';
+        debugButton.style.cursor = 'pointer';
+        debugButton.onclick = function() {
+            window.debugTinyMCE();
+        };
         
         // Check if TinyMCE is loaded
         const isTinyMCELoaded = typeof window.tinymce !== 'undefined';
@@ -143,6 +215,9 @@
         // Set initial content
         debugContainer.innerHTML = debugReport;
         
+        // Add the debug button to the top of the container
+        debugContainer.insertBefore(debugButton, debugContainer.firstChild);
+        
         // Append container to page
         if (hasTextarea) {
             const parent = textareaElement.parentNode;
@@ -167,10 +242,22 @@
                     createBasicEditor();
                     debugReport += `<p style="color: blue;"><strong>Basic editor:</strong> Created</p>`;
                     debugContainer.innerHTML = debugReport;
+                    
+                    // Add the debug button again after updating content
+                    debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                    debugContainer.querySelector('button').onclick = function() {
+                        window.debugTinyMCE();
+                    };
                 } else {
                     alert('Basic editor function not found. Try reloading the page first.');
                     debugReport += `<p style="color: red;"><strong>Basic editor:</strong> Function not found</p>`;
                     debugContainer.innerHTML = debugReport;
+                    
+                    // Add the debug button again after updating content
+                    debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                    debugContainer.querySelector('button').onclick = function() {
+                        window.debugTinyMCE();
+                    };
                 }
             });
             
@@ -184,6 +271,12 @@
             debugReport += `<p><strong>Attempting to fix TinyMCE...</strong></p>`;
             debugContainer.innerHTML = debugReport;
             
+            // Re-add the debug button after updating content
+            debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+            debugContainer.querySelector('button').onclick = function() {
+                window.debugTinyMCE();
+            };
+            
             // Create a new script element with the complete TinyMCE bundle
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js';
@@ -193,6 +286,12 @@
             script.onload = function() {
                 debugReport += `<p style="color: green;"><strong>TinyMCE bundle loaded successfully</strong></p>`;
                 debugContainer.innerHTML = debugReport;
+                
+                // Re-add the debug button after updating content
+                debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                debugContainer.querySelector('button').onclick = function() {
+                    window.debugTinyMCE();
+                };
                 
                 // Remove any existing instances
                 if (typeof window.tinymce.remove === 'function') {
@@ -214,11 +313,23 @@
                         editor.on('init', function() {
                             debugReport += `<p style="color: green;"><strong>TinyMCE initialized successfully</strong></p>`;
                             debugContainer.innerHTML = debugReport;
+                            
+                            // Re-add the debug button after updating content
+                            debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                            debugContainer.querySelector('button').onclick = function() {
+                                window.debugTinyMCE();
+                            };
                         });
                     }
                 }).then(function() {
                     debugReport += `<p style="color: green;"><strong>TinyMCE initialization successful</strong></p>`;
                     debugContainer.innerHTML = debugReport;
+                    
+                    // Re-add the debug button after updating content
+                    debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                    debugContainer.querySelector('button').onclick = function() {
+                        window.debugTinyMCE();
+                    };
                     
                     // Hide the fix button in the main UI
                     const fixButton = document.getElementById('fixRichEditorBtn');
@@ -228,9 +339,22 @@
                     debugReport += `<p style="color: red;"><strong>TinyMCE initialization failed:</strong> ${error.message}</p>`;
                     debugContainer.innerHTML = debugReport;
                     
+                    // Re-add the debug button after updating content
+                    debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                    debugContainer.querySelector('button').onclick = function() {
+                        window.debugTinyMCE();
+                    };
+                    
                     if (typeof createBasicEditor === 'function') {
                         debugReport += `<p><strong>Falling back to basic editor...</strong></p>`;
                         debugContainer.innerHTML = debugReport;
+                        
+                        // Re-add the debug button after updating content
+                        debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                        debugContainer.querySelector('button').onclick = function() {
+                            window.debugTinyMCE();
+                        };
+                        
                         createBasicEditor();
                     }
                 });
@@ -240,9 +364,22 @@
                 debugReport += `<p style="color: red;"><strong>Failed to load TinyMCE bundle</strong></p>`;
                 debugContainer.innerHTML = debugReport;
                 
+                // Re-add the debug button after updating content
+                debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                debugContainer.querySelector('button').onclick = function() {
+                    window.debugTinyMCE();
+                };
+                
                 if (typeof createBasicEditor === 'function') {
                     debugReport += `<p><strong>Falling back to basic editor...</strong></p>`;
                     debugContainer.innerHTML = debugReport;
+                    
+                    // Re-add the debug button after updating content
+                    debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+                    debugContainer.querySelector('button').onclick = function() {
+                        window.debugTinyMCE();
+                    };
+                    
                     createBasicEditor();
                 }
             };
@@ -270,4 +407,134 @@
         };
         img.src = 'https://cdn.jsdelivr.net/favicon.ico?_=' + Date.now();
     });
+
+    // Function to create a basic editor if TinyMCE fails
+    function createBasicEditor() {
+        debugReport += `<p><strong>Creating basic editor fallback...</strong></p>`;
+        debugContainer.innerHTML = debugReport;
+        
+        // Re-add the debug button after updating content
+        debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+        debugContainer.querySelector('button').onclick = function() {
+            window.debugTinyMCE();
+        };
+        
+        // Hide the original textarea
+        const textarea = document.getElementById('productDescription');
+        if (!textarea) {
+            debugReport += `<p style="color: red;"><strong>Error:</strong> Could not find product description textarea</p>`;
+            debugContainer.innerHTML = debugReport;
+            
+            // Re-add the debug button after updating content
+            debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+            debugContainer.querySelector('button').onclick = function() {
+                window.debugTinyMCE();
+            };
+            return;
+        }
+        
+        textarea.style.display = 'none';
+        
+        // Create an editable div
+        const editorContainer = document.createElement('div');
+        editorContainer.className = 'basic-editor-container';
+        editorContainer.innerHTML = `
+            <div class="basic-editor-toolbar">
+                <button type="button" data-command="bold" title="Bold"><strong>B</strong></button>
+                <button type="button" data-command="italic" title="Italic"><em>I</em></button>
+                <button type="button" data-command="insertUnorderedList" title="Bullet List">• List</button>
+                <button type="button" data-command="createLink" title="Insert Link">🔗 Link</button>
+            </div>
+            <div class="fallback-note">Fallback editor active. <button type="button" id="reloadPage">Try reloading</button> for full editor.</div>
+            <div id="basicEditor" contenteditable="true" class="basic-editor-content">${textarea.value}</div>
+        `;
+        
+        // Insert after textarea
+        textarea.parentNode.insertBefore(editorContainer, textarea.nextSibling);
+        
+        // Style the basic editor
+        const style = document.createElement('style');
+        style.textContent = `
+            .basic-editor-container {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            .basic-editor-toolbar {
+                padding: 8px;
+                background: #f5f5f5;
+                border-bottom: 1px solid #ddd;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .basic-editor-toolbar button {
+                padding: 5px 10px;
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                cursor: pointer;
+            }
+            .basic-editor-toolbar button:hover {
+                background: #e9e9e9;
+            }
+            .basic-editor-content {
+                min-height: 200px;
+                padding: 10px;
+                overflow-y: auto;
+            }
+            .fallback-note {
+                background-color: #fff3cd;
+                color: #856404;
+                padding: 8px;
+                font-size: 0.9em;
+                border-bottom: 1px solid #ddd;
+            }
+            .fallback-note button {
+                background: none;
+                border: none;
+                color: #0066cc;
+                text-decoration: underline;
+                cursor: pointer;
+                padding: 0;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Add event listeners for the buttons
+        editorContainer.querySelectorAll('.basic-editor-toolbar button').forEach(button => {
+            button.addEventListener('click', function() {
+                const command = this.getAttribute('data-command');
+                if (command === 'createLink') {
+                    const url = prompt('Enter the URL:', 'https://');
+                    if (url) {
+                        document.execCommand('createLink', false, url);
+                    }
+                } else {
+                    document.execCommand(command, false, null);
+                }
+                // Update the textarea with the new content
+                textarea.value = document.getElementById('basicEditor').innerHTML;
+            });
+        });
+        
+        // Update textarea when content changes in the editable div
+        document.getElementById('basicEditor').addEventListener('input', function() {
+            textarea.value = this.innerHTML;
+        });
+        
+        // Add reload page functionality
+        document.getElementById('reloadPage').addEventListener('click', function() {
+            window.location.reload();
+        });
+        
+        debugReport += `<p style="color: green;"><strong>Basic editor created successfully</strong></p>`;
+        debugContainer.innerHTML = debugReport;
+        
+        // Re-add the debug button after updating content
+        debugContainer.insertBefore(debugButton.cloneNode(true), debugContainer.firstChild);
+        debugContainer.querySelector('button').onclick = function() {
+            window.debugTinyMCE();
+        };
+    }
 })(); 
