@@ -1,18 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../contexts/NotificationContext';
-// Temporarily comment out FontAwesome imports to fix build
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import {
-//     faBell,
-//     faShoppingCart,
-//     faUser,
-//     faCog,
-//     faExclamationTriangle,
-//     faCheck,
-//     faSpinner,
-//     faTimes
-// } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+    faBell,
+    faShoppingCart,
+    faUser,
+    faCog,
+    faExclamationTriangle,
+    faCheck,
+    faSpinner,
+    faTimes
+} from '@fortawesome/free-solid-svg-icons';
 
 // Temporary icon component to replace FontAwesome
 const IconPlaceholder = ({ name, className }) => {
@@ -70,15 +69,15 @@ const NotificationDropdown = () => {
     const getIcon = (notification) => {
         switch (notification.icon) {
             case 'shopping-cart':
-                return <IconPlaceholder name="🛒" className={notification.iconClass} />;
+                return <FontAwesomeIcon icon={faShoppingCart} className={notification.iconClass} />;
             case 'user':
-                return <IconPlaceholder name="👤" className={notification.iconClass} />;
+                return <FontAwesomeIcon icon={faUser} className={notification.iconClass} />;
             case 'cog':
-                return <IconPlaceholder name="⚙️" className={notification.iconClass} />;
+                return <FontAwesomeIcon icon={faCog} className={notification.iconClass} />;
             case 'exclamation-triangle':
-                return <IconPlaceholder name="⚠️" className={notification.iconClass} />;
+                return <FontAwesomeIcon icon={faExclamationTriangle} className={notification.iconClass} />;
             default:
-                return <IconPlaceholder name="🔔" className={notification.iconClass} />;
+                return <FontAwesomeIcon icon={faBell} className={notification.iconClass} />;
         }
     };
 
@@ -90,7 +89,7 @@ const NotificationDropdown = () => {
                 onClick={toggleNotifications}
                 aria-label="Notifications"
             >
-                <IconPlaceholder name="🔔" className="text-xl" />
+                <FontAwesomeIcon icon={faBell} className="text-xl" />
                 {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -117,7 +116,7 @@ const NotificationDropdown = () => {
                     {/* Loading State */}
                     {loading && (
                         <div className="p-4 text-center text-gray-500">
-                            <IconPlaceholder name="⏳" className="mr-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
                             Loading notifications...
                         </div>
                     )}
@@ -125,7 +124,7 @@ const NotificationDropdown = () => {
                     {/* Error State */}
                     {error && (
                         <div className="p-4 text-center text-red-500">
-                            <IconPlaceholder name="❌" className="mr-2" />
+                            <FontAwesomeIcon icon={faTimes} className="mr-2" />
                             {error}
                         </div>
                     )}
