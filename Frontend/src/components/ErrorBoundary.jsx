@@ -17,12 +17,15 @@ class ErrorBoundary extends Component {
 
     static getDerivedStateFromError(error) {
         // Update state so the next render will show the fallback UI
+        console.error('Error caught in ErrorBoundary.getDerivedStateFromError:', error);
         return { hasError: true, error };
     }
 
     componentDidCatch(error, errorInfo) {
-        // Log the error to an error reporting service
-        console.error('Error caught by ErrorBoundary:', error, errorInfo);
+        // Log the error to the console
+        console.error('Error caught by ErrorBoundary.componentDidCatch:', error);
+        console.error('Component stack:', errorInfo?.componentStack);
+
         this.setState({ errorInfo });
 
         // You could also log to an error reporting service here
@@ -39,7 +42,16 @@ class ErrorBoundary extends Component {
 
     render() {
         if (this.state.hasError) {
-            // Render fallback UI
+            // If a custom fallback renderer is provided, use that
+            if (this.props.fallbackRender) {
+                return this.props.fallbackRender({
+                    error: this.state.error,
+                    errorInfo: this.state.errorInfo,
+                    reset: this.handleReload
+                });
+            }
+
+            // Otherwise use the default fallback UI
             return (
                 <div className="error-boundary-container flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
                     <div className="error-card bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
@@ -51,6 +63,11 @@ class ErrorBoundary extends Component {
                                 <pre className="mt-2 text-sm text-gray-600 overflow-auto p-2 bg-gray-100 rounded">
                                     {this.state.error && this.state.error.toString()}
                                 </pre>
+                                {this.state.errorInfo && (
+                                    <pre className="mt-2 text-sm text-gray-600 overflow-auto p-2 bg-gray-100 rounded">
+                                        {this.state.errorInfo.componentStack}
+                                    </pre>
+                                )}
                             </details>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -78,7 +95,8 @@ class ErrorBoundary extends Component {
 }
 
 ErrorBoundary.propTypes = {
-    children: PropTypes.node.isRequired
+    children: PropTypes.node.isRequired,
+    fallbackRender: PropTypes.func
 };
 
 export default ErrorBoundary; 

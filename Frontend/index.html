@@ -10,6 +10,18 @@
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
     
+    <!-- Force reloading if stuck for over 30 seconds -->
+    <script>
+      // Auto-reload if page is stuck loading for too long
+      setTimeout(function() {
+        // Check if the app has loaded by looking for a specific element
+        if (document.querySelector('.app-loading') && !document.querySelector('.app-loaded')) {
+          console.log('App appears to be stuck loading, reloading page...');
+          window.location.reload();
+        }
+      }, 30000);
+    </script>
+    
     <!-- Preconnect to Google Fonts to improve load time -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,6 +67,25 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      
+      /* Add fallback error message style */
+      .loading-error {
+        display: none;
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        background-color: #fee2e2;
+        border: 1px solid #ef4444;
+        border-radius: 0.25rem;
+        color: #b91c1c;
+      }
+      
+      /* Show error message after 15 seconds if app is still loading */
+      setTimeout(function() {
+        const errorMessage = document.querySelector('.loading-error');
+        if (errorMessage && document.querySelector('.app-loading')) {
+          errorMessage.style.display = 'block';
+        }
+      }, 15000);
     </style>
     
     <!-- Preload critical resources -->
@@ -68,12 +99,32 @@
   <body>
     <div id="root">
       <!-- Initial loading state that will be replaced by React -->
-      <div class="app-loading">
+      <div class="app-loading" id="initial-loading">
         <img src="/logo.png" alt="UniQVerse Logo" width="120" height="120">
         <div class="app-loading-spinner"></div>
         <p>Loading UniQVerse...</p>
+        <div class="loading-error">
+          Taking longer than expected. <button onclick="window.location.reload()">Refresh the page</button>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Fallback script to remove loader if main script fails -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loader = document.getElementById('initial-loading');
+          if (loader) {
+            console.log('Fallback: Attempting to remove loader after window load');
+            loader.style.opacity = '0';
+            setTimeout(function() {
+              if (loader.parentNode) {
+                loader.parentNode.removeChild(loader);
+              }
+            }, 500);
+          }
+        }, 5000); // Give the app 5 seconds to initialize
+      });
+    </script>
   </body>
 </html>
