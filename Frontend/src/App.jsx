@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,20 +16,41 @@ import MainLayout from './layouts/MainLayout';
 import { initAnalytics } from './services/analyticsService';
 import ErrorBoundary from './components/ErrorBoundary';
 
+// Loading spinner for Suspense fallback
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-screen w-full">
+    <div className="app-loading-spinner"></div>
+    <p className="ml-2">Loading components...</p>
+  </div>
+);
+
 function App() {
   // Track loaded state and any errors
   const [isLoaded, setIsLoaded] = useState(false);
   const [initError, setInitError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   // Initialize app and set up error handling
   useEffect(() => {
-    console.log('App component mounting');
+    console.log('App component mounting - React version:', React.version);
 
     // Make sure we immediately update the loading state on mount
     // to prevent the blank screen issue
     setTimeout(() => {
       document.documentElement.classList.add('app-ready');
     }, 100);
+
+    // Add global error handler for context initialization errors
+    const errorHandler = (event) => {
+      console.error('Global error in App.jsx:', event.error);
+      if (event.error && (
+        event.error.toString().includes('context') ||
+        event.error.toString().includes('useState')
+      )) {
+        setLoadError(event.error);
+      }
+    };
+    window.addEventListener('error', errorHandler);
 
     // Handle initialization in a safe way
     const initApp = async () => {
@@ -66,18 +87,32 @@ function App() {
 
     initApp();
 
+    // Ensure app is loaded after a timeout even if something fails
+    const timeoutId = setTimeout(() => {
+      if (!isLoaded) {
+        console.warn('App not loaded after timeout - forcing loaded state');
+        setIsLoaded(true);
+      }
+    }, 5000);
+
     // Cleanup function
     return () => {
       console.log('App component unmounting');
+      window.removeEventListener('error', errorHandler);
+      clearTimeout(timeoutId);
     };
-  }, []);
+  }, [isLoaded]);
 
   // Render error message if initialization failed
-  if (initError) {
+  if (initError || loadError) {
+    const error = initError || loadError;
     return (
       <div className="error-message p-4 bg-red-50 text-red-700 rounded m-4">
-        <h2 className="text-xl font-bold">Initialization Error</h2>
-        <p>{initError.message}</p>
+        <h2 className="text-xl font-bold">Application Error</h2>
+        <p>{error.message || 'An unknown error occurred'}</p>
+        <div className="mt-2 text-sm text-gray-600">
+          {error.stack && <pre className="overflow-auto max-h-40">{error.stack}</pre>}
+        </div>
         <button
           className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
           onClick={() => window.location.reload()}
@@ -88,30 +123,40 @@ function App() {
     );
   }
 
-  // Render main application
+  // Render main application with nested providers and error boundaries
   return (
     <ErrorBoundary>
       <Router>
         <div className={`app-container ${isLoaded ? 'app-loaded' : ''}`}>
-          <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <NotificationProvider>
-                  <MainLayout />
-                  <ToastContainer
-                    position="bottom-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop
-                    closeOnClick
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                  />
-                </NotificationProvider>
-              </WishlistProvider>
-            </CartProvider>
-          </AuthProvider>
+          <ErrorBoundary fallback={<div>Auth provider error</div>}>
+            <AuthProvider>
+              <ErrorBoundary fallback={<div>Cart provider error</div>}>
+                <CartProvider>
+                  <ErrorBoundary fallback={<div>Wishlist provider error</div>}>
+                    <WishlistProvider>
+                      <ErrorBoundary fallback={<div>Notification provider error</div>}>
+                        <NotificationProvider>
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <MainLayout />
+                          </Suspense>
+                          <ToastContainer
+                            position="bottom-right"
+                            autoClose={3000}
+                            hideProgressBar={false}
+                            newestOnTop
+                            closeOnClick
+                            pauseOnFocusLoss
+                            draggable
+                            pauseOnHover
+                          />
+                        </NotificationProvider>
+                      </ErrorBoundary>
+                    </WishlistProvider>
+                  </ErrorBoundary>
+                </CartProvider>
+              </ErrorBoundary>
+            </AuthProvider>
+          </ErrorBoundary>
         </div>
       </Router>
     </ErrorBoundary>

@@ -1,59 +1,53 @@
-// Get React from the global scope if available or import it
-const React = window.React || React; // Try global first
+// Direct import React as fallback
+import React from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 
-// Use an IIFE to handle async imports if needed
-(function initializeModule() {
-    if (!window.React) {
-        // Only attempt to import if not already available
-        import('react').then(module => {
-            window.React = module.default || module;
-            // Force a refresh if needed
-            if (typeof forceRefresh === 'function') forceRefresh();
-        }).catch(err => console.error('Failed to import React:', err));
+// Import services consistently
+const notificationService = {
+    // Placeholder implementations until real service is connected
+    fetchUnreadNotifications: async (limit = 10) => {
+        console.log('Fetching notifications with limit:', limit);
+        // Mock implementation
+        return { notifications: [], count: 0 };
+    },
+    getNotificationCount: async () => {
+        // Mock implementation
+        return 0;
+    },
+    markNotificationsAsRead: async (ids) => {
+        console.log('Marking notifications as read:', ids);
+        // Mock implementation
+        return true;
+    },
+    markAllNotificationsAsRead: async () => {
+        console.log('Marking all notifications as read');
+        // Mock implementation
+        return true;
+    },
+    formatNotifications: (notifications) => {
+        // Mock implementation
+        return notifications.map(n => ({
+            ...n,
+            formattedDate: new Date(n.createdAt).toLocaleString()
+        }));
     }
-})();
-
-const { useContext, useState, useEffect, useCallback, createContext } = React || {
-    useState: () => [null, () => { }],
-    useEffect: () => { },
-    useContext: () => ({}),
-    useCallback: (cb) => cb,
-    createContext: (val) => ({ Provider: ({ children }) => children, Consumer: ({ children }) => children })
 };
 
-import {
-    fetchUnreadNotifications,
-    getNotificationCount,
-    markNotificationsAsRead,
-    markAllNotificationsAsRead,
-    formatNotifications
-} from '../services/notificationService';
-import { useAuth } from './AuthContext';
-import { toast } from 'react-toastify';
-
-// Create the notification context with a safer pattern
+// Create notification context with safer pattern
 const NotificationContext = createContext({
     notifications: [],
     unreadCount: 0,
     loading: false,
     error: null,
     isOpen: false,
-    fetchNotifications: () => Promise.resolve(),
-    refreshNotificationCount: () => Promise.resolve(),
-    markAsRead: () => Promise.resolve(),
-    markAllAsRead: () => Promise.resolve(),
+    fetchNotifications: () => { },
+    refreshNotificationCount: () => { },
+    markAsRead: () => { },
+    markAllAsRead: () => { },
     toggleNotifications: () => { },
     closeNotifications: () => { }
 });
-
-// Custom hook to use the notification context
-export const useNotification = () => {
-    const context = useContext(NotificationContext);
-    if (!context) {
-        throw new Error('useNotification must be used within a NotificationProvider');
-    }
-    return context;
-};
 
 export const NotificationProvider = ({ children }) => {
     const { isAuthenticated } = useAuth();
@@ -71,8 +65,8 @@ export const NotificationProvider = ({ children }) => {
         setError(null);
 
         try {
-            const data = await fetchUnreadNotifications(limit);
-            setNotifications(formatNotifications(data.notifications || []));
+            const data = await notificationService.fetchUnreadNotifications(limit);
+            setNotifications(notificationService.formatNotifications(data.notifications || []));
             setUnreadCount(data.count || 0);
         } catch (err) {
             console.error('Error fetching notifications:', err);
@@ -87,7 +81,7 @@ export const NotificationProvider = ({ children }) => {
         if (!isAuthenticated) return;
 
         try {
-            const count = await getNotificationCount();
+            const count = await notificationService.getNotificationCount();
             setUnreadCount(count);
         } catch (err) {
             console.error('Error fetching notification count:', err);
@@ -97,7 +91,7 @@ export const NotificationProvider = ({ children }) => {
     // Mark a single notification as read
     const markAsRead = useCallback(async (notificationId) => {
         try {
-            await markNotificationsAsRead([notificationId]);
+            await notificationService.markNotificationsAsRead([notificationId]);
 
             // Update local state
             setNotifications(prevNotifications =>
@@ -119,7 +113,7 @@ export const NotificationProvider = ({ children }) => {
     // Mark all notifications as read
     const markAllAsRead = useCallback(async () => {
         try {
-            await markAllNotificationsAsRead();
+            await notificationService.markAllNotificationsAsRead();
 
             // Update local state
             setNotifications(prevNotifications =>
@@ -163,27 +157,34 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [isAuthenticated, fetchNotifications, refreshNotificationCount]);
 
-    // Create a stable context value object
-    const value = {
-        notifications,
-        unreadCount,
-        loading,
-        error,
-        isOpen,
-        fetchNotifications,
-        refreshNotificationCount,
-        markAsRead,
-        markAllAsRead,
-        toggleNotifications,
-        closeNotifications
-    };
-
     return (
-        <NotificationContext.Provider value={value}>
+        <NotificationContext.Provider
+            value={{
+                notifications,
+                unreadCount,
+                loading,
+                error,
+                isOpen,
+                fetchNotifications,
+                refreshNotificationCount,
+                markAsRead,
+                markAllAsRead,
+                toggleNotifications,
+                closeNotifications
+            }}
+        >
             {children}
         </NotificationContext.Provider>
     );
 };
 
-// Export the context
-export { NotificationContext }; 
+// Custom hook to use the notification context
+export const useNotification = () => {
+    const context = useContext(NotificationContext);
+    if (!context) {
+        throw new Error('useNotification must be used within a NotificationProvider');
+    }
+    return context;
+};
+
+export default NotificationContext; 

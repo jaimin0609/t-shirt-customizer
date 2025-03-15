@@ -10,43 +10,18 @@
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
     
-    <!-- Import maps to resolve bare module specifiers in ES modules -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
-      }
-    }
-    </script>
-    
-    <!-- Add React CDN links as fallbacks with specific versions and crossorigin attribute -->
+    <!-- Add CDN React with specific version - MUST be before app script -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     
-    <!-- Initialize React globally to handle errors with context creation -->
+    <!-- Backup CDN links from alternate CDN -->
     <script>
-      // Ensure React is available globally
-      window.React = window.React || {};
-      window.ReactDOM = window.ReactDOM || {};
-      
-      // Check if React loaded properly
-      document.addEventListener('DOMContentLoaded', function() {
-        if (!window.React || typeof window.React.createElement !== 'function') {
-          console.error('React failed to load properly from CDN');
-          // Try to load React directly from backup sources
-          var reactScript = document.createElement('script');
-          reactScript.src = 'https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js';
-          reactScript.crossOrigin = 'anonymous';
-          document.head.appendChild(reactScript);
-          
-          var reactDomScript = document.createElement('script');
-          reactDomScript.src = 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js';
-          reactDomScript.crossOrigin = 'anonymous';
-          document.head.appendChild(reactDomScript);
-        }
-      });
+      // Ensure React is globally available
+      if (!window.React) {
+        console.warn('Loading React from backup CDN...');
+        document.write('<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"><\/script>');
+        document.write('<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"><\/script>');
+      }
     </script>
     
     <!-- Preconnect to Google Fonts to improve load time -->
@@ -60,8 +35,24 @@
     <!-- Fallback CSS in case bundled CSS fails to load -->
     <link rel="stylesheet" href="/fallback.css">
     
-    <!-- Failsafe: Auto-reload if page is stuck loading for too long -->
+    <!-- Verify React loaded properly -->
     <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        if (!window.React || typeof window.React.createElement !== 'function') {
+          console.error('React failed to load properly from CDN');
+          document.getElementById('root').innerHTML = `
+            <div style="padding: 20px; text-align: center; font-family: 'Roboto', sans-serif;">
+              <h2 style="color: #e53e3e; margin-bottom: 16px;">React Loading Error</h2>
+              <p>The application could not load React properly.</p>
+              <button onclick="window.location.reload()" 
+                      style="background-color: #4a6cf7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                Reload Page
+              </button>
+            </div>
+          `;
+        }
+      });
+      
       // Auto-reload if page is stuck loading for too long
       setTimeout(function() {
         // Check if the app has loaded by looking for a specific element
@@ -78,67 +69,6 @@
           errorMessage.style.display = 'block';
         }
       }, 15000);
-      
-      // Ensure React loads properly - failsafe check
-      window.addEventListener('load', function() {
-        // Verify React is available globally
-        if (!window.React) {
-          console.error('React not available globally - this may cause problems');
-          // Attempt to fix by explicitly setting window.React
-          try {
-            // Try to import React directly
-            import('https://esm.sh/react@18.2.0').then(reactModule => {
-              window.React = reactModule.default;
-              console.log('Successfully imported React as module');
-            }).catch(err => {
-              console.error('Failed to import React:', err);
-            });
-          } catch (e) {
-            console.error('Error attempting to import React:', e);
-          }
-        }
-        
-        setTimeout(function() {
-          // If we still see the loading screen after 5 seconds, something is wrong
-          if (document.querySelector('#initial-loading') && 
-              document.body.textContent.indexOf('Loading UniQVerse') !== -1 && 
-              !document.querySelector('.app-loaded')) {
-            console.warn('Application failed to initialize properly');
-            
-            // Try to clean up and show error
-            try {
-              var root = document.getElementById('root');
-              if (root) {
-                root.innerHTML = `
-                  <div style="padding: 20px; text-align: center; font-family: 'Roboto', sans-serif;">
-                    <h2 style="color: #e53e3e; margin-bottom: 16px;">Application Failed to Load</h2>
-                    <p>It seems the application is having trouble starting up. Please try the following:</p>
-                    <ul style="text-align: left; margin: 20px auto; max-width: 400px;">
-                      <li>Refresh the page</li>
-                      <li>Clear your browser cache</li>
-                      <li>Try a different browser</li>
-                    </ul>
-                    <button 
-                      onclick="window.location.reload()" 
-                      style="background-color: #4a6cf7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;"
-                    >
-                      Reload Application
-                    </button>
-                  </div>
-                `;
-                
-                // Remove loading screen
-                var loader = document.getElementById('initial-loading');
-                if (loader && loader.parentNode) {
-                  loader.parentNode.removeChild(loader);
-                }
-              }
-            } catch (e) {
-              console.error('Failed to show error message:', e);
-            }
-          }
-        }, 10000);
-      });
     </script>
     
     <!-- Inject inline critical CSS directly -->
@@ -206,7 +136,7 @@
       </div>
     </div>
     
-    <!-- Main application script -->
+    <!-- Main application script - must be after React CDN scripts -->
     <script type="module" src="/src/main.jsx"></script>
     
     <!-- Error detection and recovery -->

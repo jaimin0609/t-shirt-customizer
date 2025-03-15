@@ -1,28 +1,9 @@
-// Get React from the global scope if available or import it
-const React = window.React || React; // Try global first
-
-// Use an IIFE to handle async imports if needed
-(function initializeModule() {
-    if (!window.React) {
-        // Only attempt to import if not already available
-        import('react').then(module => {
-            window.React = module.default || module;
-            // Force a refresh if needed
-            if (typeof forceRefresh === 'function') forceRefresh();
-        }).catch(err => console.error('Failed to import React:', err));
-    }
-})();
-
-const { useState, useEffect, useContext, createContext } = React || {
-    useState: () => [null, () => { }],
-    useEffect: () => { },
-    useContext: () => ({}),
-    createContext: (val) => ({ Provider: ({ children }) => children, Consumer: ({ children }) => children })
-};
-
+// Direct import React as fallback
+import React from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
-// Create the context with a safer pattern
+// Create wishlist context with safer pattern
 const WishlistContext = createContext({
     wishlist: [],
     wishlistCount: 0,
@@ -31,15 +12,6 @@ const WishlistContext = createContext({
     isInWishlist: () => false,
     clearWishlist: () => { }
 });
-
-// Custom hook for using wishlist context
-export const useWishlist = () => {
-    const context = useContext(WishlistContext);
-    if (!context) {
-        throw new Error('useWishlist must be used within a WishlistProvider');
-    }
-    return context;
-};
 
 export const WishlistProvider = ({ children }) => {
     const [wishlist, setWishlist] = useState([]);
@@ -55,7 +27,15 @@ export const WishlistProvider = ({ children }) => {
             // Load user's wishlist
             const userWishlist = localStorage.getItem(`wishlist_${user.email}`);
             if (userWishlist) {
-                setWishlist(JSON.parse(userWishlist));
+                try {
+                    const parsedWishlist = JSON.parse(userWishlist);
+                    setWishlist(parsedWishlist);
+                    console.log('Loaded wishlist items:', parsedWishlist.length);
+                } catch (err) {
+                    console.error('Failed to parse wishlist data:', err);
+                    localStorage.removeItem(`wishlist_${user.email}`);
+                    setWishlist([]);
+                }
             } else {
                 setWishlist([]);
             }
@@ -68,7 +48,11 @@ export const WishlistProvider = ({ children }) => {
     // Save wishlist to localStorage whenever it changes
     useEffect(() => {
         if (user) {
-            localStorage.setItem(`wishlist_${user.email}`, JSON.stringify(wishlist));
+            try {
+                localStorage.setItem(`wishlist_${user.email}`, JSON.stringify(wishlist));
+            } catch (err) {
+                console.error('Failed to save wishlist to localStorage:', err);
+            }
         }
     }, [wishlist, user]);
 
@@ -115,22 +99,29 @@ export const WishlistProvider = ({ children }) => {
         setWishlist([]);
     };
 
-    // Create a stable context value object
-    const value = {
-        wishlist,
-        addToWishlist,
-        removeFromWishlist,
-        isInWishlist,
-        clearWishlist,
-        wishlistCount: wishlist.length
-    };
-
     return (
-        <WishlistContext.Provider value={value}>
+        <WishlistContext.Provider
+            value={{
+                wishlist,
+                addToWishlist,
+                removeFromWishlist,
+                isInWishlist,
+                clearWishlist,
+                wishlistCount: wishlist.length
+            }}
+        >
             {children}
         </WishlistContext.Provider>
     );
 };
 
-// Export the context
-export { WishlistContext }; 
+// Custom hook to use the wishlist context
+export const useWishlist = () => {
+    const context = useContext(WishlistContext);
+    if (!context) {
+        throw new Error('useWishlist must be used within a WishlistProvider');
+    }
+    return context;
+};
+
+export default WishlistContext; 

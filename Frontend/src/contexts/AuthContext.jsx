@@ -1,251 +1,255 @@
-// Get React from the global scope if available or import it
-const React = window.React || React; // Try global first
+// Direct import React as fallback
+import React from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import axios from 'axios';
+import { API_URL } from '../config';
 
-// Use an IIFE to handle async imports if needed
-(function initializeModule() {
-    if (!window.React) {
-        // Only attempt to import if not already available
-        import('react').then(module => {
-            window.React = module.default || module;
-            // Force a refresh if needed
-            if (typeof forceRefresh === 'function') forceRefresh();
-        }).catch(err => console.error('Failed to import React:', err));
-    }
-})();
+// Ensure React is used properly with fallback
+const ReactModule = window.React || React;
 
-const { useState, useEffect, useContext, createContext } = React || {
-    useState: () => [null, () => { }],
-    useEffect: () => { },
-    useContext: () => ({}),
-    createContext: (val) => ({ Provider: ({ children }) => children, Consumer: ({ children }) => children })
-};
-
-import { authService } from '../services/authService';
-
-// Create the context with a default value
+// Create auth context with safer pattern
 const AuthContext = createContext({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-    login: () => Promise.resolve(),
-    logout: () => Promise.resolve(),
-    register: () => Promise.resolve(),
-    updateProfile: () => Promise.resolve(),
-    requestPasswordReset: () => Promise.resolve(),
-    resetPassword: () => Promise.resolve(),
-    verifyEmail: () => Promise.resolve(),
-    changePassword: () => Promise.resolve(),
-    refreshUser: () => Promise.resolve()
+  user: null,
+  token: null,
+  loading: true,
+  error: null,
+  isAuthenticated: false,
+  login: () => {},
+  register: () => {},
+  logout: () => {},
+  updateProfile: () => {},
+  checkAuthStatus: () => {},
+  clearError: () => {}
 });
 
-// Custom hook - keep this as is
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-};
-
-// Provider component
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    // Initialize auth state
-    useEffect(() => {
-        const initializeAuth = () => {
-            try {
-                const currentUser = authService.getUser();
-                if (currentUser) {
-                    setUser(currentUser);
-                }
-            } catch (err) {
-                console.error("Error initializing auth:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+  // Check if the user is authenticated
+  const isAuthenticated = !!token;
 
-        initializeAuth();
-    }, []);
+  // Clear any errors
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
-    const login = async (email, password) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            const user = await authService.login(email, password);
-            setUser(user);
-            return user;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
+  // Log the user in
+  const login = useCallback(async (email, password) => {
+    setLoading(true);
+    clearError();
+    
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setToken(response.data.token);
+        setUser(response.data.user);
+        
+        // Save user data to localStorage for persistence
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Login successful', response.data.user);
+        return { success: true };
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to login. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [clearError]);
+
+  // Register a new user
+  const register = useCallback(async (userData) => {
+    setLoading(true);
+    clearError();
+    
+    try {
+      const response = await axios.post(`${API_URL}/auth/register`, userData);
+      
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setToken(response.data.token);
+        setUser(response.data.user);
+        
+        // Save user data to localStorage for persistence
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Registration successful', response.data.user);
+        return { success: true };
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to register. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [clearError]);
+
+  // Log the user out
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    localStorage.removeItem('wishlist');
+    setToken(null);
+    setUser(null);
+    console.log('User logged out');
+  }, []);
+
+  // Update the user's profile
+  const updateProfile = useCallback(async (profileData) => {
+    if (!token) {
+      setError('You must be logged in to update your profile');
+      return { success: false, error: 'Not authenticated' };
+    }
+    
+    setLoading(true);
+    clearError();
+    
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-    };
+      };
+      
+      const response = await axios.put(`${API_URL}/users/profile`, profileData, config);
+      
+      if (response.data && response.data.user) {
+        setUser(response.data.user);
+        
+        // Update user data in localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Profile updated successfully');
+        return { success: true };
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      console.error('Profile update error:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to update profile. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [token, clearError]);
 
-    const register = async (firstName, lastName, email, password) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            const user = await authService.register(firstName, lastName, email, password);
-            setUser(user);
-            return user;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
+  // Check the user's authentication status
+  const checkAuthStatus = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-    };
+      };
+      
+      const response = await axios.get(`${API_URL}/auth/me`, config);
+      
+      if (response.data && response.data.user) {
+        setUser(response.data.user);
+        
+        // Update user data in localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Auth status checked successfully');
+      } else {
+        // If the server doesn't recognize the token, log the user out
+        logout();
+      }
+    } catch (err) {
+      console.error('Auth status check error:', err);
+      // If there's an error (e.g., token expired), log the user out
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  }, [token, logout]);
 
-    const logout = async () => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            await authService.logout();
-            setUser(null);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
+  // Check auth status on mount and when token changes
+  useEffect(() => {
+    console.log('AuthContext: Checking auth status on mount or token change');
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // Try to load user data from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser && !user) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error('Failed to parse stored user data:', err);
+        localStorage.removeItem('user');
+      }
+    }
+  }, [user]);
+
+  // Set up axios interceptor to handle token
+  useEffect(() => {
+    const interceptor = axios.interceptors.request.use(
+      config => {
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
-    };
-
-    const updateProfile = async (userData) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            const updatedUser = await authService.updateProfile(userData);
-
-            // Force a refresh to make sure we have the latest data
-            const refreshedUser = await authService.getCurrentUser();
-            setUser(refreshedUser || updatedUser);
-
-            return refreshedUser || updatedUser;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const requestPasswordReset = async (email) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            return await authService.requestPasswordReset(email);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const resetPassword = async (token, newPassword) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            return await authService.resetPassword(token, newPassword);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const verifyEmail = async (token) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            return await authService.verifyEmail(token);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const changePassword = async (currentPassword, newPassword) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-            return await authService.changePassword(currentPassword, newPassword);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const refreshUser = async () => {
-        try {
-            console.log('AuthContext: Refreshing user data');
-            setError(null);
-            setIsLoading(true);
-
-            // Check if we have a token before trying to refresh
-            if (!authService.getToken()) {
-                console.log('AuthContext: No token available, cannot refresh user');
-                setUser(null);
-                setIsLoading(false);
-                return null;
-            }
-
-            const refreshedUser = await authService.getCurrentUser();
-
-            if (refreshedUser) {
-                console.log('AuthContext: User data refreshed successfully');
-                setUser(refreshedUser);
-                return refreshedUser;
-            } else {
-                console.log('AuthContext: Failed to get current user data, but not logging out');
-                // We don't clear the user here to prevent logout on temporary issues
-                return user; // Return current user as fallback
-            }
-        } catch (err) {
-            console.error('AuthContext: Error refreshing user:', err);
-            setError(err.message);
-
-            // Don't throw error, instead return current user as fallback
-            return user;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Create a stable context value object - important for performance
-    const value = {
-        user,
-        login,
-        logout,
-        register,
-        updateProfile,
-        requestPasswordReset,
-        resetPassword,
-        verifyEmail,
-        changePassword,
-        refreshUser,
-        isAuthenticated: !!user,
-        isLoading,
-        error
-    };
-
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
+        return config;
+      },
+      error => Promise.reject(error)
     );
+
+    return () => {
+      // Clean up interceptor on unmount
+      axios.interceptors.request.eject(interceptor);
+    };
+  }, [token]);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        error,
+        isAuthenticated,
+        login,
+        register,
+        logout,
+        updateProfile,
+        checkAuthStatus,
+        clearError
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Export the context
-export { AuthContext }; 
+// Custom hook to use the auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export default AuthContext; 
