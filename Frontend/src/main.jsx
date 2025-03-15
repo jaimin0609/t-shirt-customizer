@@ -5,46 +5,57 @@ if (typeof window !== 'undefined') {
   window.ReactDOM = window.ReactDOM || (typeof ReactDOM !== 'undefined' ? ReactDOM : null);
 }
 
-// Handle import errors with a fallback
-let ReactImport, ReactDOMImport;
+// Function to handle React imports safely
+function initializeReact() {
+  return new Promise((resolve, reject) => {
+    // If React is already available globally, use it
+    if (window.React && window.ReactDOM) {
+      resolve({
+        React: window.React,
+        ReactDOM: window.ReactDOM
+      });
+      return;
+    }
 
-try {
-  ReactImport = await import('react');
-  ReactDOMImport = await import('react-dom/client');
-
-  // If imports succeed, set them globally as backup
-  window.React = window.React || ReactImport.default;
-  window.ReactDOM = window.ReactDOM || ReactDOMImport.default;
-} catch (err) {
-  console.error('Error importing React/ReactDOM directly:', err);
-  // Use globally available React if direct import fails
+    // Try to import React
+    Promise.all([
+      import('react').catch(e => console.error('Failed to import React:', e)),
+      import('react-dom/client').catch(e => console.error('Failed to import ReactDOM:', e))
+    ])
+      .then(([reactModule, reactDomModule]) => {
+        if (reactModule && reactDomModule) {
+          window.React = reactModule.default || reactModule;
+          window.ReactDOM = reactDomModule.default || reactDomModule;
+          resolve({
+            React: window.React,
+            ReactDOM: window.ReactDOM
+          });
+        } else {
+          console.error('Failed to import React or ReactDOM');
+          reject(new Error('Failed to import React or ReactDOM'));
+        }
+      })
+      .catch(err => {
+        console.error('Error importing React:', err);
+        reject(err);
+      });
+  });
 }
 
-// Only proceed if React is available
-if (!window.React) {
-  // Show a fatal error if React is not available
-  document.body.innerHTML = `
-    <div style="padding: 20px; text-align: center; font-family: sans-serif;">
-      <h2 style="color: red;">React Loading Error</h2>
-      <p>Failed to load React library. Please try refreshing the page or checking your connection.</p>
-      <button onclick="window.location.reload()">Refresh Page</button>
-    </div>
-  `;
-  throw new Error('React could not be loaded');
+// Import App using a dynamic import to avoid top-level await
+function importApp() {
+  return import('./App.jsx').catch(err => {
+    console.error('Error importing App:', err);
+    throw err;
+  });
 }
 
-// Directly use the React we've ensured is available
-const React = window.React;
-const ReactDOM = window.ReactDOM;
-
-// Import App only after React is confirmed to be available
-import App from './App.jsx';
+// Import CSS
 import './index.css';
 
 // Log environment info for debugging
 console.log('App starting in environment:', process.env.NODE_ENV);
 console.log('Browser details:', navigator.userAgent);
-console.log('React version:', React.version);
 
 // Function to show a visible error message without relying on React
 function showFatalError(message, error) {
@@ -147,40 +158,75 @@ try {
 // Make sure document is marked as ready before React starts
 document.documentElement.classList.add('app-ready');
 
-// Render the app with robust error handling
-try {
-  console.log('Creating React root element');
-  const rootElement = document.getElementById('root');
+// Initialize the application
+function initializeApp() {
+  // First, ensure React is available
+  initializeReact()
+    .then(({ React, ReactDOM }) => {
+      // Log React version if available
+      if (React.version) {
+        console.log('React version:', React.version);
+      }
 
-  if (!rootElement) {
-    throw new Error('Root element not found in the DOM');
-  }
+      // Then import the App component
+      return importApp().then(AppModule => {
+        const App = AppModule.default;
 
-  // Use ReactDOM directly from the window global if createRoot is available
-  const rootAPI = ReactDOM.createRoot || (ReactDOMImport && ReactDOMImport.createRoot);
+        try {
+          console.log('Creating React root element');
+          const rootElement = document.getElementById('root');
 
-  if (!rootAPI) {
-    throw new Error('ReactDOM.createRoot is not available');
-  }
+          if (!rootElement) {
+            throw new Error('Root element not found in the DOM');
+          }
 
-  const root = rootAPI(rootElement);
+          // Use ReactDOM directly from the window global if createRoot is available
+          const rootAPI = ReactDOM.createRoot;
 
-  // Render with error catching
-  console.log('Rendering React application');
-  root.render(React.createElement(App));
+          if (!rootAPI) {
+            throw new Error('ReactDOM.createRoot is not available');
+          }
 
-  // Handle loading indicator after a short delay to ensure React has mounted
-  console.log('App rendered, scheduling loading indicator removal');
-  setTimeout(removeLoadingIndicator, 1000);
+          const root = rootAPI(rootElement);
 
-  // Add a backup removal timeout in case the app stalls
-  setTimeout(() => {
-    if (document.querySelector('.app-loading')) {
-      console.warn('Loader still present after 5s, forcing removal');
-      removeLoadingIndicator();
-    }
-  }, 5000);
-} catch (error) {
-  console.error('Fatal error rendering app:', error);
-  showFatalError('Error initializing application', error);
+          // Render with error catching
+          console.log('Rendering React application');
+          root.render(React.createElement(App));
+
+          // Handle loading indicator after a short delay to ensure React has mounted
+          console.log('App rendered, scheduling loading indicator removal');
+          setTimeout(removeLoadingIndicator, 1000);
+
+          // Add a backup removal timeout in case the app stalls
+          setTimeout(() => {
+            if (document.querySelector('.app-loading')) {
+              console.warn('Loader still present after 5s, forcing removal');
+              removeLoadingIndicator();
+            }
+          }, 5000);
+        } catch (error) {
+          console.error('Fatal error rendering app:', error);
+          showFatalError('Error initializing application', error);
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Failed to initialize React:', error);
+      showFatalError('Failed to load React library', error);
+
+      // Show a fallback error UI if React can't be loaded
+      const rootElement = document.getElementById('root');
+      if (rootElement) {
+        rootElement.innerHTML = `
+          <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+            <h2 style="color: red;">React Loading Error</h2>
+            <p>Failed to load React library. Please try refreshing the page or checking your connection.</p>
+            <button onclick="window.location.reload()">Refresh Page</button>
+          </div>
+        `;
+      }
+    });
 }
+
+// Start the application
+initializeApp();

@@ -1,6 +1,25 @@
 // Get React from the global scope if available or import it
-const React = window.React || (await import('react')).default;
-const { useContext, useState, useEffect, useCallback, createContext } = React;
+const React = window.React || React; // Try global first
+
+// Use an IIFE to handle async imports if needed
+(function initializeModule() {
+    if (!window.React) {
+        // Only attempt to import if not already available
+        import('react').then(module => {
+            window.React = module.default || module;
+            // Force a refresh if needed
+            if (typeof forceRefresh === 'function') forceRefresh();
+        }).catch(err => console.error('Failed to import React:', err));
+    }
+})();
+
+const { useContext, useState, useEffect, useCallback, createContext } = React || {
+    useState: () => [null, () => { }],
+    useEffect: () => { },
+    useContext: () => ({}),
+    useCallback: (cb) => cb,
+    createContext: (val) => ({ Provider: ({ children }) => children, Consumer: ({ children }) => children })
+};
 
 import {
     fetchUnreadNotifications,
