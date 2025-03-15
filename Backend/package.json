@@ -40,7 +40,8 @@
     "sharp": "^0.33.2",
     "stripe": "^14.25.0",
     "three": "^0.174.0",
-    "umzug": "^3.8.2"
+    "umzug": "^3.8.2",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

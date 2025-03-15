@@ -7,6 +7,7 @@ import { User, Customer } from '../models/index.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
@@ -417,6 +418,95 @@ router.post('/test-password', async (req, res) => {
       message: 'Error testing password', 
       error: error.message 
     });
+  }
+});
+
+// Request Password Reset
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      // Security best practice: Don't let attackers know if email exists
+      return res.status(200).json({ 
+        message: 'If your email is registered, you will receive a password reset link shortly' 
+      });
+    }
+
+    // Generate a unique reset token (UUID v4)
+    const resetToken = uuidv4();
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Store the reset token and expiry in the user record
+    await user.update({
+      resetToken,
+      resetTokenExpiry
+    });
+
+    // In a real app, you would send an email with a link to reset password
+    // For demo purposes, we'll just send the token in the response
+    console.log(`Reset token for ${email}: ${resetToken}`);
+
+    // Send email logic would go here
+    // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    // await sendEmail(email, 'Password Reset', `Click here to reset your password: ${resetLink}`);
+
+    res.status(200).json({ 
+      message: 'If your email is registered, you will receive a password reset link shortly',
+      // Only for development - remove in production
+      debug: {
+        resetToken,
+        resetLink: `${process.env.FRONTEND_URL || 'https://yourdomain.com'}/reset-password?token=${resetToken}`
+      }
+    });
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ message: 'Error processing request' });
+  }
+});
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    // Find user with this reset token and token not expired
+    const user = await User.findOne({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          [Op.gt]: new Date() // Token expiry greater than current time
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Hash the new password (password will be hashed by model hooks)
+    // Update the user's password and clear the reset token
+    await user.update({
+      password,
+      resetToken: null,
+      resetTokenExpiry: null
+    });
+
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ message: 'Error resetting password' });
   }
 });
 

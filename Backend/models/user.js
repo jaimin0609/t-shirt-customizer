@@ -42,6 +42,14 @@ const User = sequelize.define('User', {
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         defaultValue: 'active'
+    },
+    resetToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    resetTokenExpiry: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     hooks: {

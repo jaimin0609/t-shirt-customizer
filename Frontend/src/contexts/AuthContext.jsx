@@ -17,7 +17,9 @@ const AuthContext = createContext({
   updateProfile: () => { },
   checkAuthStatus: () => { },
   clearError: () => { },
-  refreshUser: () => { }
+  refreshUser: () => { },
+  requestPasswordReset: () => { },
+  resetPassword: () => { }
 });
 
 // Setup global axios configuration - moved to top to avoid initialization issues
@@ -377,6 +379,77 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, clearError]);
 
+  // Request a password reset
+  const requestPasswordReset = useCallback(async (email) => {
+    setLoading(true);
+    clearError();
+
+    try {
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      console.log('Using API URL for password reset request:', baseUrl);
+
+      const response = await axios.post(`${baseUrl}/auth/forgot-password`, { email }, {
+        headers: getCorsHeaders(),
+        timeout: 10000 // 10 second timeout
+      });
+
+      console.log('Password reset request response:', response.status);
+      return { success: true, message: response.data.message };
+    } catch (err) {
+      console.error('Password reset request error:', err);
+      let errorMessage = 'Failed to request password reset. Please try again.';
+
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your internet connection.';
+      }
+
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [clearError]);
+
+  // Reset password with token
+  const resetPassword = useCallback(async (token, newPassword) => {
+    setLoading(true);
+    clearError();
+
+    try {
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      console.log('Using API URL for password reset:', baseUrl);
+
+      const response = await axios.post(`${baseUrl}/auth/reset-password`, {
+        token,
+        password: newPassword
+      }, {
+        headers: getCorsHeaders(),
+        timeout: 10000 // 10 second timeout
+      });
+
+      console.log('Password reset response:', response.status);
+      return { success: true, message: response.data.message };
+    } catch (err) {
+      console.error('Password reset error:', err);
+      let errorMessage = 'Failed to reset password. Please try again.';
+
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your internet connection.';
+      }
+
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [clearError]);
+
   // Effect to configure axios with the token
   useEffect(() => {
     configureAxiosAuth(token);
@@ -400,7 +473,9 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     checkAuthStatus,
     clearError,
-    refreshUser
+    refreshUser,
+    requestPasswordReset,
+    resetPassword
   };
 
   return (
