@@ -40,6 +40,10 @@ axios.interceptors.request.use(
       config.headers['Content-Type'] = 'application/json';
     }
 
+    // Add CORS headers if not already present
+    config.headers['Accept'] = 'application/json';
+    config.withCredentials = true;
+
     console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
     return config;
   },
@@ -140,7 +144,9 @@ export const AuthProvider = ({ children }) => {
       const loginResponse = await axios.post(`${API_URL}/auth/login`, { email, password }, {
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        withCredentials: true, // Important for CORS
         timeout: 10000, // 10 second timeout
         validateStatus: status => status < 500 // Don't reject on 4xx status codes
       });

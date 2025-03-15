@@ -10,12 +10,35 @@ const log = (message, data) => {
 };
 
 import axios from 'axios';
+import { API_CONFIG, FALLBACK_API_URL } from '../config/api';
+
+// Utility function to handle fetch requests with CORS
+const fetchWithCORS = async (url, options = {}) => {
+    const fetchOptions = {
+        ...API_CONFIG,
+        ...options,
+    };
+    
+    try {
+        const response = await fetch(url, fetchOptions);
+        return response;
+    } catch (error) {
+        console.error(`Error fetching ${url}:`, error);
+        // Try fallback URL if main URL fails
+        if (url.startsWith(API_URL) && API_URL !== FALLBACK_API_URL) {
+            const fallbackUrl = url.replace(API_URL, FALLBACK_API_URL);
+            console.log(`Trying fallback URL: ${fallbackUrl}`);
+            return fetch(fallbackUrl, fetchOptions);
+        }
+        throw error;
+    }
+};
 
 export const productService = {
     getAllProducts: async () => {
         try {
             // Public endpoint - no token required
-            const response = await fetch(`${API_URL}/products`);
+            const response = await fetchWithCORS(`${API_URL}/products`);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));

@@ -75,12 +75,38 @@ app.use(cors({
         'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
         'https://uniqverse-8ub2zql8o-jaimin0609s-projects.vercel.app',
         'https://uniqverse.vercel.app',
-        'https://uniqverse-five.vercel.app'
+        'https://uniqverse-five.vercel.app',
+        'https://uniqverse-7dymb389x-jaimin0609s-projects.vercel.app', // Add the current deployment URL
+        'https://*.vercel.app' // Allow all Vercel subdomains for preview deployments
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+    credentials: true,
+    maxAge: 86400 // Cache preflight requests for 24 hours
 }));
+
+// Special handling for OPTIONS requests
+app.options('*', (req, res) => {
+    // Handle preflight requests
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // Cache preflight requests for 24 hours
+    res.status(204).end();
+});
+
+// Middleware to ensure CORS headers are properly set
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    next();
+});
 
 // Log CORS requests in development
 if (process.env.NODE_ENV !== 'production') {

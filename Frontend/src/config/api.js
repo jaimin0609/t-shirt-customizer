@@ -6,17 +6,17 @@
 // Determine the API base URL based on the current environment
 const determineApiUrl = () => {
     // Check if running in development or production
-    if (process.env.NODE_ENV === 'production') {
-        // For Vercel deployments, API might be at a different host or at the same origin
+    if (process.env.NODE_ENV === 'production' || import.meta.env.MODE === 'production') {
+        // For Vercel deployments, use the Render backend URL
         // First check if we have an explicit production API URL from environment
         if (import.meta.env.VITE_API_URL) {
             console.log('Using environment-provided API URL:', import.meta.env.VITE_API_URL);
             return import.meta.env.VITE_API_URL;
         }
         
-        // Default to same-origin API endpoint for production
-        console.log('Using default production API URL at /api');
-        return '/api';
+        // Default to the Render backend URL for production
+        console.log('Using default production API URL at Render');
+        return 'https://t-shirt-customizer-backend.onrender.com/api';
     }
     
     // In development, use the correct port 5002 where the backend is running
@@ -28,9 +28,19 @@ const determineApiUrl = () => {
 export const API_URL = determineApiUrl();
 
 // Fallback URL in case the main one is not available
-export const FALLBACK_API_URL = '/api';
+export const FALLBACK_API_URL = 'https://t-shirt-customizer-backend.onrender.com/api';
 
 // Export other API-related constants if needed
 export const API_TIMEOUT = 30000; // 30 seconds
+
+// API fetch configuration
+export const API_CONFIG = {
+    credentials: 'include', // Send cookies with requests
+    mode: 'cors', // Enable CORS
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    }
+};
 
 console.log('Using API URL:', API_URL); // Log the API URL being used 

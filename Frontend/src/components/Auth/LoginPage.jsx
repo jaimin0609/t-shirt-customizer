@@ -168,10 +168,12 @@ const LoginPage = () => {
                                     </label>
                                     <input
                                         id="firstName"
+                                        name="firstName"
                                         type="text"
                                         {...registerForm('firstName')}
                                         className={`mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                         placeholder="John"
+                                        autoComplete="given-name"
                                     />
                                     {errors.firstName && (
                                         <p className="mt-2 text-sm text-red-600">
@@ -185,10 +187,12 @@ const LoginPage = () => {
                                     </label>
                                     <input
                                         id="lastName"
+                                        name="lastName"
                                         type="text"
                                         {...registerForm('lastName')}
                                         className={`mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border ${errors.lastName ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                         placeholder="Doe"
+                                        autoComplete="family-name"
                                     />
                                     {errors.lastName && (
                                         <p className="mt-2 text-sm text-red-600">
@@ -205,11 +209,13 @@ const LoginPage = () => {
                             </label>
                             <input
                                 id="email"
+                                name="email"
                                 type="email"
                                 {...registerForm('email')}
                                 className={`mt-1 appearance-none rounded-md relative block w-full px-3 py-2 border ${errors.email ? 'border-red-300' : 'border-gray-300'
                                     } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                 placeholder="you@example.com"
+                                autoComplete="email"
                             />
                             {errors.email && (
                                 <p className="mt-2 text-sm text-red-600">
@@ -225,11 +231,13 @@ const LoginPage = () => {
                             <div className="mt-1 relative">
                                 <input
                                     id="password"
+                                    name="password"
                                     type={showPassword ? 'text' : 'password'}
                                     {...registerForm('password')}
                                     className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${errors.password ? 'border-red-300' : 'border-gray-300'
                                         } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                     placeholder="••••••••"
+                                    autoComplete={isRegister ? "new-password" : "current-password"}
                                 />
                                 <button
                                     type="button"
@@ -258,11 +266,13 @@ const LoginPage = () => {
                                 <div className="mt-1 relative">
                                     <input
                                         id="confirmPassword"
+                                        name="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         {...registerForm('confirmPassword')}
                                         className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
                                             } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                         placeholder="••••••••"
+                                        autoComplete="new-password"
                                     />
                                     <button
                                         type="button"
