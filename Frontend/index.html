@@ -20,6 +20,14 @@
           window.location.reload();
         }
       }, 30000);
+      
+      // Show error message after 15 seconds if app is still loading
+      setTimeout(function() {
+        const errorMessage = document.querySelector('.loading-error');
+        if (errorMessage && document.querySelector('.app-loading')) {
+          errorMessage.style.display = 'block';
+        }
+      }, 15000);
     </script>
     
     <!-- Preconnect to Google Fonts to improve load time -->
@@ -78,14 +86,6 @@
         border-radius: 0.25rem;
         color: #b91c1c;
       }
-      
-      /* Show error message after 15 seconds if app is still loading */
-      setTimeout(function() {
-        const errorMessage = document.querySelector('.loading-error');
-        if (errorMessage && document.querySelector('.app-loading')) {
-          errorMessage.style.display = 'block';
-        }
-      }, 15000);
     </style>
     
     <!-- Preload critical resources -->
