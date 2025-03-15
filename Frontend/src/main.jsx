@@ -1,14 +1,18 @@
-// Import React directly first
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+// Import React modules - we'll use these if available
+import * as ReactImport from 'react';
+import * as ReactDOMImport from 'react-dom/client';
 
-// Make sure React is defined before proceeding
-if (!React) {
-  console.warn('React not defined in module despite import - using global fallback');
+// Create local references that we can assign to
+let React = ReactImport;
+let ReactDOM = ReactDOMImport;
+
+// Check if we have a valid React instance
+if (!React || !React.createElement) {
+  console.warn('React not defined from import - using global fallback');
   // Use the globally available React from CDN
   const globalReact = window.React;
-  if (globalReact) {
-    // eslint-disable-next-line no-global-assign
+  if (globalReact && globalReact.createElement) {
+    // Use the global version instead of the import
     React = globalReact;
   } else {
     console.error('React is not available globally or via import!');
@@ -25,11 +29,11 @@ if (!React) {
 }
 
 // Similarly ensure ReactDOM is available
-if (!ReactDOM) {
-  console.warn('ReactDOM not defined in module despite import - using global fallback');
+if (!ReactDOM || !ReactDOM.createRoot) {
+  console.warn('ReactDOM not defined from import - using global fallback');
   const globalReactDOM = window.ReactDOM;
-  if (globalReactDOM) {
-    // eslint-disable-next-line no-global-assign
+  if (globalReactDOM && globalReactDOM.createRoot) {
+    // Use the global version instead of the import
     ReactDOM = globalReactDOM;
   } else {
     console.error('ReactDOM is not available globally or via import!');
@@ -46,7 +50,7 @@ import App from './App.jsx';
 import './index.css';
 
 // Log environment info for debugging
-console.log('App starting in environment:', process.env.NODE_ENV);
+console.log('App starting in environment:', import.meta.env.MODE);
 console.log('Browser details:', navigator.userAgent);
 console.log('React version:', React?.version || 'unknown');
 
