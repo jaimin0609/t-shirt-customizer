@@ -23,6 +23,25 @@
         const isTinyMCELoaded = typeof window.tinymce !== 'undefined';
         console.log('TinyMCE loaded:', isTinyMCELoaded);
         
+        // Get TinyMCE version (safely)
+        let tinymceVersion = 'Not available';
+        if (isTinyMCELoaded && window.tinymce.majorVersion) {
+            tinymceVersion = window.tinymce.majorVersion + '.' + window.tinymce.minorVersion;
+        }
+        
+        // Check editor instances (safely)
+        let editorInstances = [];
+        let activeEditors = 0;
+        if (isTinyMCELoaded && typeof window.tinymce.get === 'function') {
+            // In some TinyMCE versions, editors might not be an array
+            try {
+                editorInstances = window.tinymce.get();
+                activeEditors = editorInstances.length;
+            } catch (e) {
+                console.error('Error checking editor instances:', e);
+            }
+        }
+        
         // List all required DOM elements
         const textareaElement = document.getElementById('productDescription');
         const hasTextarea = !!textareaElement;
@@ -33,6 +52,8 @@
         const toolbars = document.querySelectorAll('.tox-toolbar__primary');
         console.log('TinyMCE containers found:', editorContainers.length);
         console.log('TinyMCE toolbars found:', toolbars.length);
+        console.log('TinyMCE version:', tinymceVersion);
+        console.log('Active TinyMCE editors:', activeEditors);
         
         // Check textarea visibility
         let textareaVisibility = 'Not found';
@@ -48,23 +69,16 @@
         }
         console.log('Textarea visibility:', textareaVisibility);
         
-        // Try to load TinyMCE dynamically
-        console.log('Attempting to load TinyMCE dynamically...');
-        
-        // Create script element
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.7.2/tinymce.min.js';
-        script.integrity = 'sha512-AzvIEbpsAxvXAR6AlL76VNSC7XFmeCK+KYYl1lQmm+MvZED4AlIAObfjCQbjZ+OLe5CF4aDV1EtDLP4FuDwE2JA==';
-        script.crossOrigin = 'anonymous';
-        
         // Create debug report HTML
         let debugReport = `
             <h3 style="color: #dc3545; margin-top: 0;">TinyMCE Debug Report</h3>
             <p><strong>TinyMCE loaded:</strong> ${isTinyMCELoaded}</p>
+            <p><strong>TinyMCE version:</strong> ${tinymceVersion}</p>
+            <p><strong>Active editors:</strong> ${activeEditors}</p>
             <p><strong>Textarea element found:</strong> ${hasTextarea}</p>
             <p><strong>TinyMCE containers found:</strong> ${editorContainers.length}</p>
             <p><strong>TinyMCE toolbars found:</strong> ${toolbars.length}</p>
-            <p><strong>Textarea visibility:</strong> ${JSON.stringify(textareaVisibility, null, 2)}</p>
+            <p><strong>Textarea visibility:</strong> <pre>${JSON.stringify(textareaVisibility, null, 2)}</pre></p>
         `;
         
         // Check for CSP issues
@@ -77,47 +91,52 @@
             console.log('CSP Found: No');
         }
         
+        // Add script sources
+        const scriptSources = Array.from(document.querySelectorAll('script[src*="tinymce"]'))
+            .map(script => script.src);
+        
+        if (scriptSources.length > 0) {
+            debugReport += `<p><strong>TinyMCE Script Sources:</strong></p><ul>`;
+            scriptSources.forEach(src => {
+                debugReport += `<li>${src}</li>`;
+            });
+            debugReport += `</ul>`;
+        } else {
+            debugReport += `<p><strong>TinyMCE Script Sources:</strong> None found</p>`;
+        }
+        
         // Check for Console errors
         debugReport += `<p><strong>Check browser console for errors</strong></p>`;
         
-        // Attempt to load script
-        script.onload = function() {
-            debugReport += `<p style="color: green;"><strong>Dynamic load:</strong> Success</p>`;
-            debugContainer.innerHTML = debugReport;
-            console.log('TinyMCE dynamically loaded successfully');
+        // Add diagnostics about base_url and suffix
+        if (isTinyMCELoaded) {
+            let baseUrl = 'Not set';
+            let suffix = 'Not set';
             
-            // Try to initialize
-            if (hasTextarea) {
-                window.tinymce.init({
-                    selector: '#productDescription',
-                    height: 300,
-                    menubar: false,
-                    plugins: 'lists link',
-                    toolbar: 'bold italic | bullist numlist | link'
-                }).then(function() {
-                    debugReport += `<p style="color: green;"><strong>Dynamic initialization:</strong> Success</p>`;
-                    debugContainer.innerHTML = debugReport;
-                    console.log('TinyMCE dynamically initialized successfully');
-                }).catch(function(error) {
-                    debugReport += `<p style="color: red;"><strong>Dynamic initialization:</strong> Failed - ${error.message}</p>`;
-                    debugContainer.innerHTML = debugReport;
-                    console.error('TinyMCE dynamic initialization failed:', error);
-                });
+            try {
+                // These might be internal and not accessible
+                if (window.tinymce.baseURL) baseUrl = window.tinymce.baseURL;
+                if (window.tinymce.suffix) suffix = window.tinymce.suffix;
+            } catch (e) {
+                console.warn('Could not access TinyMCE internal properties:', e);
             }
-        };
+            
+            debugReport += `<p><strong>Base URL:</strong> ${baseUrl}</p>`;
+            debugReport += `<p><strong>Suffix:</strong> ${suffix}</p>`;
+        }
         
-        script.onerror = function() {
-            debugReport += `<p style="color: red;"><strong>Dynamic load:</strong> Failed</p>`;
-            debugContainer.innerHTML = debugReport;
-            console.error('Failed to load TinyMCE dynamically');
-        };
-        
-        // Add actions
+        // Add direct fix button and diagnostic options
         debugReport += `
-            <div style="margin-top: 15px;">
-                <button id="tinymceDebugForceCdn1" style="margin-right: 10px; padding: 5px 10px;">Try CDN #1</button>
-                <button id="tinymceDebugForceCdn2" style="margin-right: 10px; padding: 5px 10px;">Try CDN #2</button>
-                <button id="tinymceDebugForceBasic" style="padding: 5px 10px;">Use Basic Editor</button>
+            <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
+                <button id="tinymceDebugFix" style="padding: 8px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Fix TinyMCE
+                </button>
+                <button id="tinymceDebugForceBasic" style="padding: 8px 15px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Use Basic Editor
+                </button>
+                <button id="tinymceDebugReload" style="padding: 8px 15px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Reload Page
+                </button>
             </div>
         `;
         
@@ -132,59 +151,103 @@
             document.body.insertBefore(debugContainer, document.body.firstChild);
         }
         
-        // Add script to page
-        document.head.appendChild(script);
-        
         // Add event listeners after container is added
         setTimeout(function() {
-            document.getElementById('tinymceDebugForceCdn1').addEventListener('click', function() {
-                loadFromCdn('https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js');
-            });
-            
-            document.getElementById('tinymceDebugForceCdn2').addEventListener('click', function() {
-                loadFromCdn('https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js');
+            document.getElementById('tinymceDebugFix').addEventListener('click', function() {
+                fixTinyMCE();
             });
             
             document.getElementById('tinymceDebugForceBasic').addEventListener('click', function() {
                 if (typeof createBasicEditor === 'function') {
+                    // Remove any existing TinyMCE instances first
+                    if (isTinyMCELoaded && typeof window.tinymce.remove === 'function') {
+                        window.tinymce.remove('#productDescription');
+                    }
+                    
                     createBasicEditor();
                     debugReport += `<p style="color: blue;"><strong>Basic editor:</strong> Created</p>`;
                     debugContainer.innerHTML = debugReport;
                 } else {
+                    alert('Basic editor function not found. Try reloading the page first.');
                     debugReport += `<p style="color: red;"><strong>Basic editor:</strong> Function not found</p>`;
                     debugContainer.innerHTML = debugReport;
                 }
             });
+            
+            document.getElementById('tinymceDebugReload').addEventListener('click', function() {
+                window.location.reload();
+            });
         }, 100);
         
-        // Function to load TinyMCE from a different CDN
-        function loadFromCdn(cdnUrl) {
-            const newScript = document.createElement('script');
-            newScript.src = cdnUrl;
+        // Function to fix TinyMCE
+        function fixTinyMCE() {
+            debugReport += `<p><strong>Attempting to fix TinyMCE...</strong></p>`;
+            debugContainer.innerHTML = debugReport;
             
-            newScript.onload = function() {
-                debugReport += `<p style="color: green;"><strong>Alternative CDN:</strong> Loaded from ${cdnUrl}</p>`;
+            // Create a new script element with the complete TinyMCE bundle
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js';
+            script.integrity = 'sha256-Q5efEJ9LbVH8Ky/6iBQZ1PmVyQdT7QP7pVWa0ukIo1c=';
+            script.crossOrigin = 'anonymous';
+            
+            script.onload = function() {
+                debugReport += `<p style="color: green;"><strong>TinyMCE bundle loaded successfully</strong></p>`;
                 debugContainer.innerHTML = debugReport;
-                console.log('TinyMCE loaded from alternative CDN:', cdnUrl);
                 
-                if (hasTextarea) {
-                    window.tinymce.init({
-                        selector: '#productDescription',
-                        height: 300,
-                        menubar: false,
-                        plugins: 'lists link',
-                        toolbar: 'bold italic | bullist numlist | link'
-                    });
+                // Remove any existing instances
+                if (typeof window.tinymce.remove === 'function') {
+                    window.tinymce.remove('#productDescription');
+                }
+                
+                // Initialize with minimal dependencies
+                window.tinymce.init({
+                    selector: '#productDescription',
+                    height: 300,
+                    base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2',
+                    suffix: '.min',
+                    promotion: false,
+                    branding: false,
+                    menubar: false,
+                    plugins: ['lists', 'link'],
+                    toolbar: 'bold italic | bullist numlist | link',
+                    setup: function(editor) {
+                        editor.on('init', function() {
+                            debugReport += `<p style="color: green;"><strong>TinyMCE initialized successfully</strong></p>`;
+                            debugContainer.innerHTML = debugReport;
+                        });
+                    }
+                }).then(function() {
+                    debugReport += `<p style="color: green;"><strong>TinyMCE initialization successful</strong></p>`;
+                    debugContainer.innerHTML = debugReport;
+                    
+                    // Hide the fix button in the main UI
+                    const fixButton = document.getElementById('fixRichEditorBtn');
+                    if (fixButton) fixButton.style.display = 'none';
+                    
+                }).catch(function(error) {
+                    debugReport += `<p style="color: red;"><strong>TinyMCE initialization failed:</strong> ${error.message}</p>`;
+                    debugContainer.innerHTML = debugReport;
+                    
+                    if (typeof createBasicEditor === 'function') {
+                        debugReport += `<p><strong>Falling back to basic editor...</strong></p>`;
+                        debugContainer.innerHTML = debugReport;
+                        createBasicEditor();
+                    }
+                });
+            };
+            
+            script.onerror = function() {
+                debugReport += `<p style="color: red;"><strong>Failed to load TinyMCE bundle</strong></p>`;
+                debugContainer.innerHTML = debugReport;
+                
+                if (typeof createBasicEditor === 'function') {
+                    debugReport += `<p><strong>Falling back to basic editor...</strong></p>`;
+                    debugContainer.innerHTML = debugReport;
+                    createBasicEditor();
                 }
             };
             
-            newScript.onerror = function() {
-                debugReport += `<p style="color: red;"><strong>Alternative CDN:</strong> Failed to load from ${cdnUrl}</p>`;
-                debugContainer.innerHTML = debugReport;
-                console.error('Failed to load TinyMCE from alternative CDN:', cdnUrl);
-            };
-            
-            document.head.appendChild(newScript);
+            document.head.appendChild(script);
         }
         
         // Browser compatibility check

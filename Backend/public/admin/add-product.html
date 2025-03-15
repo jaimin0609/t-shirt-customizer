@@ -9,119 +9,145 @@
     <link href="/admin/css/style.css" rel="stylesheet">
     <!-- Rich Text Editor CSS -->
     <link href="/css/rich-editor.css" rel="stylesheet">
-    <!-- Use multiple reliable CDN sources for TinyMCE with proper API key -->
+    <!-- Font Awesome for the basic editor -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- TinyMCE Complete Bundle  -->
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" integrity="sha256-Q5efEJ9LbVH8Ky/6iBQZ1PmVyQdT7QP7pVWa0ukIo1c=" crossorigin="anonymous"></script>
+    
     <script>
-        // Log TinyMCE loading attempts
-        console.log("Starting TinyMCE loading process...");
-        
-        // Track loading attempts
-        window.tinyMCELoadAttempts = 0;
-        window.tinyMCELoaded = false;
-        
-        // List of CDN sources to try
-        const tinymceSources = [
-            {
-                src: "https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.7.2/tinymce.min.js",
-                integrity: "sha512-AzvIEbpsAxvXAR6AlL76VNSC7XFmeCK+KYYl1lQmm+MvZED4AlIAObfjCQbjZ+OLe5CF4aDV1EtDLP4FuDwE2JA=="
-            },
-            {
-                src: "https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js"
-            },
-            {
-                src: "https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"
-            }
-        ];
-        
-        // Function to try loading from the next source
-        function tryNextTinyMCESource(index) {
-            if (index >= tinymceSources.length) {
-                console.error("All TinyMCE sources failed to load");
-                return;
-            }
-            
-            window.tinyMCELoadAttempts++;
-            const source = tinymceSources[index];
-            console.log(`Attempting to load TinyMCE from source ${index + 1}/${tinymceSources.length}: ${source.src}`);
-            
-            const script = document.createElement('script');
-            script.src = source.src;
-            
-            if (source.integrity) {
-                script.integrity = source.integrity;
-                script.crossOrigin = "anonymous";
-            }
-            
-            script.onload = function() {
-                console.log(`TinyMCE successfully loaded from source ${index + 1}`);
-                window.tinyMCELoaded = true;
-                
-                // Initialize TinyMCE with a delay to ensure it's fully loaded
-                setTimeout(initializeTinyMCE, 100);
-            };
-            
-            script.onerror = function() {
-                console.warn(`Failed to load TinyMCE from source ${index + 1}`);
-                // Try the next source
-                tryNextTinyMCESource(index + 1);
-            };
-            
-            document.head.appendChild(script);
-        }
-        
-        // Initialize TinyMCE with basic configuration
-        function initializeTinyMCE() {
-            if (typeof tinymce === 'undefined') {
-                console.error("TinyMCE not available even after successful script load");
-                return;
-            }
-            
-            console.log("Initializing TinyMCE...");
-            
-            tinymce.init({
-                selector: '#productDescription',
-                plugins: 'lists link',
-                toolbar: 'bold italic | bullist numlist | link',
-                height: 300,
-                menubar: false,
-                statusbar: false,
-                branding: false,
-                setup: function(editor) {
-                    editor.on('init', function() {
-                        console.log("TinyMCE initialization complete!");
-                    });
-                }
-            }).then(function() {
-                console.log("TinyMCE promise resolved successfully");
-            }).catch(function(error) {
-                console.error("TinyMCE initialization failed:", error);
-                
-                // If initialization fails, create a basic editor
-                document.addEventListener('DOMContentLoaded', function() {
-                    if (document.getElementById('productDescription')) {
-                        setTimeout(createBasicEditor, 500);
-                    }
-                });
-            });
-        }
-        
-        // Start the loading process
         document.addEventListener('DOMContentLoaded', function() {
-            // Only start if we have the textarea to edit
-            if (document.getElementById('productDescription')) {
-                // Check if TinyMCE has already loaded
-                if (!window.tinyMCELoaded && window.tinyMCELoadAttempts === 0) {
-                    tryNextTinyMCESource(0);
-                }
+            console.log("DOM loaded, initializing TinyMCE...");
+            
+            // Initialize TinyMCE with the complete bundle
+            if (typeof tinymce !== 'undefined') {
+                console.log("TinyMCE found, initializing...");
                 
-                // Set a final fallback
+                // Simple initialization with minimal dependencies
+                tinymce.init({
+                    selector: '#productDescription',
+                    height: 300,
+                    base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2',
+                    suffix: '.min',
+                    promotion: false,
+                    branding: false,
+                    menubar: false,
+                    plugins: [
+                        'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+                        'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                        'insertdatetime', 'table', 'wordcount'
+                    ],
+                    toolbar: 'undo redo | formatselect | ' +
+                        'bold italic | alignleft aligncenter alignright | ' +
+                        'bullist numlist | link',
+                    setup: function(editor) {
+                        editor.on('init', function() {
+                            console.log("TinyMCE initialized successfully");
+                        });
+                    }
+                }).then(function(editors) {
+                    console.log("TinyMCE promise resolved successfully", editors);
+                }).catch(function(error) {
+                    console.error("TinyMCE initialization failed:", error);
+                    console.log("Falling back to basic editor...");
+                    createBasicEditor();
+                });
+                
+                // Set a timeout to check if editor initialized properly
                 setTimeout(function() {
-                    if (typeof tinymce === 'undefined' || !tinymce.get('productDescription')) {
-                        console.warn("TinyMCE not available after timeout, creating basic editor");
-                        createBasicEditor();
+                    const toolbar = document.querySelector('.tox-toolbar__primary');
+                    const editor = tinymce.get('productDescription');
+                    
+                    if (!toolbar || !editor) {
+                        console.warn("TinyMCE toolbar not found after timeout");
+                        document.getElementById('fixRichEditorBtn').style.display = 'inline-block';
+                        
+                        // If we have no editor at all, create a basic one
+                        if (!editor && !document.getElementById('basicEditor')) {
+                            console.log("No TinyMCE editor found, creating basic editor");
+                            createBasicEditor();
+                        }
                     }
                 }, 3000);
+            } else {
+                console.error("TinyMCE not available, falling back to basic editor");
+                // Wait a moment to ensure DOM is fully loaded
+                setTimeout(createBasicEditor, 500);
             }
         });
+        
+        // Force TinyMCE initialization function (simplified)
+        function forceTinyMCE() {
+            console.log("Forcing TinyMCE reinitialization...");
+            
+            // Check if we're using the basic editor
+            const basicEditor = document.getElementById('basicEditor');
+            if (basicEditor) {
+                console.log("Basic editor already active, removing it first");
+                basicEditor.remove();
+            }
+            
+            // If TinyMCE is available, remove any instances first
+            if (typeof tinymce !== 'undefined') {
+                tinymce.remove('#productDescription');
+                
+                // Recreate textarea if needed
+                const textarea = document.getElementById('productDescription');
+                if (!textarea) {
+                    const newTextarea = document.createElement('textarea');
+                    newTextarea.id = 'productDescription';
+                    newTextarea.className = 'form-control';
+                    newTextarea.name = 'description';
+                    newTextarea.rows = '8';
+                    newTextarea.placeholder = 'Enter product description';
+                    newTextarea.required = true;
+                    
+                    // Find where to insert it
+                    const container = document.querySelector('.mb-4:has(label[for="productDescription"])');
+                    if (container) {
+                        // Insert after the label
+                        const label = container.querySelector('label');
+                        if (label) {
+                            label.after(newTextarea);
+                        } else {
+                            container.appendChild(newTextarea);
+                        }
+                    }
+                }
+                
+                // Try to initialize with core features only
+                tinymce.init({
+                    selector: '#productDescription',
+                    height: 300, 
+                    base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2',
+                    suffix: '.min',
+                    menubar: false,
+                    statusbar: false,
+                    branding: false,
+                    promotion: false,
+                    plugins: 'lists',
+                    toolbar: 'bold italic | bullist numlist',
+                    setup: function(editor) {
+                        editor.on('init', function() {
+                            console.log("TinyMCE reinitialized!");
+                        });
+                    }
+                }).then(function() {
+                    console.log("TinyMCE reinit successful");
+                    alert('Rich text editor successfully loaded!');
+                    // Hide the fix button
+                    document.getElementById('fixRichEditorBtn').style.display = 'none';
+                }).catch(function(error) {
+                    console.error("TinyMCE reinit failed:", error);
+                    createBasicEditor();
+                    alert('Could not initialize TinyMCE. Using basic editor instead.');
+                });
+            } else {
+                console.error("TinyMCE not available for forced initialization");
+                createBasicEditor();
+                alert('TinyMCE is not available. Using basic editor mode instead.');
+            }
+        }
     </script>
 </head>
 <body>
@@ -698,90 +724,6 @@
     <script src="/admin/js/debug-tinymce.js"></script>
 
     <script>
-        // Force TinyMCE initialization function
-        function forceTinyMCE() {
-            console.log("Forcing TinyMCE initialization...");
-            
-            // Check if we're using the basic editor
-            const basicEditor = document.getElementById('basicEditor');
-            if (basicEditor) {
-                // We're already using basic editor, no need to try TinyMCE again
-                alert('The rich text editor could not be loaded. Using basic editor mode instead.');
-                return;
-            }
-            
-            // Try to load TinyMCE from CDN again
-            var script = document.createElement('script');
-            script.src = "https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js";
-            script.onload = function() {
-                // Remove any existing instances
-                if (typeof tinymce !== 'undefined') {
-                    tinymce.remove('#productDescription');
-                    
-                    // Re-initialize TinyMCE with basic settings
-                    tinymce.init({
-                        selector: '#productDescription',
-                        plugins: 'lists link',
-                        toolbar: 'bold italic | bullist numlist | link',
-                        height: 300,
-                        menubar: false,
-                        statusbar: false,
-                        branding: false
-                    }).then(function() {
-                        alert('Rich text editor successfully loaded!');
-                    }).catch(function() {
-                        createBasicEditor();
-                        alert('Could not initialize the rich text editor. Using basic editor mode instead.');
-                    });
-                } else {
-                    createBasicEditor();
-                    alert('TinyMCE could not be loaded properly. Using basic editor mode instead.');
-                }
-            };
-            script.onerror = function() {
-                createBasicEditor();
-                alert('Could not load TinyMCE. Using basic editor mode instead.');
-            };
-            document.head.appendChild(script);
-        }
-        
-        // Check if TinyMCE toolbar is visible after a short delay
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                const toolbar = document.querySelector('.tox-toolbar__primary');
-                const fixButton = document.getElementById('fixRichEditorBtn');
-                const basicEditor = document.getElementById('basicEditor');
-                
-                // Only show fix button if we don't have a toolbar and not using basic editor
-                if (!toolbar && fixButton && !basicEditor) {
-                    fixButton.style.display = 'inline-block';
-                }
-            }, 2000);
-        });
-        
-        // Add a special handler for the form submit to ensure we capture content from any editor type
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('addProductForm');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    // Handle TinyMCE content
-                    if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
-                        const content = tinymce.get('productDescription').getContent();
-                        document.getElementById('productDescription').value = content;
-                    }
-                    
-                    // Handle basic editor content
-                    const basicEditor = document.getElementById('basicEditor');
-                    if (basicEditor) {
-                        const contentArea = basicEditor.querySelector('[contenteditable=true]');
-                        if (contentArea) {
-                            document.getElementById('productDescription').value = contentArea.innerHTML;
-                        }
-                    }
-                });
-            }
-        });
-
         function debugCategoryDropdown() {
             const categorySelect = document.getElementById('productCategory');
             if (!categorySelect) {
@@ -884,6 +826,33 @@
         function testShowToast() {
             showToast('success', 'This is a test toast message');
         }
+        
+        // Form submission handler to ensure we capture content from any editor type
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('addProductForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log("Form submit event triggered, capturing editor content");
+                    
+                    // Handle TinyMCE content
+                    if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
+                        const content = tinymce.get('productDescription').getContent();
+                        document.getElementById('productDescription').value = content;
+                        console.log("Captured content from TinyMCE editor");
+                    }
+                    
+                    // Handle basic editor content
+                    const basicEditor = document.getElementById('basicEditor');
+                    if (basicEditor) {
+                        const contentArea = basicEditor.querySelector('[contenteditable=true]');
+                        if (contentArea) {
+                            document.getElementById('productDescription').value = contentArea.innerHTML;
+                            console.log("Captured content from basic editor");
+                        }
+                    }
+                });
+            }
+        });
     </script>
 
     <!-- Accessibility fixes -->
