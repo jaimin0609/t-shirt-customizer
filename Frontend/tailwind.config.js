@@ -17,6 +17,26 @@ export default {
     'text-gray-500',
     'text-gray-700',
     'text-gray-900',
+    // Essential Flexbox utilities
+    'flex',
+    'flex-col',
+    'flex-row',
+    'items-center',
+    'justify-center',
+    'justify-between',
+    // Layout utilities
+    'container',
+    'mx-auto',
+    'w-full',
+    'h-screen',
+    // Button utilities
+    'btn',
+    'btn-primary',
+    // Spacing utilities
+    'p-4',
+    'm-4',
+    'my-4',
+    'mx-4'
   ],
   theme: {
     extend: {
@@ -56,4 +76,5 @@ export default {
     },
   },
   plugins: [],
+  important: true, // This ensures Tailwind styles take precedence
 } 

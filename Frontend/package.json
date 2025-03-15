@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "node ./vercel-setup.cjs",
-    "build": "vite build",
+    "build": "NODE_ENV=production vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

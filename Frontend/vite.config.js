@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,7 +23,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     // Ensure CSS gets properly extracted and loaded
-    cssCodeSplit: true,
+    cssCodeSplit: false,
     // Improve asset handling
     assetsInlineLimit: 4096,
     // Ensure source maps for better debugging
@@ -41,6 +42,18 @@ export default defineConfig({
           }
         }
       }
+    },
+    // Explicitly copy public directory contents to output directory
+    copyPublicDir: true
+  },
+  css: {
+    // PostCSS options explicitly defined here
+    postcss: {
+      plugins: [
+        require('tailwindcss'),
+        require('autoprefixer'),
+        process.env.NODE_ENV === 'production' ? require('cssnano')({ preset: 'default' }) : null
+      ].filter(Boolean)
     }
   },
   optimizeDeps: {
@@ -56,5 +69,7 @@ export default defineConfig({
     alias: {
       // Add any necessary aliases here
     }
-  }
+  },
+  // Custom configuration to ensure public CSS files are properly handled
+  publicDir: resolve(__dirname, 'public'),
 })
