@@ -1,7 +1,7 @@
 {
     "version": 2,
     "framework": "vite",
-    "buildCommand": "chmod +x ./vercel-prebuild.sh && ./vercel-prebuild.sh && node ./vercel-setup.cjs && npm run build",
+    "buildCommand": "chmod +x ./vercel-prebuild.sh && ./vercel-prebuild.sh && node ./vercel-setup.cjs && npm run build:vercel",
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "github": {
