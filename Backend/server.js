@@ -402,6 +402,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// Add this near the database connection setup
+// Determine if we're using PostgreSQL
+const isPostgres = process.env.DATABASE_URL ? process.env.DATABASE_URL.startsWith('postgres') : false;
+console.log(`Using ${isPostgres ? 'PostgreSQL' : 'MySQL/MariaDB'} database`);
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -539,8 +544,8 @@ async function applyResetTokenMigration() {
     // Determine the actual table name based on the dialect
     let tableName = 'Users';
     
+    // In PostgreSQL, we need to check what the actual table name is (case sensitivity)
     if (isPostgres) {
-      // In PostgreSQL, we need to check what the actual table name is (case sensitivity)
       try {
         const [tables] = await sequelize.query(
           `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'`
@@ -615,6 +620,27 @@ async function applyResetTokenMigration() {
     }
     
     console.log('Reset token migration completed successfully');
+
+    // Now update the User model to exclude these fields temporarily
+    try {
+      // Use a workaround - modify the User model attributes to exclude resetToken and resetTokenExpiry
+      // until the migration is complete to avoid errors with findOne queries
+      console.log('Adjusting User model to avoid query errors...');
+      if (models.User && models.User.rawAttributes) {
+        // Create a temporary model for initial admin check
+        models.AdminUser = sequelize.define('AdminUser', {
+          id: { type: sequelize.Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+          username: sequelize.Sequelize.STRING,
+          email: sequelize.Sequelize.STRING,
+          password: sequelize.Sequelize.STRING,
+          role: sequelize.Sequelize.STRING
+        }, {
+          tableName: tableName
+        });
+      }
+    } catch (modelError) {
+      console.error('Error adjusting User model:', modelError);
+    }
   } catch (error) {
     console.error('Error applying reset token migration:', error);
     console.log('Attempting to continue startup despite migration error');
@@ -657,28 +683,89 @@ async function startServer() {
         // Add this line before checking for admin users
         await applyResetTokenMigration();
         
-        // Check for admin user, create if it doesn't exist
-        const adminUser = await models.User.findOne({ where: { role: 'admin' } });
-        if (!adminUser) {
-            console.log('No admin user found, creating one...');
-            const hashedPassword = await bcrypt.hash('Admin123!', 10);
-            await models.User.create({
-                username: 'admin',
-                name: 'Administrator',
-                email: 'admin@example.com',
-                password: hashedPassword,
-                role: 'admin',
-                status: 'active'
-            });
-            console.log('Admin user created successfully');
-        } else {
-            // Ensure admin password is updated to the known password if env var is set
-            if (process.env.RESET_ADMIN_PASSWORD === 'true') {
-                console.log('Resetting admin password to known value due to RESET_ADMIN_PASSWORD flag');
-                const hashedPassword = await bcrypt.hash('Admin123!', 10);
-                await adminUser.update({ password: hashedPassword });
-                console.log('Admin password reset successfully');
+        try {
+            // Check for admin user, create if it doesn't exist
+            // Try using the temporary model first if it exists
+            let adminUser = null;
+            
+            if (models.AdminUser) {
+                console.log('Using temporary AdminUser model to check for admin user');
+                try {
+                    // Create a direct query instead of using the model
+                    const [adminResult] = await sequelize.query(
+                        `SELECT id, username, email, role FROM "${isPostgres ? 'Users' : 'Users'}" WHERE role = 'admin' LIMIT 1`
+                    );
+                    adminUser = adminResult.length > 0 ? adminResult[0] : null;
+                    console.log('Admin check result:', adminUser ? 'Admin user found' : 'No admin user found');
+                } catch (tempModelError) {
+                    console.error('Error using temporary model:', tempModelError);
+                }
+            } else {
+                console.log('Using User model to check for admin user');
+                adminUser = await models.User.findOne({ where: { role: 'admin' } });
             }
+            
+            if (!adminUser) {
+                console.log('No admin user found, creating one...');
+                const hashedPassword = await bcrypt.hash('Admin123!', 10);
+                
+                // Use a direct query to create admin user without resetToken fields
+                const adminData = {
+                    username: 'admin',
+                    name: 'Administrator',
+                    email: 'admin@example.com',
+                    password: hashedPassword,
+                    role: 'admin',
+                    status: 'active',
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+                
+                if (isPostgres) {
+                    const [insertResults] = await sequelize.query(
+                        `INSERT INTO "Users" (username, name, email, password, role, status, "createdAt", "updatedAt") 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+                        { 
+                            bind: [
+                                adminData.username, 
+                                adminData.name, 
+                                adminData.email, 
+                                adminData.password, 
+                                adminData.role, 
+                                adminData.status,
+                                adminData.createdAt,
+                                adminData.updatedAt
+                            ]
+                        }
+                    );
+                    console.log('Admin user created successfully via direct query:', insertResults);
+                } else {
+                    await models.User.create(adminData);
+                    console.log('Admin user created successfully via model');
+                }
+            } else {
+                // Ensure admin password is updated to the known password if env var is set
+                if (process.env.RESET_ADMIN_PASSWORD === 'true') {
+                    console.log('Resetting admin password to known value due to RESET_ADMIN_PASSWORD flag');
+                    const hashedPassword = await bcrypt.hash('Admin123!', 10);
+                    
+                    if (isPostgres) {
+                        await sequelize.query(
+                            `UPDATE "Users" SET password = $1, "updatedAt" = $2 WHERE id = $3`,
+                            { 
+                                bind: [hashedPassword, new Date(), adminUser.id] 
+                            }
+                        );
+                    } else if (adminUser.update) {
+                        await adminUser.update({ password: hashedPassword });
+                    }
+                    
+                    console.log('Admin password reset successfully');
+                }
+            }
+        } catch (adminError) {
+            console.error('Error handling admin user:', adminError);
+            console.log('Continuing with server startup despite admin user errors');
         }
         
         // Start listening for requests
@@ -686,6 +773,18 @@ async function startServer() {
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
             console.log(`Server environment: ${process.env.NODE_ENV || 'development'}`);
+            
+            // Now that the server is running, manually add the missing attributes to the User model
+            try {
+                console.log('Updating User model schema with resetToken fields');
+                if (models.User) {
+                    // Perform a sync on just this model to ensure it has the latest schema
+                    models.User.sync();
+                    console.log('User model synchronized with database');
+                }
+            } catch (modelUpdateError) {
+                console.error('Error updating User model schema:', modelUpdateError);
+            }
         });
     } catch (error) {
         console.error('Error starting server:', error);
