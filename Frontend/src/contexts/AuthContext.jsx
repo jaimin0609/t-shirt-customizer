@@ -4,9 +4,6 @@ import { createContext, useState, useEffect, useContext, useCallback } from 'rea
 import axios from 'axios';
 import { API_URL } from '../config/api';
 
-// Ensure React is used properly with fallback
-const ReactModule = window.React || React;
-
 // Create auth context with safer pattern
 const AuthContext = createContext({
   user: null,
