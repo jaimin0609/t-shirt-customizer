@@ -520,6 +520,108 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
+// In the database connection section, before 'startServer()' function call
+// Add this function:
+
+async function applyResetTokenMigration() {
+  try {
+    console.log('Checking and adding resetToken/resetTokenExpiry columns if needed...');
+    
+    // First test if we can connect and run a query
+    try {
+      await sequelize.query('SELECT 1+1 AS result');
+      console.log('Database connection verified for migration');
+    } catch (connError) {
+      console.error('Cannot connect to database for migration:', connError);
+      return; // Exit the migration function but don't throw error
+    }
+    
+    // Determine the actual table name based on the dialect
+    let tableName = 'Users';
+    
+    if (isPostgres) {
+      // In PostgreSQL, we need to check what the actual table name is (case sensitivity)
+      try {
+        const [tables] = await sequelize.query(
+          `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'`
+        );
+        
+        // Find the users table regardless of case
+        const usersTable = tables.find(t => 
+          (t.tablename || '').toLowerCase() === 'users'
+        );
+        
+        if (usersTable) {
+          tableName = usersTable.tablename;
+          console.log(`Found actual users table name: "${tableName}"`);
+        } else {
+          console.log('Could not find Users table, using default: "Users"');
+        }
+      } catch (err) {
+        console.error('Error finding actual table name:', err);
+        console.log('Proceeding with default table name: "Users"');
+      }
+    }
+    
+    // Use a PostgreSQL compatible query to check if columns exist
+    const query = isPostgres 
+      ? `
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = '${tableName.toLowerCase()}' 
+        AND column_name IN ('resettoken', 'resettokenexpiry')
+      `
+      : `
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = '${tableName}' 
+        AND COLUMN_NAME IN ('resetToken', 'resetTokenExpiry')
+      `;
+    
+    console.log('Running column check query:', query);
+    const [resetTokenResults] = await sequelize.query(query);
+    console.log('Column check results:', resetTokenResults);
+    
+    // Handle different case sensitivity between PostgreSQL and MySQL
+    const existingColumns = resetTokenResults.map(r => 
+      (r.column_name || r.COLUMN_NAME || '').toLowerCase()
+    );
+    
+    // For PostgreSQL, we need to use quoted table names
+    const tableRef = isPostgres ? `"${tableName}"` : tableName;
+    
+    // Add resetToken column if it doesn't exist
+    if (!existingColumns.includes('resettoken')) {
+      console.log(`Adding resetToken column to ${tableName} table...`);
+      await sequelize.query(`
+        ALTER TABLE ${tableRef} 
+        ADD COLUMN "${isPostgres ? 'resetToken' : 'resetToken'}" VARCHAR(255) NULL
+      `);
+      console.log('Added resetToken column successfully');
+    } else {
+      console.log('resetToken column already exists');
+    }
+    
+    // Add resetTokenExpiry column if it doesn't exist
+    if (!existingColumns.includes('resettokenexpiry')) {
+      console.log(`Adding resetTokenExpiry column to ${tableName} table...`);
+      await sequelize.query(`
+        ALTER TABLE ${tableRef} 
+        ADD COLUMN "${isPostgres ? 'resetTokenExpiry' : 'resetTokenExpiry'}" TIMESTAMP NULL
+      `);
+      console.log('Added resetTokenExpiry column successfully');
+    } else {
+      console.log('resetTokenExpiry column already exists');
+    }
+    
+    console.log('Reset token migration completed successfully');
+  } catch (error) {
+    console.error('Error applying reset token migration:', error);
+    console.log('Attempting to continue startup despite migration error');
+    // Don't throw the error, allow the server to continue starting
+  }
+}
+
 // Main startup function
 async function startServer() {
     try {
@@ -551,6 +653,9 @@ async function startServer() {
         // Sync database models
         await sequelize.sync();
         console.log('Database synchronized');
+        
+        // Add this line before checking for admin users
+        await applyResetTokenMigration();
         
         // Check for admin user, create if it doesn't exist
         const adminUser = await models.User.findOne({ where: { role: 'admin' } });
