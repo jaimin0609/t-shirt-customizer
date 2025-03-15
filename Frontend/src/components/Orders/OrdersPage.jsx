@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { orderService } from '../../services/orderService';
 
 const OrderStatus = {
@@ -14,7 +14,7 @@ const OrdersPage = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { user } = useContext(AuthContext);
+    const { user } = useAuth();
 
     // Get the image URL, handling both backend and frontend image paths
     const getImageUrl = (imagePath) => {
