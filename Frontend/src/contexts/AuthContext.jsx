@@ -1,24 +1,11 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { authService } from '../services/authService';
 
-// Create the context with a default value
-const AuthContext = React.createContext({
-    user: null,
-    login: () => { },
-    logout: () => { },
-    register: () => { },
-    updateProfile: () => { },
-    requestPasswordReset: () => { },
-    resetPassword: () => { },
-    verifyEmail: () => { },
-    changePassword: () => { },
-    refreshUser: () => { },
-    isAuthenticated: false,
-    isLoading: true,
-    error: null
-});
+// Create the context with a default value - using a safer pattern
+const AuthContext = React.createContext(null);
 
-// Add this custom hook
+// Custom hook - keep this as is
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -27,6 +14,7 @@ export const useAuth = () => {
     return context;
 };
 
+// Provider component
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,11 +23,16 @@ export const AuthProvider = ({ children }) => {
     // Initialize auth state
     useEffect(() => {
         const initializeAuth = () => {
-            const currentUser = authService.getUser();
-            if (currentUser) {
-                setUser(currentUser);
+            try {
+                const currentUser = authService.getUser();
+                if (currentUser) {
+                    setUser(currentUser);
+                }
+            } catch (err) {
+                console.error("Error initializing auth:", err);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         initializeAuth();
@@ -196,26 +189,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Create a stable context value object - important for performance
+    const value = {
+        user,
+        login,
+        logout,
+        register,
+        updateProfile,
+        requestPasswordReset,
+        resetPassword,
+        verifyEmail,
+        changePassword,
+        refreshUser,
+        isAuthenticated: !!user,
+        isLoading,
+        error
+    };
+
     return (
-        <AuthContext.Provider value={{
-            user,
-            login,
-            logout,
-            register,
-            updateProfile,
-            requestPasswordReset,
-            resetPassword,
-            verifyEmail,
-            changePassword,
-            refreshUser,
-            isAuthenticated: !!user,
-            isLoading,
-            error
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
 
-// Export the context itself
+// Export the context
 export { AuthContext }; 

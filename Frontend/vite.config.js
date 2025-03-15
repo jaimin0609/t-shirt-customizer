@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import fs from 'fs'
@@ -22,89 +22,101 @@ if (!fs.existsSync(criticalCssPath)) {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    // Security: Only allow connections from localhost
-    host: 'localhost',
-    hmr: {
-      // Only allow websocket connections from same origin
-      clientPort: 5173,
-      host: 'localhost'
-    },
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp'
-    }
-  },
-  build: {
-    outDir: 'dist',
-    // Improved CSS extraction for better compatibility
-    cssCodeSplit: true,
-    // Ensure source maps for better debugging
-    sourcemap: process.env.NODE_ENV !== 'production',
-    // Improve asset handling
-    assetsInlineLimit: 4096,
-    // Use the default CSS minifier (removed lightningcss)
-    rollupOptions: {
-      output: {
-        assetFileNames: (assetInfo) => {
-          // Place CSS files in a dedicated directory
-          if (assetInfo.name.endsWith('.css')) {
-            return 'assets/css/[name].[hash].[ext]'
-          }
-          return 'assets/[name].[hash].[ext]'
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current directory.
+  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
+  const env = loadEnv(mode, process.cwd(), '')
+
+  return {
+    plugins: [react()],
+    server: {
+      port: 3000,
+      proxy: {
+        '/api': {
+          target: env.VITE_API_URL || 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
         },
-        chunkFileNames: 'assets/js/[name].[hash].js',
-        entryFileNames: 'assets/js/[name].[hash].js',
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Group common dependencies
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react'
-            }
-            if (id.includes('three') || id.includes('@react-three')) {
-              return 'vendor-three'
-            }
-            return 'vendor'
-          }
-        }
+      },
+      hmr: {
+        // Only allow websocket connections from same origin
+        clientPort: 5173,
+        host: 'localhost'
+      },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp'
       }
     },
-    // Explicitly copy public directory contents to output directory
-    copyPublicDir: true,
-    emptyOutDir: true
-  },
-  css: {
-    // Improved PostCSS configuration
-    postcss: './postcss.config.js',
-    // Enable sourcemaps in development
-    devSourcemap: true,
-  },
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      '@fortawesome/fontawesome-svg-core',
-      '@fortawesome/free-solid-svg-icons',
-      '@fortawesome/free-regular-svg-icons',
-      '@fortawesome/free-brands-svg-icons',
-      '@fortawesome/react-fontawesome'
-    ],
-    esbuildOptions: {
-      // Fix specific issues with dependencies
-      define: {
-        global: 'globalThis'
-      }
-    }
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    }
-  },
-  // Custom configuration to ensure public CSS files are properly handled
-  publicDir: resolve(__dirname, 'public'),
+    build: {
+      outDir: 'dist',
+      // Set React as external to ensure proper loading
+      rollupOptions: {
+        // Make React and ReactDOM externals when using CDN links
+        external: mode === 'production' ? ['react', 'react-dom'] : [],
+        output: {
+          manualChunks: {
+            // Group React and related libraries in a vendor chunk
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            // Group UI components in their own chunk
+            'vendor-ui': ['react-toastify'],
+            // Group context-related code
+            'app-contexts': [
+              './src/contexts/AuthContext.jsx',
+              './src/contexts/CartContext.jsx', 
+              './src/contexts/WishlistContext.jsx',
+              './src/contexts/NotificationContext.jsx'
+            ],
+          },
+          // Properly resolve external imports
+          globals: {
+            react: 'React',
+            'react-dom': 'ReactDOM',
+          },
+          assetFileNames: (assetInfo) => {
+            // Place CSS files in a dedicated directory
+            if (assetInfo.name.endsWith('.css')) {
+              return 'assets/css/[name].[hash].[ext]'
+            }
+            return 'assets/[name].[hash].[ext]'
+          },
+          chunkFileNames: 'assets/js/[name].[hash].js',
+          entryFileNames: 'assets/js/[name].[hash].js',
+        },
+      },
+      // Enable source maps for debugging in development
+      sourcemap: mode !== 'production',
+      // Ensure CSS is processed correctly
+      cssCodeSplit: true,
+      // Configure minification to preserve React global references
+      minify: mode === 'production' ? 'esbuild' : false,
+      // Handle dynamic imports gracefully
+      dynamicImportVarsOptions: {
+        warnOnError: true,
+      },
+      // Explicitly copy public directory contents to output directory
+      copyPublicDir: true,
+      emptyOutDir: true,
+    },
+    css: {
+      // Improved PostCSS configuration
+      postcss: './postcss.config.js',
+      // Enable sourcemaps in development
+      devSourcemap: true,
+    },
+    optimizeDeps: {
+      // Make sure React is properly pre-bundled
+      include: ['react', 'react-dom', 'react-router-dom', 'react-toastify'],
+      // Ensure dependencies aren't optimized multiple times
+      force: mode === 'development',
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './src'),
+      },
+    },
+    // Custom configuration to ensure public CSS files are properly handled
+    publicDir: resolve(__dirname, 'public'),
+  }
 })

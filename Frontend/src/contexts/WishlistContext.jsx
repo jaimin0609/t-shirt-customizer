@@ -1,15 +1,9 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
-// Create the context
-const WishlistContext = React.createContext({
-    wishlist: [],
-    addToWishlist: () => { },
-    removeFromWishlist: () => { },
-    isInWishlist: () => false,
-    clearWishlist: () => { },
-    wishlistCount: 0
-});
+// Create the context with a safer pattern
+const WishlistContext = React.createContext(null);
 
 // Custom hook for using wishlist context
 export const useWishlist = () => {
@@ -94,21 +88,22 @@ export const WishlistProvider = ({ children }) => {
         setWishlist([]);
     };
 
+    // Create a stable context value object
+    const value = {
+        wishlist,
+        addToWishlist,
+        removeFromWishlist,
+        isInWishlist,
+        clearWishlist,
+        wishlistCount: wishlist.length
+    };
+
     return (
-        <WishlistContext.Provider
-            value={{
-                wishlist,
-                addToWishlist,
-                removeFromWishlist,
-                isInWishlist,
-                clearWishlist,
-                wishlistCount: wishlist.length
-            }}
-        >
+        <WishlistContext.Provider value={value}>
             {children}
         </WishlistContext.Provider>
     );
 };
 
-// Export the context itself
+// Export the context
 export { WishlistContext }; 

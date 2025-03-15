@@ -1,5 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+
+// Ensure environment for React is properly set up
+window.React = React; // Make React available globally to help with potential errors
+
+// Only import App after React is fully set up
 import App from './App.jsx'
 import './index.css'
 
@@ -60,8 +65,31 @@ function removeLoadingIndicator() {
 
 // Global error handlers
 window.addEventListener('error', (event) => {
-  console.error('Global error caught:', event.error);
-  showFatalError('An unexpected error occurred', event.error);
+  // Check if this is a React-related error
+  const errorString = event.error ? event.error.toString() : '';
+  if (errorString.includes('React') ||
+    errorString.includes('createContext') ||
+    errorString.includes('Cannot read properties')) {
+    console.error('React-related error caught:', event.error);
+
+    // Add detail about the error
+    let errorDetails = errorString;
+    if (event.filename) {
+      errorDetails += ` in ${event.filename}`;
+    }
+
+    // Show specific error message for createContext issues
+    if (errorString.includes('createContext')) {
+      showFatalError('React initialization error: Problem with context creation',
+        'This is likely due to an issue with how React contexts are loaded. ' +
+        'Please try clearing your browser cache and reloading.');
+    } else {
+      showFatalError('An unexpected React error occurred', errorDetails);
+    }
+  } else {
+    console.error('Global error caught:', event.error);
+    showFatalError('An unexpected error occurred', event.error);
+  }
 });
 
 window.addEventListener('unhandledrejection', (event) => {
@@ -82,17 +110,23 @@ try {
   console.warn('Feature detection error:', e);
 }
 
-// Render the app with simplified error handling
+// Make sure document is marked as ready before React starts
+document.documentElement.classList.add('app-ready');
+
+// Render the app with robust error handling
 try {
   console.log('Creating React root element');
-  const root = ReactDOM.createRoot(document.getElementById('root'));
+  const rootElement = document.getElementById('root');
+
+  if (!rootElement) {
+    throw new Error('Root element not found in the DOM');
+  }
+
+  const root = ReactDOM.createRoot(rootElement);
 
   // Render with error catching
   console.log('Rendering React application');
-  root.render(
-    // Removed StrictMode temporarily as it can cause double-mounting and confuse debugging
-    <App />
-  );
+  root.render(<App />);
 
   // Handle loading indicator after a short delay to ensure React has mounted
   console.log('App rendered, scheduling loading indicator removal');

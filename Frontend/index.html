@@ -10,6 +10,10 @@
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
     
+    <!-- Add React CDN links as fallbacks -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
     <!-- Preconnect to Google Fonts to improve load time -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,6 +46,11 @@
       
       // Ensure React loads properly - failsafe check
       window.addEventListener('load', function() {
+        // Verify React is available globally
+        if (!window.React) {
+          console.error('React not available globally - this may cause problems');
+        }
+        
         setTimeout(function() {
           // If we still see the loading screen after 5 seconds, something is wrong
           if (document.querySelector('#initial-loading') && 
@@ -153,8 +162,29 @@
     <!-- Main application script -->
     <script type="module" src="/src/main.jsx"></script>
     
-    <!-- Fallback script to remove loader if main script fails -->
+    <!-- Error detection and recovery -->
     <script>
+      // This script fires if there's an issue loading our main bundle
+      var scriptLoadError = false;
+      
+      window.addEventListener('error', function(event) {
+        // Check if the error is related to script loading
+        if (event.target && event.target.tagName === 'SCRIPT') {
+          scriptLoadError = true;
+          console.error('Script loading error:', event);
+          
+          // Show error message for script loading issues
+          var errorMsg = document.querySelector('.loading-error');
+          if (errorMsg) {
+            errorMsg.innerHTML = `
+              Error loading application scripts. Please <button onclick="window.location.reload()">refresh the page</button>
+              or try clearing your browser cache.
+            `;
+            errorMsg.style.display = 'block';
+          }
+        }
+      }, true); // Use capturing to catch the event
+      
       // Final failsafe to ensure loader is removed
       window.addEventListener('load', function() {
         setTimeout(function() {

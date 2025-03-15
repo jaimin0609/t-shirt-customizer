@@ -1,20 +1,9 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
-// Create the context
-const CartContext = React.createContext({
-    cart: [],
-    orders: [],
-    appliedCoupon: null,
-    addToCart: () => { },
-    removeFromCart: () => { },
-    updateQuantity: () => { },
-    clearCart: () => { },
-    createOrder: () => { },
-    applyCoupon: () => { },
-    removeCoupon: () => { },
-    cartCount: 0
-});
+// Create the context with a safer pattern
+const CartContext = React.createContext(null);
 
 // Custom hook for using cart context
 export const useCart = () => {
@@ -288,24 +277,27 @@ export const CartProvider = ({ children }) => {
 
     const PLACEHOLDER_IMAGE = '/assets/placeholder-product.jpg';
 
+    // Create a stable context value object
+    const value = {
+        cart,
+        orders,
+        appliedCoupon,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        createOrder,
+        applyCoupon,
+        removeCoupon,
+        cartCount: cart.reduce((total, item) => total + item.quantity, 0)
+    };
+
     return (
-        <CartContext.Provider value={{
-            cart,
-            orders,
-            appliedCoupon,
-            addToCart,
-            removeFromCart,
-            updateQuantity,
-            clearCart,
-            createOrder,
-            applyCoupon,
-            removeCoupon,
-            cartCount: cart.reduce((total, item) => total + item.quantity, 0)
-        }}>
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     );
 };
 
-// Export the context itself
+// Export the context
 export { CartContext }; 

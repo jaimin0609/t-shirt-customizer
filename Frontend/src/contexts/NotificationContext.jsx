@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import {
     fetchUnreadNotifications,
     getNotificationCount,
@@ -9,15 +10,8 @@ import {
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
 
-// Create the notification context
-const NotificationContext = React.createContext({
-    notifications: [],
-    unreadCount: 0,
-    addNotification: () => { },
-    markAsRead: () => { },
-    clearNotifications: () => { },
-    showToast: () => { }
-});
+// Create the notification context with a safer pattern
+const NotificationContext = React.createContext(null);
 
 // Custom hook to use the notification context
 export const useNotification = () => {
@@ -136,7 +130,7 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [isAuthenticated, fetchNotifications, refreshNotificationCount]);
 
-    // Value object to be provided by the context
+    // Create a stable context value object
     const value = {
         notifications,
         unreadCount,
@@ -158,5 +152,5 @@ export const NotificationProvider = ({ children }) => {
     );
 };
 
-// Export the context itself
+// Export the context
 export { NotificationContext }; 
