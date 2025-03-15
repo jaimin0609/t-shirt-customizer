@@ -1,9 +1,23 @@
-import React from 'react';
-import { useState, useEffect, useContext } from 'react';
+// Get React from the global scope if available or import it
+const React = window.React || (await import('react')).default;
+const { useState, useEffect, useContext, createContext } = React;
+
 import { useAuth } from './AuthContext';
 
 // Create the context with a safer pattern
-const CartContext = React.createContext(null);
+const CartContext = createContext({
+    cart: [],
+    orders: [],
+    appliedCoupon: null,
+    cartCount: 0,
+    addToCart: () => { },
+    removeFromCart: () => { },
+    updateQuantity: () => { },
+    clearCart: () => { },
+    createOrder: () => { },
+    applyCoupon: () => Promise.resolve({ success: false }),
+    removeCoupon: () => { }
+});
 
 // Custom hook for using cart context
 export const useCart = () => {

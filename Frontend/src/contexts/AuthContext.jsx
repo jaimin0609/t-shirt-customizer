@@ -1,9 +1,26 @@
-import React from 'react';
-import { useState, useEffect, useContext } from 'react';
+// Get React from the global scope if available or import it
+const React = window.React || (await import('react')).default;
+const { useState, useEffect, useContext, createContext } = React;
+
 import { authService } from '../services/authService';
 
 // Create the context with a default value - using a safer pattern
-const AuthContext = React.createContext(null);
+// If React is loaded from global properly, use that, otherwise use a safe fallback
+const AuthContext = createContext({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    error: null,
+    login: () => Promise.resolve(),
+    logout: () => Promise.resolve(),
+    register: () => Promise.resolve(),
+    updateProfile: () => Promise.resolve(),
+    requestPasswordReset: () => Promise.resolve(),
+    resetPassword: () => Promise.resolve(),
+    verifyEmail: () => Promise.resolve(),
+    changePassword: () => Promise.resolve(),
+    refreshUser: () => Promise.resolve()
+});
 
 // Custom hook - keep this as is
 export const useAuth = () => {

@@ -1,9 +1,18 @@
-import React from 'react';
-import { useState, useEffect, useContext } from 'react';
+// Get React from the global scope if available or import it
+const React = window.React || (await import('react')).default;
+const { useState, useEffect, useContext, createContext } = React;
+
 import { useAuth } from './AuthContext';
 
 // Create the context with a safer pattern
-const WishlistContext = React.createContext(null);
+const WishlistContext = createContext({
+    wishlist: [],
+    wishlistCount: 0,
+    addToWishlist: () => { },
+    removeFromWishlist: () => { },
+    isInWishlist: () => false,
+    clearWishlist: () => { }
+});
 
 // Custom hook for using wishlist context
 export const useWishlist = () => {

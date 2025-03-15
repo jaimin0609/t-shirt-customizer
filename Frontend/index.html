@@ -10,9 +10,44 @@
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
     
-    <!-- Add React CDN links as fallbacks -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Import maps to resolve bare module specifiers in ES modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+      }
+    }
+    </script>
+    
+    <!-- Add React CDN links as fallbacks with specific versions and crossorigin attribute -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Initialize React globally to handle errors with context creation -->
+    <script>
+      // Ensure React is available globally
+      window.React = window.React || {};
+      window.ReactDOM = window.ReactDOM || {};
+      
+      // Check if React loaded properly
+      document.addEventListener('DOMContentLoaded', function() {
+        if (!window.React || typeof window.React.createElement !== 'function') {
+          console.error('React failed to load properly from CDN');
+          // Try to load React directly from backup sources
+          var reactScript = document.createElement('script');
+          reactScript.src = 'https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js';
+          reactScript.crossOrigin = 'anonymous';
+          document.head.appendChild(reactScript);
+          
+          var reactDomScript = document.createElement('script');
+          reactDomScript.src = 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js';
+          reactDomScript.crossOrigin = 'anonymous';
+          document.head.appendChild(reactDomScript);
+        }
+      });
+    </script>
     
     <!-- Preconnect to Google Fonts to improve load time -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,6 +84,18 @@
         // Verify React is available globally
         if (!window.React) {
           console.error('React not available globally - this may cause problems');
+          // Attempt to fix by explicitly setting window.React
+          try {
+            // Try to import React directly
+            import('https://esm.sh/react@18.2.0').then(reactModule => {
+              window.React = reactModule.default;
+              console.log('Successfully imported React as module');
+            }).catch(err => {
+              console.error('Failed to import React:', err);
+            });
+          } catch (e) {
+            console.error('Error attempting to import React:', e);
+          }
         }
         
         setTimeout(function() {

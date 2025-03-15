@@ -1,5 +1,7 @@
-import React from 'react';
-import { useContext, useState, useEffect, useCallback } from 'react';
+// Get React from the global scope if available or import it
+const React = window.React || (await import('react')).default;
+const { useContext, useState, useEffect, useCallback, createContext } = React;
+
 import {
     fetchUnreadNotifications,
     getNotificationCount,
@@ -11,7 +13,19 @@ import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
 
 // Create the notification context with a safer pattern
-const NotificationContext = React.createContext(null);
+const NotificationContext = createContext({
+    notifications: [],
+    unreadCount: 0,
+    loading: false,
+    error: null,
+    isOpen: false,
+    fetchNotifications: () => Promise.resolve(),
+    refreshNotificationCount: () => Promise.resolve(),
+    markAsRead: () => Promise.resolve(),
+    markAllAsRead: () => Promise.resolve(),
+    toggleNotifications: () => { },
+    closeNotifications: () => { }
+});
 
 // Custom hook to use the notification context
 export const useNotification = () => {

@@ -1,18 +1,52 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+// Ensure React is available globally first, before any imports
+if (typeof window !== 'undefined') {
+  // Make React available globally to help with context errors
+  window.React = window.React || (typeof React !== 'undefined' ? React : null);
+  window.ReactDOM = window.ReactDOM || (typeof ReactDOM !== 'undefined' ? ReactDOM : null);
+}
 
-// Ensure environment for React is properly set up
-window.React = React; // Make React available globally to help with potential errors
+// Handle import errors with a fallback
+let ReactImport, ReactDOMImport;
 
-// Only import App after React is fully set up
-import App from './App.jsx'
-import './index.css'
+try {
+  ReactImport = await import('react');
+  ReactDOMImport = await import('react-dom/client');
+
+  // If imports succeed, set them globally as backup
+  window.React = window.React || ReactImport.default;
+  window.ReactDOM = window.ReactDOM || ReactDOMImport.default;
+} catch (err) {
+  console.error('Error importing React/ReactDOM directly:', err);
+  // Use globally available React if direct import fails
+}
+
+// Only proceed if React is available
+if (!window.React) {
+  // Show a fatal error if React is not available
+  document.body.innerHTML = `
+    <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+      <h2 style="color: red;">React Loading Error</h2>
+      <p>Failed to load React library. Please try refreshing the page or checking your connection.</p>
+      <button onclick="window.location.reload()">Refresh Page</button>
+    </div>
+  `;
+  throw new Error('React could not be loaded');
+}
+
+// Directly use the React we've ensured is available
+const React = window.React;
+const ReactDOM = window.ReactDOM;
+
+// Import App only after React is confirmed to be available
+import App from './App.jsx';
+import './index.css';
 
 // Log environment info for debugging
 console.log('App starting in environment:', process.env.NODE_ENV);
 console.log('Browser details:', navigator.userAgent);
+console.log('React version:', React.version);
 
-// Quick function to show a visible error message without relying on React
+// Function to show a visible error message without relying on React
 function showFatalError(message, error) {
   console.error(message, error);
   const rootElement = document.getElementById('root');
@@ -122,11 +156,18 @@ try {
     throw new Error('Root element not found in the DOM');
   }
 
-  const root = ReactDOM.createRoot(rootElement);
+  // Use ReactDOM directly from the window global if createRoot is available
+  const rootAPI = ReactDOM.createRoot || (ReactDOMImport && ReactDOMImport.createRoot);
+
+  if (!rootAPI) {
+    throw new Error('ReactDOM.createRoot is not available');
+  }
+
+  const root = rootAPI(rootElement);
 
   // Render with error catching
   console.log('Rendering React application');
-  root.render(<App />);
+  root.render(React.createElement(App));
 
   // Handle loading indicator after a short delay to ensure React has mounted
   console.log('App rendered, scheduling loading indicator removal');
