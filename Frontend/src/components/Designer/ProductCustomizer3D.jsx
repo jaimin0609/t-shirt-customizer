@@ -220,7 +220,7 @@ const ProductCustomizer3D = ({ onSaveDesign, initialProductType = 'tshirt' }) =>
             // Setup renderer
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.shadowMap.enabled = true;
             mountRef.current.appendChild(renderer.domElement);
 
@@ -517,7 +517,7 @@ const ProductCustomizer3D = ({ onSaveDesign, initialProductType = 'tshirt' }) =>
                 const textureLoader = new THREE.TextureLoader();
                 const texture = textureLoader.load(dataURL);
                 texture.flipY = false;
-                texture.encoding = THREE.sRGBEncoding;
+                texture.colorSpace = THREE.SRGBColorSpace;
 
                 currentModel.traverse((node) => {
                     if (node.isMesh) {

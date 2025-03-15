@@ -27,8 +27,7 @@ export default defineConfig({
     assetsInlineLimit: 4096,
     // Ensure source maps for better debugging
     sourcemap: true,
-    // Improve CSS minification
-    cssMinify: 'lightningcss',
+    // Use the default CSS minifier (removed lightningcss)
     rollupOptions: {
       output: {
         // Ensure assets are properly hashed for cache control
