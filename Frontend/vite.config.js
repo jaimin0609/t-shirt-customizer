@@ -20,20 +20,16 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist',
-    rollupOptions: {
-      // Explicitly mark FontAwesome modules as external if they can't be resolved
-      external: [
-        // Add these only if they can't be resolved during build
-        ...(process.env.NODE_ENV === 'production' ? [
-          '@fortawesome/react-fontawesome',
-          '@fortawesome/fontawesome-svg-core',
-          '@fortawesome/free-solid-svg-icons',
-          '@fortawesome/free-regular-svg-icons',
-          '@fortawesome/free-brands-svg-icons'
-        ] : [])
-      ]
-    }
+    outDir: 'dist'
+  },
+  optimizeDeps: {
+    include: [
+      '@fortawesome/fontawesome-svg-core',
+      '@fortawesome/free-solid-svg-icons',
+      '@fortawesome/free-regular-svg-icons',
+      '@fortawesome/free-brands-svg-icons',
+      '@fortawesome/react-fontawesome'
+    ]
   },
   resolve: {
     alias: {

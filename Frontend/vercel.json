@@ -1,7 +1,13 @@
 {
-    "buildCommand": "npm run build",
-    "outputDirectory": "dist",
+    "version": 2,
     "framework": "vite",
+    "buildCommand": "npm install --no-save @fortawesome/fontawesome-svg-core @fortawesome/free-brands-svg-icons @fortawesome/free-regular-svg-icons @fortawesome/free-solid-svg-icons @fortawesome/react-fontawesome && npm run build",
+    "outputDirectory": "dist",
+    "installCommand": "npm install",
+    "github": {
+        "enabled": true,
+        "silent": false
+    },
     "rewrites": [
         {
             "source": "/api/:path*",
