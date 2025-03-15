@@ -1,6 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+import fs from 'fs'
+
+// Ensure critical CSS file exists
+const criticalCssPath = resolve(__dirname, 'public/critical.css')
+if (!fs.existsSync(criticalCssPath)) {
+  try {
+    // If missing, create a simple version
+    const basicCSS = `
+      /* Minimal critical CSS for initial render */
+      body{margin:0;font-family:'Roboto','Montserrat',sans-serif;}
+      .flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}
+      .w-full{width:100%}.text-center{text-align:center}.bg-white{background-color:white}
+    `
+    fs.writeFileSync(criticalCssPath, basicCSS)
+    console.log('Created basic critical.css file')
+  } catch (err) {
+    console.error('Failed to create critical.css file:', err)
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,52 +41,68 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Ensure CSS gets properly extracted and loaded
-    cssCodeSplit: false,
+    // Improved CSS extraction for better compatibility
+    cssCodeSplit: true,
+    // Ensure source maps for better debugging
+    sourcemap: process.env.NODE_ENV !== 'production',
     // Improve asset handling
     assetsInlineLimit: 4096,
-    // Ensure source maps for better debugging
-    sourcemap: true,
     // Use the default CSS minifier (removed lightningcss)
     rollupOptions: {
       output: {
-        // Ensure assets are properly hashed for cache control
-        assetFileNames: 'assets/[name].[hash].[ext]',
-        chunkFileNames: 'assets/[name].[hash].js',
-        entryFileNames: 'assets/[name].[hash].js',
-        // Manually chunk the CSS to ensure it loads correctly
+        assetFileNames: (assetInfo) => {
+          // Place CSS files in a dedicated directory
+          if (assetInfo.name.endsWith('.css')) {
+            return 'assets/css/[name].[hash].[ext]'
+          }
+          return 'assets/[name].[hash].[ext]'
+        },
+        chunkFileNames: 'assets/js/[name].[hash].js',
+        entryFileNames: 'assets/js/[name].[hash].js',
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return 'vendor';
+            // Group common dependencies
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('three') || id.includes('@react-three')) {
+              return 'vendor-three'
+            }
+            return 'vendor'
           }
         }
       }
     },
     // Explicitly copy public directory contents to output directory
-    copyPublicDir: true
+    copyPublicDir: true,
+    emptyOutDir: true
   },
   css: {
-    // PostCSS options explicitly defined here
-    postcss: {
-      plugins: [
-        require('tailwindcss'),
-        require('autoprefixer'),
-        process.env.NODE_ENV === 'production' ? require('cssnano')({ preset: 'default' }) : null
-      ].filter(Boolean)
-    }
+    // Improved PostCSS configuration
+    postcss: './postcss.config.js',
+    // Enable sourcemaps in development
+    devSourcemap: true,
   },
   optimizeDeps: {
     include: [
+      'react',
+      'react-dom',
       '@fortawesome/fontawesome-svg-core',
       '@fortawesome/free-solid-svg-icons',
       '@fortawesome/free-regular-svg-icons',
       '@fortawesome/free-brands-svg-icons',
       '@fortawesome/react-fontawesome'
-    ]
+    ],
+    esbuildOptions: {
+      // Fix specific issues with dependencies
+      define: {
+        global: 'globalThis'
+      }
+    }
   },
   resolve: {
     alias: {
-      // Add any necessary aliases here
+      '@': resolve(__dirname, 'src'),
     }
   },
   // Custom configuration to ensure public CSS files are properly handled

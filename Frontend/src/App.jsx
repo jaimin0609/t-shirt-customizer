@@ -6,28 +6,57 @@ import MainLayout from './layouts/MainLayout';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { initAnalytics } from './services/analyticsService';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
-  // Initialize analytics on component mount
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Initialize analytics and mark app as loaded
   useEffect(() => {
-    initAnalytics();
+    try {
+      initAnalytics();
+    } catch (error) {
+      console.error('Analytics initialization failed:', error);
+      // Continue loading the app even if analytics fails
+    }
+
+    // Mark app as loaded after a short delay to ensure CSS is applied
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <NotificationProvider>
-              <MainLayout />
-              <ToastContainer position="bottom-right" autoClose={3000} />
-            </NotificationProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <NotificationProvider>
+                <div className={`app-container ${isLoaded ? 'app-loaded' : ''}`}>
+                  <MainLayout />
+                  <ToastContainer
+                    position="bottom-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                  />
+                </div>
+              </NotificationProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

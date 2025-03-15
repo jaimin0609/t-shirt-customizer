@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Critical CSS loaded directly in head - not using dynamic path to ensure it's copied -->
+    <!-- Critical CSS loaded directly in head -->
     <link rel="stylesheet" href="/critical.css">
     
     <!-- Fallback CSS in case bundled CSS fails to load -->
@@ -28,6 +28,33 @@
       .justify-center{justify-content:center}.w-full{width:100%}.text-center{text-align:center}
       .text-gray-700{color:#374151}.bg-white{background-color:#fff}
       body{margin:0;font-family:'Roboto','Montserrat',sans-serif}
+      
+      /* Add loading indicator styles */
+      .app-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        z-index: 9999;
+      }
+      .app-loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #4a6cf7;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
     
     <!-- Preload critical resources -->
@@ -39,7 +66,14 @@
     <title>UniQVerse - Custom T-Shirt Design</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading state that will be replaced by React -->
+      <div class="app-loading">
+        <img src="/logo.png" alt="UniQVerse Logo" width="120" height="120">
+        <div class="app-loading-spinner"></div>
+        <p>Loading UniQVerse...</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

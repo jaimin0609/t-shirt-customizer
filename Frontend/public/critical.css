@@ -28,12 +28,26 @@ body {
 }
 
 /* Basic layout */
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Essential flexbox utilities */
 .flex {
     display: flex;
 }
 
 .flex-col {
     flex-direction: column;
+}
+
+.flex-row {
+    flex-direction: row;
 }
 
 .items-center {
@@ -44,190 +58,110 @@ body {
     justify-content: center;
 }
 
-.w-full {
-    width: 100%;
+.justify-between {
+    justify-content: space-between;
 }
 
-.h-screen {
-    height: 100vh;
-}
-
-.text-center {
-    text-align: center;
-}
-
-/* Text sizing */
-.text-sm {
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-}
-
-.text-base {
-    font-size: 1rem;
-    line-height: 1.5rem;
-}
-
-.text-lg {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-}
-
-.text-xl {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
-}
-
-.text-2xl {
-    font-size: 1.5rem;
-    line-height: 2rem;
-}
-
-/* Colors */
-.text-primary-500 {
-    color: #4a6cf7;
-}
-
-.bg-primary-500 {
-    background-color: #4a6cf7;
-}
-
-.bg-white {
-    background-color: #ffffff;
-}
-
-.text-white {
-    color: #ffffff;
-}
-
-.text-gray-900 {
-    color: #111827;
-}
-
-.text-gray-700 {
-    color: #374151;
-}
-
-.text-gray-500 {
-    color: #6b7280;
-}
-
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1rem;
-    font-weight: 500;
-    transition-property: color, background-color, border-color;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-}
-
-.btn-primary {
-    background-color: #4a6cf7;
-    color: #ffffff;
-}
-
-.btn-primary:hover {
-    background-color: #3a57d7;
-}
-
-/* Form elements */
-.form-input {
-    display: block;
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    background-color: #ffffff;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #374151;
-}
-
-/* Layout utilities */
-.container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-
-@media (min-width: 640px) {
-    .container {
-        max-width: 640px;
-    }
-}
-
-@media (min-width: 768px) {
-    .container {
-        max-width: 768px;
-    }
-}
-
-@media (min-width: 1024px) {
-    .container {
-        max-width: 1024px;
-    }
-}
-
-@media (min-width: 1280px) {
-    .container {
-        max-width: 1280px;
-    }
-}
-
-/* Spacing utilities */
-.m-0 {
-    margin: 0;
-}
-
-.m-1 {
-    margin: 0.25rem;
-}
-
-.m-2 {
-    margin: 0.5rem;
+/* Essential spacing */
+.p-4 {
+    padding: 1rem;
 }
 
 .m-4 {
     margin: 1rem;
 }
 
-.mt-4 {
+.my-4 {
     margin-top: 1rem;
-}
-
-.mb-4 {
     margin-bottom: 1rem;
 }
 
-.p-0 {
-    padding: 0;
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.p-1 {
-    padding: 0.25rem;
+/* Essential typography */
+.text-center {
+    text-align: center;
 }
 
-.p-2 {
-    padding: 0.5rem;
+.text-lg {
+    font-size: 1.125rem;
 }
 
-.p-4 {
+.text-xl {
+    font-size: 1.25rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+/* Essential colors */
+.text-primary {
+    color: #4a6cf7;
+}
+
+.text-white {
+    color: #ffffff;
+}
+
+.text-gray-700 {
+    color: #374151;
+}
+
+.bg-white {
+    background-color: #ffffff;
+}
+
+.bg-primary {
+    background-color: #4a6cf7;
+}
+
+/* Essential components */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: #4a6cf7;
+    color: white;
+}
+
+/* Header styles */
+header {
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+}
+
+/* Card styles */
+.card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 1rem;
 }
 
-.pt-4 {
-    padding-top: 1rem;
+/* Loading animation */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-.pb-4 {
-    padding-bottom: 1rem;
+.animate-spin {
+    animation: spin 1s linear infinite;
 }

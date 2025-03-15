@@ -8,7 +8,11 @@ export default {
           cssnano: { 
             preset: ['default', { 
               discardComments: { removeAll: true },
-              normalizeWhitespace: false // Keep some whitespace for readability
+              normalizeWhitespace: false, // Keep some whitespace for readability
+              cssDeclarationSorter: true,
+              reduceIdents: false, // Avoid breaking keyframe animations
+              minifyFontValues: true,
+              colormin: true
             }]
           } 
         } 
