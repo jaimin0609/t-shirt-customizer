@@ -33,7 +33,7 @@ export const FALLBACK_API_URL = 'https://t-shirt-customizer-backend.onrender.com
 // Export other API-related constants if needed
 export const API_TIMEOUT = 30000; // 30 seconds
 
-// API fetch configuration
+// API fetch configuration with explicit CORS headers
 export const API_CONFIG = {
     credentials: 'include', // Send cookies with requests
     mode: 'cors', // Enable CORS
@@ -41,6 +41,58 @@ export const API_CONFIG = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     }
+};
+
+// A function to test API connectivity and fallback if needed
+export const getWorkingApiUrl = async () => {
+    const urls = [API_URL, FALLBACK_API_URL];
+    let workingUrl = null;
+    
+    for (const url of urls) {
+        try {
+            console.log(`Testing API connectivity to: ${url}`);
+            // Try to fetch the health endpoint with a short timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            
+            const response = await fetch(`${url}/health`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                mode: 'cors',
+                credentials: 'include',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                console.log(`API connection successful to: ${url}`);
+                workingUrl = url;
+                break;
+            }
+        } catch (error) {
+            console.warn(`API connection failed to: ${url}`, error.message);
+        }
+    }
+    
+    // If no working URL found, still return the primary URL
+    return workingUrl || API_URL;
+};
+
+// Add specific headers for CORS requests
+export const getCorsHeaders = (token = null) => {
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
 };
 
 console.log('Using API URL:', API_URL); // Log the API URL being used 

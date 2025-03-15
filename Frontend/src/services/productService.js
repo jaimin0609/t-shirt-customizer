@@ -1,5 +1,6 @@
-// Use the environment variable for API URL with fallback to local development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+// Use the API URL from config
+import { API_URL, FALLBACK_API_URL, API_CONFIG, getCorsHeaders, getWorkingApiUrl } from '../config/api';
+import axios from 'axios';
 
 // Production code should not have console.log statements
 const isProd = import.meta.env.PROD;
@@ -9,14 +10,49 @@ const log = (message, data) => {
   }
 };
 
-import axios from 'axios';
-import { API_CONFIG, FALLBACK_API_URL } from '../config/api';
+// Helper function to ensure product images and prices are properly formatted
+const processProductData = (product) => {
+    if (!product) return null;
+    
+    // Ensure we have a valid image path
+    const processedProduct = {
+        ...product,
+        // Normalize image property
+        image: product.image || 
+               (product.images && Array.isArray(product.images) && product.images.length > 0 
+                  ? product.images[0] 
+                  : '/assets/placeholder-product.jpg')
+    };
+    
+    // Ensure price is a valid number
+    if (typeof processedProduct.price === 'string') {
+        processedProduct.price = parseFloat(processedProduct.price);
+        if (isNaN(processedProduct.price)) {
+            processedProduct.price = 0;
+        }
+    }
+    
+    return processedProduct;
+};
+
+// Process an array of products to ensure all have proper image and price properties
+const processProductsArray = (products) => {
+    if (!Array.isArray(products)) return [];
+    return products.map(processProductData).filter(Boolean);
+};
 
 // Utility function to handle fetch requests with CORS
 const fetchWithCORS = async (url, options = {}) => {
+    const token = localStorage.getItem('token');
+    const headers = {
+        ...getCorsHeaders(token),
+        ...(options.headers || {})
+    };
+    
     const fetchOptions = {
         ...API_CONFIG,
         ...options,
+        headers
     };
     
     try {
@@ -37,8 +73,12 @@ const fetchWithCORS = async (url, options = {}) => {
 export const productService = {
     getAllProducts: async () => {
         try {
+            // Try to get a working API URL
+            const baseUrl = await getWorkingApiUrl();
+            console.log(`Using API URL for products: ${baseUrl}`);
+            
             // Public endpoint - no token required
-            const response = await fetchWithCORS(`${API_URL}/products`);
+            const response = await fetchWithCORS(`${baseUrl}/products`);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -47,7 +87,7 @@ export const productService = {
             }
             
             const data = await response.json();
-            return data;
+            return processProductsArray(data);
         } catch (error) {
             console.error('Error fetching products:', error);
             // Fallback to returning an empty array instead of throwing an error
@@ -129,8 +169,11 @@ export const productService = {
 
     getProductById: async (productId) => {
         try {
+            // Try to get a working API URL
+            const baseUrl = await getWorkingApiUrl();
+            
             // Public endpoint - no token required
-            const response = await fetch(`${API_URL}/products/${productId}`);
+            const response = await fetchWithCORS(`${baseUrl}/products/${productId}`);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -139,7 +182,7 @@ export const productService = {
             }
             
             const data = await response.json();
-            return data;
+            return processProductData(data);
         } catch (error) {
             console.error('Error in getProductById:', error);
             throw error;
@@ -697,4 +740,27 @@ export const productService = {
             throw error;
         }
     }
+};
+
+// Add helper function for getting image URLs
+export const getImageUrl = (imageSource) => {
+    if (!imageSource) return '/assets/placeholder-product.jpg';
+    
+    // Handle Cloudinary URLs and other absolute URLs
+    if (typeof imageSource === 'string' && (
+        imageSource.startsWith('http') || 
+        imageSource.startsWith('data:') ||
+        imageSource.startsWith('/assets/')
+    )) {
+        return imageSource;
+    }
+    
+    // Handle relative image paths that start with slash
+    if (typeof imageSource === 'string' && imageSource.startsWith('/')) {
+        return imageSource;
+    }
+    
+    // Handle backend paths (assuming backend URL is available)
+    const backendUrl = API_URL.split('/api')[0];
+    return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
 }; 

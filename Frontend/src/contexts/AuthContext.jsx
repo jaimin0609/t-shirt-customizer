@@ -2,7 +2,7 @@
 import React from 'react';
 import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config/api';
+import { API_URL, getCorsHeaders, getWorkingApiUrl } from '../config/api';
 
 // Create auth context with safer pattern
 const AuthContext = createContext({
@@ -16,7 +16,8 @@ const AuthContext = createContext({
   logout: () => { },
   updateProfile: () => { },
   checkAuthStatus: () => { },
-  clearError: () => { }
+  clearError: () => { },
+  refreshUser: () => { }
 });
 
 // Setup global axios configuration - moved to top to avoid initialization issues
@@ -66,10 +67,20 @@ axios.interceptors.response.use(
 );
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Try to initialize from localStorage
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (err) {
+      console.error('Error parsing user from localStorage:', err);
+      return null;
+    }
+  });
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastCheckTime, setLastCheckTime] = useState(0);
 
   // Check if the user is authenticated
   const isAuthenticated = !!token;
@@ -93,6 +104,44 @@ export const AuthProvider = ({ children }) => {
     // Navigate to home page happens in the component
   }, []);
 
+  // Refresh user data from the server
+  const refreshUser = useCallback(async () => {
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...getCorsHeaders()
+        }
+      };
+
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      const response = await axios.get(`${baseUrl}/auth/profile`, config);
+
+      if (response.data && response.data.user) {
+        // Update user state and localStorage
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data.user;
+      } else {
+        throw new Error('No user data returned');
+      }
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+
+      // If token is invalid, log out
+      if (err.response && err.response.status === 401) {
+        logout();
+      }
+
+      throw err;
+    }
+  }, [token, logout]);
+
   // Check the user's authentication status
   const checkAuthStatus = useCallback(async (providedToken = null) => {
     const authToken = providedToken || token;
@@ -101,17 +150,28 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    // Prevent frequent checks (no more than once every 30 seconds)
+    const now = Date.now();
+    if (now - lastCheckTime < 30000 && user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     clearError();
+    setLastCheckTime(now);
 
     try {
       const config = {
         headers: {
-          Authorization: `Bearer ${authToken}`
+          Authorization: `Bearer ${authToken}`,
+          ...getCorsHeaders()
         }
       };
 
-      const response = await axios.get(`${API_URL}/auth/profile`, config);
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      const response = await axios.get(`${baseUrl}/auth/profile`, config);
 
       if (response.data && response.data.user) {
         setUser(response.data.user);
@@ -129,7 +189,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, logout, clearError]);
+  }, [token, logout, clearError, lastCheckTime, user]);
 
   // Log the user in
   const login = useCallback(async (email, password) => {
@@ -137,15 +197,15 @@ export const AuthProvider = ({ children }) => {
     clearError();
 
     console.log('Attempting login with email:', email);
-    console.log('Using API URL:', API_URL);
 
     try {
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      console.log('Using API URL for login:', baseUrl);
+
       // Create a specific instance for this request to avoid global interceptors
-      const loginResponse = await axios.post(`${API_URL}/auth/login`, { email, password }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+      const loginResponse = await axios.post(`${baseUrl}/auth/login`, { email, password }, {
+        headers: getCorsHeaders(),
         withCredentials: true, // Important for CORS
         timeout: 10000, // 10 second timeout
         validateStatus: status => status < 500 // Don't reject on 4xx status codes
@@ -210,15 +270,17 @@ export const AuthProvider = ({ children }) => {
     console.log('Attempting registration with email:', email);
 
     try {
-      const registerResponse = await axios.post(`${API_URL}/auth/register`, {
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
+      console.log('Using API URL for registration:', baseUrl);
+
+      const registerResponse = await axios.post(`${baseUrl}/auth/register`, {
         firstName,
         lastName,
         email,
         password
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getCorsHeaders(),
         timeout: 15000 // 15 second timeout
       });
 
@@ -275,14 +337,16 @@ export const AuthProvider = ({ children }) => {
     clearError();
 
     try {
+      // Try to get a working API URL
+      const baseUrl = await getWorkingApiUrl();
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          ...getCorsHeaders()
         }
       };
 
-      const response = await axios.put(`${API_URL}/auth/profile`, profileData, config);
+      const response = await axios.put(`${baseUrl}/auth/profile`, profileData, config);
 
       if (response.data && response.data.user) {
         setUser(response.data.user);
@@ -307,31 +371,17 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, clearError]);
 
-  // Check auth status on mount and when token changes
+  // Effect to configure axios with the token
   useEffect(() => {
-    console.log('AuthContext: Checking auth status on mount or token change');
-    if (token) {
-      configureAxiosAuth(token);
-      checkAuthStatus();
-    } else {
-      setLoading(false);
-    }
-  }, [token, checkAuthStatus]);
+    configureAxiosAuth(token);
+  }, [token]);
 
-  // Try to load user data from localStorage on mount
+  // Effect to check auth status on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser && !user) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Failed to parse stored user data:', err);
-        localStorage.removeItem('user');
-      }
-    }
-  }, [user]);
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
-  // Value to be provided by the context
+  // Create auth context value
   const contextValue = {
     user,
     token,
@@ -343,7 +393,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     checkAuthStatus,
-    clearError
+    clearError,
+    refreshUser
   };
 
   return (

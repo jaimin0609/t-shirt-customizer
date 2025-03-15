@@ -68,50 +68,88 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({
-    origin: [
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'https://t-shirt-customizer-backend.onrender.com',
-        'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
-        'https://uniqverse-8ub2zql8o-jaimin0609s-projects.vercel.app',
-        'https://uniqverse.vercel.app',
-        'https://uniqverse-five.vercel.app',
-        'https://uniqverse-7dymb389x-jaimin0609s-projects.vercel.app', // Add the current deployment URL
-        'https://*.vercel.app' // Allow all Vercel subdomains for preview deployments
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+        
+        // Check allowed origins list
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:5002',
+            'http://127.0.0.1:5002',
+            'https://t-shirt-customizer-backend.onrender.com',
+            'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
+            'https://uniqverse-8ub2zql8o-jaimin0609s-projects.vercel.app',
+            'https://uniqverse.vercel.app',
+            'https://uniqverse-five.vercel.app',
+            'https://uniqverse-7dymb389x-jaimin0609s-projects.vercel.app'
+        ];
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        }
+        
+        // Allow all vercel.app domains
+        if (origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+        
+        // Log rejected origins in development
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn(`Origin ${origin} not allowed by CORS`);
+        }
+        
+        // By default, allow the request but log it
+        callback(null, true);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept', 'X-Auth-Token'],
+    exposedHeaders: ['Content-Length', 'X-Auth-Token'],
     credentials: true,
     maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 
 // Special handling for OPTIONS requests
 app.options('*', (req, res) => {
+    // Get origin from request headers
+    const origin = req.headers.origin || '*';
+    
     // Handle preflight requests
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-Auth-Token');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400'); // Cache preflight requests for 24 hours
     res.status(204).end();
 });
 
-// Middleware to ensure CORS headers are properly set
+// Middleware to ensure CORS headers are properly set on all responses
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    
+    // Define a 'vary' header to tell caches that the response will vary by Origin header
+    res.setHeader('Vary', 'Origin');
+    
+    // Continue processing the request
     next();
+});
+
+// Add a health check endpoint for connectivity testing
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is up and running' });
 });
 
 // Log CORS requests in development
 if (process.env.NODE_ENV !== 'production') {
     app.use((req, res, next) => {
-        console.log(`${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+        console.log(`${req.method} ${req.path} - Origin: ${req.get('origin') || 'No origin'}`);
         next();
     });
 }

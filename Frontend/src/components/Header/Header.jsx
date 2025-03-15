@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -17,12 +17,34 @@ import SearchBar from './SearchBar';
 import NotificationDropdown from './NotificationDropdown';
 
 const Header = () => {
-    const { user, logout, isAuthenticated } = useAuth();
+    const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
     const { cartCount } = useCart();
     const { wishlistCount } = useWishlist();
     const navigate = useNavigate();
     const location = useLocation();
     const [isDesignMenuOpen, setIsDesignMenuOpen] = useState(false);
+    const [authError, setAuthError] = useState(false);
+
+    // Effect to check authentication state and recover if needed
+    useEffect(() => {
+        if (authError) {
+            // If we detected an auth error, attempt to recover by checking localStorage
+            const localToken = localStorage.getItem('token');
+            if (isAuthenticated !== !!localToken) {
+                console.log('Auth state mismatch detected, reloading page to recover');
+                window.location.reload();
+            }
+        }
+    }, [authError, isAuthenticated]);
+
+    // Detect potential auth state inconsistencies
+    useEffect(() => {
+        const localToken = localStorage.getItem('token');
+        if (!authLoading && localToken && !isAuthenticated) {
+            console.warn('Auth state inconsistency: Token exists but not authenticated');
+            setAuthError(true);
+        }
+    }, [isAuthenticated, authLoading]);
 
     const navigation = [
         { name: 'Home', href: '/' },
@@ -45,9 +67,14 @@ const Header = () => {
     const handleLogout = async () => {
         try {
             await logout();
+            // Clear local cart/wishlist state if needed
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
+            // Force a clean logout even if the API call fails
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
         }
     };
 
@@ -139,20 +166,13 @@ const Header = () => {
 
                                 {isAuthenticated && <NotificationDropdown />}
 
-                                {isAuthenticated ? (
-                                    <Menu as="div" className="ml-3 relative">
+                                {/* User Menu (when logged in) */}
+                                {!authLoading && isAuthenticated && user ? (
+                                    <Menu as="div" className="relative ml-3">
                                         <div>
-                                            <Menu.Button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                            <Menu.Button className="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                                                 <span className="sr-only">Open user menu</span>
-                                                {user?.avatar ? (
-                                                    <img
-                                                        className="h-8 w-8 rounded-full object-cover"
-                                                        src={user.avatar}
-                                                        alt={`${user.firstName} ${user.lastName}`}
-                                                    />
-                                                ) : (
-                                                    <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                                                )}
+                                                <UserCircleIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
                                             </Menu.Button>
                                         </div>
                                         <Transition
@@ -164,78 +184,55 @@ const Header = () => {
                                             leaveFrom="transform opacity-100 scale-100"
                                             leaveTo="transform opacity-0 scale-95"
                                         >
-                                            <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                                                {isAuthenticated ? (
-                                                    <>
-                                                        <div className="px-4 py-2 text-xs text-gray-500">
-                                                            Signed in as<br />
-                                                            <span className="font-medium text-gray-900">
-                                                                {user?.email}
-                                                            </span>
-                                                        </div>
-                                                        <hr className="my-1" />
-                                                        {userNavigation.map((item) => (
-                                                            <Menu.Item key={item.name}>
-                                                                {({ active }) => (
-                                                                    <Link
-                                                                        to={item.href}
-                                                                        className={`${active ? 'bg-gray-100' : ''
-                                                                            } block px-4 py-2 text-sm text-gray-700`}
-                                                                    >
-                                                                        {item.name}
-                                                                    </Link>
-                                                                )}
-                                                            </Menu.Item>
-                                                        ))}
-                                                        <hr className="my-1" />
-                                                        <Menu.Item>
-                                                            {({ active }) => (
-                                                                <button
-                                                                    onClick={handleLogout}
-                                                                    className={`${active ? 'bg-gray-100' : ''
-                                                                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
-                                                                >
-                                                                    Sign out
-                                                                </button>
-                                                            )}
-                                                        </Menu.Item>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Menu.Item>
-                                                            {({ active }) => (
-                                                                <Link
-                                                                    to="/login"
-                                                                    className={`${active ? 'bg-gray-100' : ''
-                                                                        } block px-4 py-2 text-sm text-gray-700`}
-                                                                >
-                                                                    Sign in
-                                                                </Link>
-                                                            )}
-                                                        </Menu.Item>
-                                                        <Menu.Item>
-                                                            {({ active }) => (
-                                                                <Link
-                                                                    to="/register"
-                                                                    className={`${active ? 'bg-gray-100' : ''
-                                                                        } block px-4 py-2 text-sm text-gray-700`}
-                                                                >
-                                                                    Create account
-                                                                </Link>
-                                                            )}
-                                                        </Menu.Item>
-                                                    </>
-                                                )}
+                                            <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                                <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                                                    <div className="font-medium">
+                                                        {user?.name || 'User'}
+                                                    </div>
+                                                    <div className="truncate text-gray-500">
+                                                        {user?.email || 'No email'}
+                                                    </div>
+                                                </div>
+                                                {userNavigation.map((item) => (
+                                                    <Menu.Item key={item.name}>
+                                                        {({ active }) => (
+                                                            <Link
+                                                                to={item.href}
+                                                                className={`${active ? 'bg-gray-100' : ''
+                                                                    } block px-4 py-2 text-sm text-gray-700`}
+                                                            >
+                                                                {item.name}
+                                                            </Link>
+                                                        )}
+                                                    </Menu.Item>
+                                                ))}
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <button
+                                                            onClick={handleLogout}
+                                                            className={`${active ? 'bg-gray-100' : ''
+                                                                } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                                                        >
+                                                            Sign out
+                                                        </button>
+                                                    )}
+                                                </Menu.Item>
                                             </Menu.Items>
                                         </Transition>
                                     </Menu>
+                                ) : !authLoading ? (
+                                    <div className="ml-3">
+                                        <Link
+                                            to="/login"
+                                            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                        >
+                                            Sign in
+                                        </Link>
+                                    </div>
                                 ) : (
-                                    <Link
-                                        to="/login"
-                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                    >
-                                        Sign in
-                                    </Link>
+                                    <div className="ml-3 animate-pulse">
+                                        <div className="h-8 w-20 bg-gray-200 rounded"></div>
+                                    </div>
                                 )}
                             </div>
 

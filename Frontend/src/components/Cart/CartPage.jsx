@@ -119,6 +119,37 @@ const CartPage = () => {
         setCouponError('');
     };
 
+    // Format price display with proper currency
+    const formatPrice = (price) => {
+        if (price === undefined || price === null || isNaN(parseFloat(price))) {
+            return '$0.00';
+        }
+        return `$${parseFloat(price).toFixed(2)}`;
+    };
+
+    // Get correct image URL based on image path
+    const getImageUrl = (imageSource) => {
+        if (!imageSource) return '/assets/placeholder-product.jpg';
+
+        // Handle Cloudinary URLs
+        if (typeof imageSource === 'string' && (
+            imageSource.startsWith('http') ||
+            imageSource.startsWith('data:')
+        )) {
+            return imageSource;
+        }
+
+        // Handle relative image paths
+        if (typeof imageSource === 'string' && imageSource.startsWith('/')) {
+            // For absolute paths within the app
+            return imageSource;
+        }
+
+        // Handle backend paths (assuming backend URL is available)
+        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
+    };
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -215,7 +246,7 @@ const CartPage = () => {
                                         <div className="flex items-start">
                                             {/* Product Image */}
                                             <img
-                                                src={item.thumbnail || item.image || '/assets/placeholder-product.jpg'}
+                                                src={getImageUrl(item.image)}
                                                 alt={item.name}
                                                 className="w-20 h-20 object-cover rounded"
                                                 onError={(e) => {
@@ -246,7 +277,7 @@ const CartPage = () => {
 
                                                 {/* Price */}
                                                 <div className="flex justify-between items-center mt-2">
-                                                    <span className="text-gray-900 font-medium">${parseFloat(item.price).toFixed(2)}</span>
+                                                    <span className="text-gray-900 font-medium">{formatPrice(item.price)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -300,7 +331,7 @@ const CartPage = () => {
                                         {/* Subtotal for Mobile */}
                                         <div className="mt-3 text-right">
                                             <span className="text-sm text-gray-600">Subtotal: </span>
-                                            <span className="text-lg font-semibold">${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                                            <span className="text-lg font-semibold">{formatPrice(parseFloat(item.price) * item.quantity)}</span>
                                         </div>
                                     </div>
 
@@ -310,7 +341,7 @@ const CartPage = () => {
                                         <div className="col-span-6">
                                             <div className="flex items-center">
                                                 <img
-                                                    src={item.thumbnail || item.image || '/assets/placeholder-product.jpg'}
+                                                    src={getImageUrl(item.image)}
                                                     alt={item.name}
                                                     className="w-20 h-20 object-cover rounded"
                                                     onError={(e) => {
@@ -359,7 +390,7 @@ const CartPage = () => {
 
                                         {/* Price */}
                                         <div className="col-span-2 text-center">
-                                            <span className="text-gray-900">${parseFloat(item.price).toFixed(2)}</span>
+                                            <span className="text-gray-900">{formatPrice(item.price)}</span>
                                         </div>
 
                                         {/* Quantity */}
@@ -391,7 +422,7 @@ const CartPage = () => {
 
                                         {/* Total */}
                                         <div className="col-span-2 text-right">
-                                            <span className="font-semibold text-gray-900">${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                                            <span className="font-semibold text-gray-900">{formatPrice(parseFloat(item.price) * item.quantity)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -421,7 +452,7 @@ const CartPage = () => {
                         <div className="space-y-4">
                             <div className="flex justify-between pb-4 border-b">
                                 <span className="text-gray-600">Subtotal ({cartCount} items)</span>
-                                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                                <span className="font-medium">{formatPrice(subtotal)}</span>
                             </div>
 
                             {/* Coupon Code Section */}
@@ -494,7 +525,7 @@ const CartPage = () => {
                             {appliedCoupon && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Discount</span>
-                                    <span>-${discountAmount.toFixed(2)}</span>
+                                    <span>-{formatPrice(discountAmount)}</span>
                                 </div>
                             )}
 
@@ -503,7 +534,7 @@ const CartPage = () => {
                                 {shippingCost === 0 ? (
                                     <span className="font-medium text-green-600">Free</span>
                                 ) : (
-                                    <span className="font-medium">${shippingCost.toFixed(2)}</span>
+                                    <span className="font-medium">{formatPrice(shippingCost)}</span>
                                 )}
                             </div>
 
@@ -515,13 +546,13 @@ const CartPage = () => {
 
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Estimated Tax</span>
-                                <span className="font-medium">${taxEstimate.toFixed(2)}</span>
+                                <span className="font-medium">{formatPrice(taxEstimate)}</span>
                             </div>
 
                             <div className="pt-4 border-t">
                                 <div className="flex justify-between mb-2">
                                     <span className="font-bold text-lg">Order Total</span>
-                                    <span className="font-bold text-lg">${orderTotal.toFixed(2)}</span>
+                                    <span className="font-bold text-lg">{formatPrice(orderTotal)}</span>
                                 </div>
 
                                 {/* Show savings if applicable */}

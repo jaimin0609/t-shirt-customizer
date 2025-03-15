@@ -104,8 +104,26 @@ export const CartProvider = ({ children }) => {
     try {
       setLoading(true);
 
+      // Ensure we have a valid image path
+      const processedProduct = {
+        ...product,
+        // Ensure image is properly set
+        image: product.image ||
+          (product.images && Array.isArray(product.images) && product.images.length > 0
+            ? product.images[0]
+            : '/assets/placeholder-product.jpg')
+      };
+
+      // Ensure price is a valid number
+      if (typeof processedProduct.price === 'string') {
+        processedProduct.price = parseFloat(processedProduct.price);
+        if (isNaN(processedProduct.price)) {
+          processedProduct.price = 0;
+        }
+      }
+
       const existingItemIndex = cart.findIndex(
-        item => item.product.id === product.id &&
+        item => item.product.id === processedProduct.id &&
           JSON.stringify(item.options) === JSON.stringify(options)
       );
 
@@ -115,19 +133,19 @@ export const CartProvider = ({ children }) => {
         // Update existing item quantity
         updatedCart = [...cart];
         updatedCart[existingItemIndex].quantity += quantity;
-        console.log(`Updated quantity of existing item in cart: ${product.name}`);
+        console.log(`Updated quantity of existing item in cart: ${processedProduct.name}`);
       } else {
         // Add new item
         updatedCart = [
           ...cart,
           {
-            product,
+            product: processedProduct,
             quantity,
             options,
             addedAt: new Date().toISOString()
           }
         ];
-        console.log(`Added new item to cart: ${product.name}`);
+        console.log(`Added new item to cart: ${processedProduct.name}`);
       }
 
       setCart(updatedCart);
@@ -375,7 +393,15 @@ export const CartProvider = ({ children }) => {
   // Calculate cart total
   const getCartTotal = useCallback(() => {
     const subtotal = cart.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      // Ensure price is treated as a number
+      const price = typeof item.product.price === 'string'
+        ? parseFloat(item.product.price)
+        : item.product.price;
+
+      // Check if price is a valid number
+      const validPrice = !isNaN(price) ? price : 0;
+
+      return total + (validPrice * item.quantity);
     }, 0);
 
     // Apply discount if coupon is present
