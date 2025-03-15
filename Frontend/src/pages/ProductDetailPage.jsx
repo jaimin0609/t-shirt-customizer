@@ -11,6 +11,48 @@ import { StarIcon } from '@heroicons/react/24/solid';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import { promotionLogger } from '../services/promotionLogger';
 
+// CSS for product description content
+const productDescriptionStyles = `
+.product-description {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #4a5568;
+}
+
+.product-description p {
+    margin-bottom: 1rem;
+}
+
+.product-description ul, 
+.product-description ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.product-description ul li {
+    list-style-type: disc;
+}
+
+.product-description ol li {
+    list-style-type: decimal;
+}
+
+.product-description a {
+    color: #3182ce;
+    text-decoration: underline;
+}
+
+.product-description strong,
+.product-description b {
+    font-weight: 600;
+}
+
+.product-description em,
+.product-description i {
+    font-style: italic;
+}
+`;
+
 const ProductDetailPage = () => {
     const { productId } = useParams();
     const navigate = useNavigate();
@@ -371,6 +413,9 @@ const ProductDetailPage = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
+            {/* Add the style tag with our CSS */}
+            <style>{productDescriptionStyles}</style>
+
             {/* Product Detail Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                 {/* Product Image */}
