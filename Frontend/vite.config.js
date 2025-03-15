@@ -1,17 +1,17 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import path from 'path'
 import fs from 'fs'
 
 // Ensure critical CSS file exists
-const criticalCssPath = resolve(__dirname, 'public/critical.css')
+const criticalCssPath = path.resolve(__dirname, 'public/critical.css')
 if (!fs.existsSync(criticalCssPath)) {
   try {
     // If missing, create a simple version
     const basicCSS = `
       /* Minimal critical CSS for initial render */
       body{margin:0;font-family:'Roboto','Montserrat',sans-serif;}
-      .flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}
+      .flex{display:flex}.items-center{align-items:center}.justify-center{justify-center}
       .w-full{width:100%}.text-center{text-align:center}.bg-white{background-color:white}
     `
     fs.writeFileSync(criticalCssPath, basicCSS)
@@ -24,8 +24,8 @@ if (!fs.existsSync(criticalCssPath)) {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current directory.
-  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '')
+  const isProd = mode === 'production'
 
   return {
     plugins: [react()],
@@ -51,23 +51,33 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
-      // Set React as external to ensure proper loading
       rollupOptions: {
-        // Make React and ReactDOM externals when using CDN links
-        external: mode === 'production' ? ['react', 'react-dom'] : [],
+        // Make React and ReactDOM externals in production when using CDN links
+        external: isProd ? ['react', 'react-dom'] : [],
         output: {
-          manualChunks: {
-            // Group React and related libraries in a vendor chunk
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            // Group UI components in their own chunk
-            'vendor-ui': ['react-toastify'],
-            // Group context-related code
-            'app-contexts': [
-              './src/contexts/AuthContext.jsx',
-              './src/contexts/CartContext.jsx', 
-              './src/contexts/WishlistContext.jsx',
-              './src/contexts/NotificationContext.jsx'
-            ],
+          manualChunks: (id) => {
+            // Only create chunks for non-externalized modules
+            if (!isProd) {
+              // In development, chunk React libraries
+              if (id.includes('node_modules/react') || 
+                  id.includes('node_modules/react-dom')) {
+                return 'vendor-react'
+              }
+              if (id.includes('node_modules/react-router') ||
+                  id.includes('node_modules/react-toastify')) {
+                return 'vendor-ui'
+              }
+            }
+            
+            // Always chunk our context files
+            if (id.includes('/contexts/')) {
+              return 'app-contexts'
+            }
+            
+            // Other node_modules go in vendor
+            if (id.includes('node_modules')) {
+              return 'vendor'
+            }
           },
           // Properly resolve external imports
           globals: {
@@ -86,11 +96,11 @@ export default defineConfig(({ mode }) => {
         },
       },
       // Enable source maps for debugging in development
-      sourcemap: mode !== 'production',
+      sourcemap: !isProd,
       // Ensure CSS is processed correctly
       cssCodeSplit: true,
-      // Configure minification to preserve React global references
-      minify: mode === 'production' ? 'esbuild' : false,
+      // Configure minification
+      minify: isProd ? 'esbuild' : false,
       // Handle dynamic imports gracefully
       dynamicImportVarsOptions: {
         warnOnError: true,
@@ -106,17 +116,17 @@ export default defineConfig(({ mode }) => {
       devSourcemap: true,
     },
     optimizeDeps: {
-      // Make sure React is properly pre-bundled
+      // Pre-bundle dependencies for faster development
       include: ['react', 'react-dom', 'react-router-dom', 'react-toastify'],
-      // Ensure dependencies aren't optimized multiple times
-      force: mode === 'development',
+      // Force optimization in development
+      force: !isProd,
     },
     resolve: {
       alias: {
-        '@': resolve(__dirname, './src'),
+        '@': path.resolve(__dirname, './src'),
       },
     },
     // Custom configuration to ensure public CSS files are properly handled
-    publicDir: resolve(__dirname, 'public'),
+    publicDir: path.resolve(__dirname, 'public'),
   }
 })
