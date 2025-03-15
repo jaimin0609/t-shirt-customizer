@@ -4,6 +4,36 @@ import { createContext, useState, useEffect, useContext, useCallback } from 'rea
 import axios from 'axios';
 import { API_URL } from '../config/api';
 
+// Add global axios configuration for CORS
+axios.defaults.withCredentials = true; // Send cookies for cross-site requests
+axios.interceptors.request.use(
+  config => {
+    // Add these headers to every request if not already present
+    if (!config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
+    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
+    return config;
+  },
+  error => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error intercepted:', error.message);
+    if (error.response) {
+      console.error('Error status:', error.response.status);
+      console.error('Error data:', error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Create auth context with safer pattern
 const AuthContext = createContext({
   user: null,
@@ -33,78 +63,159 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   }, []);
 
+  // Configure axios with headers for auth
+  const configureAxiosAuth = useCallback((authToken) => {
+    if (authToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, []);
+
   // Log the user in
   const login = useCallback(async (email, password) => {
     setLoading(true);
     clearError();
 
+    console.log('Attempting login with email:', email);
+    console.log('Using API URL:', API_URL);
+
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      // Create a specific instance for this request to avoid global interceptors
+      const loginResponse = await axios.post(`${API_URL}/auth/login`, { email, password }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+        validateStatus: status => status < 500 // Don't reject on 4xx status codes
+      });
 
-      if (response.data && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        setToken(response.data.token);
-        setUser(response.data.user);
+      console.log('Login response status:', loginResponse.status);
 
-        // Save user data to localStorage for persistence
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (loginResponse.status >= 400) {
+        throw new Error(loginResponse.data?.message || 'Login failed. Please check your credentials.');
+      }
 
-        console.log('Login successful', response.data.user);
+      if (loginResponse.data && loginResponse.data.token) {
+        const authToken = loginResponse.data.token;
+
+        // Save token to localStorage
+        localStorage.setItem('token', authToken);
+        setToken(authToken);
+
+        // Configure axios for future requests
+        configureAxiosAuth(authToken);
+
+        // Save user data
+        if (loginResponse.data.user) {
+          setUser(loginResponse.data.user);
+          localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
+          console.log('Login successful', loginResponse.data.user);
+        } else {
+          // If no user data in response, make another request to get it
+          await checkAuthStatus(authToken);
+        }
+
         return { success: true };
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to login. Please try again.';
+      let errorMessage = 'Failed to login. Please try again.';
+
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error: ${err.response.status}`;
+        console.error('Server error response:', err.response.data);
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your internet connection.';
+        console.error('No response received:', err.request);
+      } else {
+        console.error('Error setting up request:', err.message);
+      }
+
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [clearError]);
+  }, [clearError, configureAxiosAuth, checkAuthStatus]);
 
   // Register a new user
-  const register = useCallback(async (userData) => {
+  const register = useCallback(async (firstName, lastName, email, password) => {
     setLoading(true);
     clearError();
 
+    console.log('Attempting registration with email:', email);
+
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
+      const registerResponse = await axios.post(`${API_URL}/auth/register`, {
+        firstName,
+        lastName,
+        email,
+        password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 15000 // 15 second timeout
+      });
 
-      if (response.data && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        setToken(response.data.token);
-        setUser(response.data.user);
+      console.log('Registration response:', registerResponse.status);
 
-        // Save user data to localStorage for persistence
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (registerResponse.data && registerResponse.data.token) {
+        const authToken = registerResponse.data.token;
 
-        console.log('Registration successful', response.data.user);
+        localStorage.setItem('token', authToken);
+        setToken(authToken);
+
+        // Configure axios for future requests
+        configureAxiosAuth(authToken);
+
+        if (registerResponse.data.user) {
+          setUser(registerResponse.data.user);
+          // Save user data to localStorage for persistence
+          localStorage.setItem('user', JSON.stringify(registerResponse.data.user));
+        } else {
+          // If user data not included, fetch it
+          await checkAuthStatus(authToken);
+        }
+
         return { success: true };
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('Registration error:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to register. Please try again.';
+      let errorMessage = 'Failed to register. Please try again.';
+
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error: ${err.response.status}`;
+        console.error('Server error response:', err.response.data);
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your internet connection.';
+      }
+
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [clearError]);
+  }, [clearError, configureAxiosAuth, checkAuthStatus]);
 
   // Log the user out
   const logout = useCallback(() => {
+    console.log('Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('cart');
-    localStorage.removeItem('wishlist');
     setToken(null);
     setUser(null);
-    console.log('User logged out');
-  }, []);
+
+    // Remove auth header
+    configureAxiosAuth(null);
+
+    // Navigate to home page happens in the component
+  }, [configureAxiosAuth]);
 
   // Update the user's profile
   const updateProfile = useCallback(async (profileData) => {
@@ -119,26 +230,29 @@ export const AuthProvider = ({ children }) => {
     try {
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       };
 
-      const response = await axios.put(`${API_URL}/users/profile`, profileData, config);
+      const response = await axios.put(`${API_URL}/auth/profile`, profileData, config);
 
       if (response.data && response.data.user) {
         setUser(response.data.user);
-
-        // Update user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
-
-        console.log('Profile updated successfully');
+        console.log('Profile updated successfully', response.data.user);
         return { success: true };
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('Profile update error:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to update profile. Please try again.';
+      let errorMessage = 'Failed to update profile. Please try again.';
+
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error: ${err.response.status}`;
+      }
+
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -147,40 +261,42 @@ export const AuthProvider = ({ children }) => {
   }, [token, clearError]);
 
   // Check the user's authentication status
-  const checkAuthStatus = useCallback(async () => {
-    if (!token) {
+  const checkAuthStatus = useCallback(async (providedToken = null) => {
+    const authToken = providedToken || token;
+    if (!authToken) {
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+    clearError();
+
     try {
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${authToken}`
         }
       };
 
-      const response = await axios.get(`${API_URL}/auth/me`, config);
+      const response = await axios.get(`${API_URL}/auth/profile`, config);
 
       if (response.data && response.data.user) {
         setUser(response.data.user);
-
-        // Update user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
-
-        console.log('Auth status checked successfully');
       } else {
-        // If the server doesn't recognize the token, log the user out
+        // If no user data, log out
         logout();
       }
     } catch (err) {
-      console.error('Auth status check error:', err);
-      // If there's an error (e.g., token expired), log the user out
-      logout();
+      console.error('Error checking auth status:', err);
+      // If error is 401 (unauthorized), log out
+      if (err.response && err.response.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
-  }, [token, logout]);
+  }, [token, logout, clearError]);
 
   // Check auth status on mount and when token changes
   useEffect(() => {
@@ -219,22 +335,23 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token]);
 
+  // Value to be provided by the context
+  const value = {
+    user,
+    token,
+    loading,
+    error,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    updateProfile,
+    checkAuthStatus,
+    clearError
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        error,
-        isAuthenticated,
-        login,
-        register,
-        logout,
-        updateProfile,
-        checkAuthStatus,
-        clearError
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

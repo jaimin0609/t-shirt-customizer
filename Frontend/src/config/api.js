@@ -7,11 +7,20 @@
 const determineApiUrl = () => {
     // Check if running in development or production
     if (process.env.NODE_ENV === 'production') {
-        // In production, the API is likely at the same origin
+        // For Vercel deployments, API might be at a different host or at the same origin
+        // First check if we have an explicit production API URL from environment
+        if (import.meta.env.VITE_API_URL) {
+            console.log('Using environment-provided API URL:', import.meta.env.VITE_API_URL);
+            return import.meta.env.VITE_API_URL;
+        }
+        
+        // Default to same-origin API endpoint for production
+        console.log('Using default production API URL at /api');
         return '/api';
     }
     
     // In development, use the correct port 5002 where the backend is running
+    console.log('Using development API URL at http://localhost:5002/api');
     return 'http://localhost:5002/api';
 };
 

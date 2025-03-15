@@ -64,18 +64,34 @@ const LoginPage = () => {
 
     const onSubmit = async (data) => {
         try {
+            console.log('Form submitted', isRegister ? 'Registration' : 'Login');
+
             if (isRegister) {
-                await register(data.firstName, data.lastName, data.email, data.password);
+                console.log('Registering with email:', data.email);
+                const result = await register(data.firstName, data.lastName, data.email, data.password);
+
+                if (!result.success && result.error) {
+                    console.error('Registration failed:', result.error);
+                }
             } else {
-                await login(data.email, data.password);
+                console.log('Logging in with email:', data.email);
+                const result = await login(data.email, data.password);
+
+                if (!result.success && result.error) {
+                    console.error('Login failed:', result.error);
+                }
             }
 
-            // Redirect to the previous page or home
-            const redirectTo = location.state?.from || '/';
-            navigate(redirectTo);
+            // Only navigate if we don't have an error (meaning login/register succeeded)
+            if (!authError) {
+                // Redirect to the previous page or home
+                const redirectTo = location.state?.from || '/';
+                console.log('Redirecting to:', redirectTo);
+                navigate(redirectTo);
+            }
         } catch (err) {
             // Error is handled by AuthContext
-            console.error('Authentication error:', err);
+            console.error('Authentication error in component:', err);
 
             // If the error indicates the email is already registered, switch to login mode
             if (err.message && err.message.includes('already registered')) {
