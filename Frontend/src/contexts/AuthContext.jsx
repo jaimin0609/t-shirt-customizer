@@ -274,9 +274,15 @@ export const AuthProvider = ({ children }) => {
       const baseUrl = await getWorkingApiUrl();
       console.log('Using API URL for registration:', baseUrl);
 
+      // Create a properly formatted request matching backend expectations
+      const name = `${firstName} ${lastName}`;
+      const username = email.split('@')[0]; // Generate username from email as fallback
+
+      console.log('Registration payload:', { username, name, email, password });
+
       const registerResponse = await axios.post(`${baseUrl}/auth/register`, {
-        firstName,
-        lastName,
+        username, // Backend requires username
+        name,     // Backend requires name (combined first and last name)
         email,
         password
       }, {

@@ -49,6 +49,7 @@ const LoginPage = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [formError, setFormError] = useState('');
     const { login, register, isLoading, error: authError } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -63,6 +64,8 @@ const LoginPage = () => {
     });
 
     const onSubmit = async (data) => {
+        setFormError('');
+
         try {
             console.log('Form submitted', isRegister ? 'Registration' : 'Login');
             let result;
@@ -73,6 +76,7 @@ const LoginPage = () => {
 
                 if (!result.success && result.error) {
                     console.error('Registration failed:', result.error);
+                    setFormError(result.error);
                     // Do not navigate if failed
                     return;
                 }
@@ -82,6 +86,7 @@ const LoginPage = () => {
 
                 if (!result.success && result.error) {
                     console.error('Login failed:', result.error);
+                    setFormError(result.error);
                     // Do not navigate if failed
                     return;
                 }
@@ -96,6 +101,7 @@ const LoginPage = () => {
         } catch (err) {
             // Error is handled by AuthContext
             console.error('Authentication error in component:', err);
+            setFormError(err.message || 'An error occurred during authentication');
 
             // If the error indicates the email is already registered, switch to login mode
             if (err.message && err.message.includes('already registered')) {
@@ -123,8 +129,9 @@ const LoginPage = () => {
                             <>
                                 Already have an account?{' '}
                                 <button
+                                    type="button"
                                     onClick={toggleMode}
-                                    className="font-medium text-blue-600 hover:text-blue-500"
+                                    className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition ease-in-out duration-150"
                                 >
                                     Sign in
                                 </button>
@@ -133,26 +140,30 @@ const LoginPage = () => {
                             <>
                                 Don't have an account?{' '}
                                 <button
+                                    type="button"
                                     onClick={toggleMode}
-                                    className="font-medium text-blue-600 hover:text-blue-500"
+                                    className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition ease-in-out duration-150"
                                 >
-                                    Sign up
+                                    Create one
                                 </button>
                             </>
                         )}
                     </p>
                 </div>
 
-                {authError && (
-                    <div className="rounded-md bg-red-50 p-4">
+                {(authError || formError) && (
+                    <div className="rounded-md bg-red-50 p-4 mb-4">
                         <div className="flex">
                             <div className="flex-shrink-0">
                                 <FiAlertCircle className="h-5 w-5 text-red-400" />
                             </div>
                             <div className="ml-3">
                                 <h3 className="text-sm font-medium text-red-800">
-                                    {authError}
+                                    Authentication Error
                                 </h3>
+                                <div className="mt-2 text-sm text-red-700">
+                                    <p>{formError || authError}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
