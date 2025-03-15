@@ -461,7 +461,14 @@ const ProductDetailPage = () => {
                     {/* Description */}
                     <div className="mb-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
-                        <p className="text-gray-700">{product.description || 'No description available.'}</p>
+                        {product.description ? (
+                            <div
+                                className="text-gray-700 product-description"
+                                dangerouslySetInnerHTML={{ __html: product.description }}
+                            />
+                        ) : (
+                            <p className="text-gray-700">No description available.</p>
+                        )}
                     </div>
 
                     {/* Tags */}
