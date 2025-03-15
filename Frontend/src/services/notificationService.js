@@ -3,9 +3,50 @@
  * Service for handling all notification-related API calls
  */
 import axios from 'axios';
-import { getAuthHeaders, isTokenExpired, refreshToken } from './authService';
+// Removing dependency on authService for build compatibility
+// import { getAuthHeaders, isTokenExpired, refreshToken } from './authService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+
+// Helper functions moved locally from authService to avoid import errors
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    Authorization: token ? `Bearer ${token}` : '',
+    'Content-Type': 'application/json'
+  };
+};
+
+const isTokenExpired = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return true;
+  
+  try {
+    // JWT tokens are in format: header.payload.signature
+    const payload = token.split('.')[1];
+    // Decode the base64 payload
+    const decoded = JSON.parse(atob(payload));
+    // Check if the expiration time (exp) is less than current time
+    return decoded.exp * 1000 < Date.now();
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return true; // Assume expired if there's an error
+  }
+};
+
+const refreshToken = async () => {
+  try {
+    const response = await axios.post(`${API_URL}/auth/refresh-token`);
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    // Clear session on refresh failure
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+};
 
 /**
  * Fetch unread notifications for the current user
