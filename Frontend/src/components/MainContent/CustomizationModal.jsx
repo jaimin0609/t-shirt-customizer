@@ -5,8 +5,7 @@ import { HiX, HiUpload, HiTrash, HiDuplicate } from 'react-icons/hi';
 import { FiMove, FiRotateCw, FiLayers, FiType, FiArrowUp, FiArrowDown, FiArrowLeft, FiArrowRight } from 'react-icons/fi';
 import { tshirtTemplate } from '../../assets/tshirtTemplate';
 import { useCart } from '../../contexts/CartContext';
-import { AuthContext } from '../../contexts/AuthContext';
-import { CartContext } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CustomizationModal = ({ product, onClose }) => {
     const [isBackView, setIsBackView] = useState(false);
@@ -40,7 +39,7 @@ const CustomizationModal = ({ product, onClose }) => {
     let rafId = null;
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const { addToCart } = useCart();
-    const { user } = useContext(AuthContext);
+    const { user } = useAuth();
 
     const colors = [
         { id: 'white', name: 'White', hex: '#FFFFFF' },
