@@ -2,7 +2,7 @@
 import React from 'react';
 import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config';
+import { API_URL } from '../config/api';
 import { useAuth } from './AuthContext';
 
 // Create cart context with safer pattern

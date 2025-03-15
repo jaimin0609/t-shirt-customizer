@@ -2,7 +2,7 @@
 import React from 'react';
 import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config';
+import { API_URL } from '../config/api';
 
 // Ensure React is used properly with fallback
 const ReactModule = window.React || React;
@@ -14,12 +14,12 @@ const AuthContext = createContext({
   loading: true,
   error: null,
   isAuthenticated: false,
-  login: () => {},
-  register: () => {},
-  logout: () => {},
-  updateProfile: () => {},
-  checkAuthStatus: () => {},
-  clearError: () => {}
+  login: () => { },
+  register: () => { },
+  logout: () => { },
+  updateProfile: () => { },
+  checkAuthStatus: () => { },
+  clearError: () => { }
 });
 
 export const AuthProvider = ({ children }) => {
@@ -40,18 +40,18 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     setLoading(true);
     clearError();
-    
+
     try {
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
-      
+
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
         setToken(response.data.token);
         setUser(response.data.user);
-        
+
         // Save user data to localStorage for persistence
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
+
         console.log('Login successful', response.data.user);
         return { success: true };
       } else {
@@ -71,18 +71,18 @@ export const AuthProvider = ({ children }) => {
   const register = useCallback(async (userData) => {
     setLoading(true);
     clearError();
-    
+
     try {
       const response = await axios.post(`${API_URL}/auth/register`, userData);
-      
+
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
         setToken(response.data.token);
         setUser(response.data.user);
-        
+
         // Save user data to localStorage for persistence
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
+
         console.log('Registration successful', response.data.user);
         return { success: true };
       } else {
@@ -115,25 +115,25 @@ export const AuthProvider = ({ children }) => {
       setError('You must be logged in to update your profile');
       return { success: false, error: 'Not authenticated' };
     }
-    
+
     setLoading(true);
     clearError();
-    
+
     try {
       const config = {
         headers: {
           Authorization: `Bearer ${token}`
         }
       };
-      
+
       const response = await axios.put(`${API_URL}/users/profile`, profileData, config);
-      
+
       if (response.data && response.data.user) {
         setUser(response.data.user);
-        
+
         // Update user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
+
         console.log('Profile updated successfully');
         return { success: true };
       } else {
@@ -155,22 +155,22 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return;
     }
-    
+
     try {
       const config = {
         headers: {
           Authorization: `Bearer ${token}`
         }
       };
-      
+
       const response = await axios.get(`${API_URL}/auth/me`, config);
-      
+
       if (response.data && response.data.user) {
         setUser(response.data.user);
-        
+
         // Update user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
+
         console.log('Auth status checked successfully');
       } else {
         // If the server doesn't recognize the token, log the user out
