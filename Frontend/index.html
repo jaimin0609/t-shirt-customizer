@@ -15,13 +15,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     
-    <title>UniQVerse - Custom T-Shirt Design</title>
+    <!-- Fallback CSS in case bundled CSS fails to load -->
+    <link rel="stylesheet" href="/fallback.css" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/assets/index.css" as="style">
+    <link rel="preload" as="image" href="/logo.png">
+    
+    <title>UniQVerse</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    
-    <!-- Preload critical resources -->
-    <link rel="preload" as="image" href="/logo.png">
   </body>
 </html>

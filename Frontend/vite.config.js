@@ -20,7 +20,29 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    // Ensure CSS gets properly extracted and loaded
+    cssCodeSplit: true,
+    // Improve asset handling
+    assetsInlineLimit: 4096,
+    // Ensure source maps for better debugging
+    sourcemap: true,
+    // Improve CSS minification
+    cssMinify: 'lightningcss',
+    rollupOptions: {
+      output: {
+        // Ensure assets are properly hashed for cache control
+        assetFileNames: 'assets/[name].[hash].[ext]',
+        chunkFileNames: 'assets/[name].[hash].js',
+        entryFileNames: 'assets/[name].[hash].js',
+        // Manually chunk the CSS to ensure it loads correctly
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
+      }
+    }
   },
   optimizeDeps: {
     include: [
