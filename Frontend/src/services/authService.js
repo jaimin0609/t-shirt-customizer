@@ -305,4 +305,54 @@ class AuthService {
     }
 }
 
-export const authService = new AuthService(); 
+export const authService = new AuthService();
+
+/**
+ * Check if the current JWT token is expired
+ * @returns {boolean} - True if token is expired or not present
+ */
+export const isTokenExpired = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return true;
+    
+    try {
+        // JWT tokens are in format: header.payload.signature
+        const payload = token.split('.')[1];
+        // Decode the base64 payload
+        const decoded = JSON.parse(atob(payload));
+        // Check if the expiration time (exp) is less than current time
+        return decoded.exp * 1000 < Date.now();
+    } catch (error) {
+        console.error('Error checking token expiration:', error);
+        return true; // Assume expired if there's an error
+    }
+};
+
+/**
+ * Refresh the auth token
+ * @returns {Promise<void>}
+ */
+export const refreshToken = async () => {
+    try {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/refresh-token`);
+        if (response.data && response.data.token) {
+            localStorage.setItem('token', response.data.token);
+        }
+    } catch (error) {
+        console.error('Error refreshing token:', error);
+        // If refresh fails, logout the user
+        await authService.logout();
+    }
+};
+
+/**
+ * Get authentication headers with current token
+ * @returns {Object} - Headers object with Authorization
+ */
+export const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        Authorization: token ? `Bearer ${token}` : '',
+        'Content-Type': 'application/json'
+    };
+}; 
