@@ -1,86 +1,108 @@
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Context providers
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+
+// Main layout
 import MainLayout from './layouts/MainLayout';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { useEffect, useState } from 'react';
+
+// Utilities
 import { initAnalytics } from './services/analyticsService';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
+  // Track loaded state and any errors
   const [isLoaded, setIsLoaded] = useState(false);
-  const [loadError, setLoadError] = useState(null);
+  const [initError, setInitError] = useState(null);
 
-  // Initialize analytics and mark app as loaded
+  // Initialize app and set up error handling
   useEffect(() => {
-    console.log('App mounting, initializing...');
+    console.log('App component mounting');
 
-    try {
-      // Attempt to initialize analytics
-      initAnalytics();
-      console.log('Analytics initialized successfully');
-    } catch (error) {
-      console.error('Analytics initialization failed:', error);
-      // Continue loading the app even if analytics fails
-    }
+    // Handle initialization in a safe way
+    const initApp = async () => {
+      try {
+        // Try to initialize analytics
+        await initAnalytics();
+        console.log('Analytics initialized successfully');
 
-    // Force the app to be marked as loaded regardless of any internal errors
-    // This ensures users don't get stuck on the loading screen
-    const timer = setTimeout(() => {
-      console.log('Setting isLoaded to true');
-      setIsLoaded(true);
-    }, 2000); // Increased timeout to ensure everything has time to initialize
+        // Mark app as loaded after a delay to ensure CSS is applied
+        setTimeout(() => {
+          console.log('Setting app as loaded');
+          setIsLoaded(true);
 
-    return () => clearTimeout(timer);
+          // Force remove any loading screens that might still be present
+          const loaders = document.querySelectorAll('.app-loading, #initial-loading');
+          loaders.forEach(loader => {
+            if (loader && loader.parentNode) {
+              console.log('Removing loader from App component');
+              loader.style.opacity = '0';
+              setTimeout(() => loader.parentNode.removeChild(loader), 300);
+            }
+          });
+        }, 500);
+      } catch (error) {
+        console.error('Error during app initialization:', error);
+        setInitError(error);
+        setIsLoaded(true); // Still set as loaded even if there's an error
+      }
+    };
+
+    initApp();
+
+    // Cleanup function
+    return () => {
+      console.log('App component unmounting');
+    };
   }, []);
 
-  // Log when the loaded state changes
-  useEffect(() => {
-    console.log('isLoaded state changed to:', isLoaded);
-  }, [isLoaded]);
-
-  return (
-    <ErrorBoundary fallbackRender={({ error }) => (
-      <div className="error-container p-4">
-        <h2>Something went wrong</h2>
-        <p>{error?.message || 'Unknown error'}</p>
-        <button onClick={() => window.location.reload()}>Reload</button>
+  // Render error message if initialization failed
+  if (initError) {
+    return (
+      <div className="error-message p-4 bg-red-50 text-red-700 rounded m-4">
+        <h2 className="text-xl font-bold">Initialization Error</h2>
+        <p>{initError.message}</p>
+        <button
+          className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={() => window.location.reload()}
+        >
+          Reload Application
+        </button>
       </div>
-    )}>
+    );
+  }
+
+  // Render main application
+  return (
+    <ErrorBoundary>
       <Router>
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <NotificationProvider>
-                <div className={`app-container ${isLoaded ? 'app-loaded' : ''}`}>
-                  {loadError ? (
-                    <div className="error-message">
-                      <h2>Failed to load application</h2>
-                      <p>{loadError.message}</p>
-                      <button onClick={() => window.location.reload()}>Reload</button>
-                    </div>
-                  ) : (
-                    <MainLayout />
-                  )}
+        <div className={`app-container ${isLoaded ? 'app-loaded' : ''}`}>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <NotificationProvider>
+                  <MainLayout />
                   <ToastContainer
                     position="bottom-right"
                     autoClose={3000}
                     hideProgressBar={false}
                     newestOnTop
                     closeOnClick
-                    rtl={false}
                     pauseOnFocusLoss
                     draggable
                     pauseOnHover
                   />
-                </div>
-              </NotificationProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
+                </NotificationProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </div>
       </Router>
     </ErrorBoundary>
   );

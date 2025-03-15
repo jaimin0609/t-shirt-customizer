@@ -10,7 +10,18 @@
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
     
-    <!-- Force reloading if stuck for over 30 seconds -->
+    <!-- Preconnect to Google Fonts to improve load time -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Critical CSS loaded directly in head -->
+    <link rel="stylesheet" href="/critical.css">
+    
+    <!-- Fallback CSS in case bundled CSS fails to load -->
+    <link rel="stylesheet" href="/fallback.css">
+    
+    <!-- Failsafe: Auto-reload if page is stuck loading for too long -->
     <script>
       // Auto-reload if page is stuck loading for too long
       setTimeout(function() {
@@ -23,23 +34,56 @@
       
       // Show error message after 15 seconds if app is still loading
       setTimeout(function() {
-        const errorMessage = document.querySelector('.loading-error');
+        var errorMessage = document.querySelector('.loading-error');
         if (errorMessage && document.querySelector('.app-loading')) {
           errorMessage.style.display = 'block';
         }
       }, 15000);
+      
+      // Ensure React loads properly - failsafe check
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          // If we still see the loading screen after 5 seconds, something is wrong
+          if (document.querySelector('#initial-loading') && 
+              document.body.textContent.indexOf('Loading UniQVerse') !== -1 && 
+              !document.querySelector('.app-loaded')) {
+            console.warn('Application failed to initialize properly');
+            
+            // Try to clean up and show error
+            try {
+              var root = document.getElementById('root');
+              if (root) {
+                root.innerHTML = `
+                  <div style="padding: 20px; text-align: center; font-family: 'Roboto', sans-serif;">
+                    <h2 style="color: #e53e3e; margin-bottom: 16px;">Application Failed to Load</h2>
+                    <p>It seems the application is having trouble starting up. Please try the following:</p>
+                    <ul style="text-align: left; margin: 20px auto; max-width: 400px;">
+                      <li>Refresh the page</li>
+                      <li>Clear your browser cache</li>
+                      <li>Try a different browser</li>
+                    </ul>
+                    <button 
+                      onclick="window.location.reload()" 
+                      style="background-color: #4a6cf7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;"
+                    >
+                      Reload Application
+                    </button>
+                  </div>
+                `;
+                
+                // Remove loading screen
+                var loader = document.getElementById('initial-loading');
+                if (loader && loader.parentNode) {
+                  loader.parentNode.removeChild(loader);
+                }
+              }
+            } catch (e) {
+              console.error('Failed to show error message:', e);
+            }
+          }
+        }, 10000);
+      });
     </script>
-    
-    <!-- Preconnect to Google Fonts to improve load time -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Critical CSS loaded directly in head -->
-    <link rel="stylesheet" href="/critical.css">
-    
-    <!-- Fallback CSS in case bundled CSS fails to load -->
-    <link rel="stylesheet" href="/fallback.css">
     
     <!-- Inject inline critical CSS directly -->
     <style>
@@ -91,9 +135,6 @@
     <!-- Preload critical resources -->
     <link rel="preload" as="image" href="/logo.png">
     
-    <!-- Force CSS reload in production with a timestamp -->
-    <meta name="build-time" content="<%= Date.now() %>">
-    
     <title>UniQVerse - Custom T-Shirt Design</title>
   </head>
   <body>
@@ -108,14 +149,18 @@
         </div>
       </div>
     </div>
+    
+    <!-- Main application script -->
     <script type="module" src="/src/main.jsx"></script>
+    
     <!-- Fallback script to remove loader if main script fails -->
     <script>
+      // Final failsafe to ensure loader is removed
       window.addEventListener('load', function() {
         setTimeout(function() {
-          const loader = document.getElementById('initial-loading');
-          if (loader) {
-            console.log('Fallback: Attempting to remove loader after window load');
+          var loader = document.getElementById('initial-loading');
+          if (loader && loader.parentNode) {
+            console.log('Fallback: Removing loader after page load');
             loader.style.opacity = '0';
             setTimeout(function() {
               if (loader.parentNode) {
@@ -123,7 +168,25 @@
               }
             }, 500);
           }
-        }, 5000); // Give the app 5 seconds to initialize
+        }, 5000);
+      });
+      
+      // Also handle errors
+      window.addEventListener('error', function(event) {
+        console.error('Global error caught in index.html:', event.error);
+        // Try to show something to the user
+        setTimeout(function() {
+          if (document.querySelector('.app-loading')) {
+            var errorMsg = document.querySelector('.loading-error');
+            if (errorMsg) {
+              errorMsg.innerHTML = `
+                Error loading application. Please <button onclick="window.location.reload()">refresh the page</button>.
+                <br><small style="font-size: 0.8em; color: #777;">${event.message || 'Unknown error'}</small>
+              `;
+              errorMsg.style.display = 'block';
+            }
+          }
+        }, 1000);
       });
     </script>
   </body>

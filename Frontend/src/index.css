@@ -2,11 +2,11 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* Remove any other styles that might conflict with Tailwind */
+/* Base styles */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Roboto', 'Segoe UI', 'Inter', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -15,12 +15,19 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23e5e7eb' fill-opacity='0.4'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* App loading state */
-.app-container {
-  opacity: 1;
-  /* Start visible by default */
-  transition: opacity 0.5s ease-in-out;
+/* Ensure app is visible regardless of loaded state */
+#root {
+  display: block;
   min-height: 100vh;
+}
+
+/* App container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
 }
 
 .app-loaded {
@@ -80,6 +87,13 @@ body {
   font-weight: 500;
 }
 
+/* Ensure layout components are properly styled */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Custom animations */
 @keyframes fadeIn {
   from {
@@ -117,48 +131,7 @@ body {
   }
 }
 
-/* Logo animations */
-@keyframes orbit-circular {
-  0% {
-    transform: rotate(0deg) translateX(12px) rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg) translateX(12px) rotate(-360deg);
-  }
-}
-
-@keyframes orbit {
-  from {
-    transform: rotate(0deg) translateX(30px) rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg) translateX(30px) rotate(-360deg);
-  }
-}
-
-@keyframes orbit-fast {
-  from {
-    transform: rotate(0deg) translateX(30px) rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg) translateX(30px) rotate(-360deg);
-  }
-}
-
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes spin-slow {
   from {
     transform: rotate(0deg);
   }
@@ -181,24 +154,23 @@ body {
   animation: pulse 2s infinite;
 }
 
-.animate-orbit-circular {
-  animation: orbit-circular 6s linear infinite;
-}
-
-.animate-orbit {
-  animation: orbit 20s linear infinite;
-}
-
-.animate-orbit-fast {
-  animation: orbit-fast 10s linear infinite;
-}
-
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
-.animate-spin-slow {
-  animation: spin-slow 15s linear infinite;
+/* Other animations - only include what's needed */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(30px) rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(30px) rotate(-360deg);
+  }
+}
+
+.animate-orbit {
+  animation: orbit 20s linear infinite;
 }
 
 /* Transitions */
@@ -214,5 +186,5 @@ body {
 }
 
 .react-toastify {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', sans-serif;
 }
