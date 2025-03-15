@@ -1,7 +1,7 @@
 {
     "version": 2,
-    "framework": "vite",
-    "buildCommand": "chmod +x ./vercel-prebuild.sh && ./vercel-prebuild.sh && node ./vercel-setup.cjs && npm run build:vercel",
+    "framework": null,
+    "buildCommand": "npm install --save-dev vite cssnano postcss tailwindcss autoprefixer && npm install && node ./vercel-setup.cjs && chmod +x ./vercel-build.sh && ./vercel-build.sh",
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "github": {

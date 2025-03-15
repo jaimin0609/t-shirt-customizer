@@ -3,11 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "prebuild": "node ./vercel-setup.cjs",
-    "build": "NODE_ENV=production npx vite build",
-    "build:vercel": "node vercel-build.js",
+    "build": "vite build",
+    "build:vercel": "bash ./vercel-build.sh",
     "lint": "eslint .",
     "preview": "vite preview"
   },
