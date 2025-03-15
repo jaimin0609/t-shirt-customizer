@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       rollupOptions: {
         // Make React and ReactDOM externals in production when using CDN links
-        external: isProd ? ['react', 'react-dom'] : [],
+        external: isProd ? ['react', 'react-dom', 'react-dom/client'] : [],
         output: {
           manualChunks: (id) => {
             // Only create chunks for non-externalized modules
@@ -123,7 +123,7 @@ export default defineConfig(({ mode }) => {
           },
           // Properly resolve external imports
           globals: {
-            react: 'React',
+            'react': 'React',
             'react-dom': 'ReactDOM',
             'react-dom/client': 'ReactDOM',
           },
@@ -189,7 +189,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        // Add aliases for direct imports
+        // Add aliases for direct imports - ensure paths are correct
         'react': path.resolve(__dirname, 'node_modules/react'),
         'react-dom': path.resolve(__dirname, 'node_modules/react-dom')
       },

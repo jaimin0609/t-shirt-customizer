@@ -2,20 +2,32 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
+// Dynamic imports fallback for environments without import maps
+if (typeof React === 'undefined') {
+  console.warn('React not detected, attempting to load dynamically...');
+  try {
+    // This approach uses the globally available React from CDN
+    window.React = window.React || {};
+    window.ReactDOM = window.ReactDOM || {};
+  } catch (e) {
+    console.error('Failed to initialize React fallback:', e);
+  }
+}
+
 // Import App and CSS
 import App from './App.jsx';
 import './index.css';
 
 // Ensure React is globally available
 if (typeof window !== 'undefined') {
-  window.React = React;
-  window.ReactDOM = ReactDOM;
+  window.React = window.React || React;
+  window.ReactDOM = window.ReactDOM || ReactDOM;
 }
 
 // Log environment info for debugging
 console.log('App starting in environment:', process.env.NODE_ENV);
 console.log('Browser details:', navigator.userAgent);
-console.log('React version:', React.version);
+console.log('React version:', React?.version || 'unknown');
 
 // Function to show a visible error message without relying on React
 function showFatalError(message, error) {
