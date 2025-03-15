@@ -28,15 +28,29 @@
     <script type="importmap">
     {
       "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+        "react": "https://esm.sh/stable/react@18.2.0/es2022/react.mjs",
+        "react-dom": "https://esm.sh/stable/react-dom@18.2.0/es2022/react-dom.mjs",
+        "react-dom/client": "https://esm.sh/stable/react-dom@18.2.0/es2022/client.mjs",
+        "react/jsx-runtime": "https://esm.sh/stable/react@18.2.0/es2022/jsx-runtime.mjs"
       }
     }
     </script>
     
     <!-- Add Tailwind CSS from CDN as fallback -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Additional CSS resets to ensure compatibility -->
+    <style>
+      /* Basic resets to ensure styles are applied correctly */
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+    </style>
     
     <!-- Preconnect to Google Fonts to improve load time -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

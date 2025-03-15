@@ -2,27 +2,48 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
-// Dynamic imports fallback for environments without import maps
-if (typeof React === 'undefined') {
-  console.warn('React not detected, attempting to load dynamically...');
-  try {
-    // This approach uses the globally available React from CDN
-    window.React = window.React || {};
-    window.ReactDOM = window.ReactDOM || {};
-  } catch (e) {
-    console.error('Failed to initialize React fallback:', e);
+// Make sure React is defined before proceeding
+if (!React) {
+  console.warn('React not defined in module despite import - using global fallback');
+  // Use the globally available React from CDN
+  const globalReact = window.React;
+  if (globalReact) {
+    // eslint-disable-next-line no-global-assign
+    React = globalReact;
+  } else {
+    console.error('React is not available globally or via import!');
+    // Show a visible error on the page
+    document.getElementById('root').innerHTML = `
+      <div style="padding: 20px; text-align: center;">
+        <h2 style="color: red;">Critical Error</h2>
+        <p>React library could not be loaded. Please check your internet connection and reload the page.</p>
+        <button onclick="window.location.reload()">Reload Now</button>
+      </div>
+    `;
+    throw new Error('React is not available!');
   }
 }
+
+// Similarly ensure ReactDOM is available
+if (!ReactDOM) {
+  console.warn('ReactDOM not defined in module despite import - using global fallback');
+  const globalReactDOM = window.ReactDOM;
+  if (globalReactDOM) {
+    // eslint-disable-next-line no-global-assign
+    ReactDOM = globalReactDOM;
+  } else {
+    console.error('ReactDOM is not available globally or via import!');
+    throw new Error('ReactDOM is not available!');
+  }
+}
+
+// Make global references available to ensure modules can find them
+window.React = React;
+window.ReactDOM = ReactDOM;
 
 // Import App and CSS
 import App from './App.jsx';
 import './index.css';
-
-// Ensure React is globally available
-if (typeof window !== 'undefined') {
-  window.React = window.React || React;
-  window.ReactDOM = window.ReactDOM || ReactDOM;
-}
 
 // Log environment info for debugging
 console.log('App starting in environment:', process.env.NODE_ENV);

@@ -4,8 +4,35 @@ import { createContext, useState, useEffect, useContext, useCallback } from 'rea
 import axios from 'axios';
 import { API_URL } from '../config/api';
 
+// Create auth context with safer pattern
+const AuthContext = createContext({
+  user: null,
+  token: null,
+  loading: true,
+  error: null,
+  isAuthenticated: false,
+  login: () => { },
+  register: () => { },
+  logout: () => { },
+  updateProfile: () => { },
+  checkAuthStatus: () => { },
+  clearError: () => { }
+});
+
+// Setup global axios configuration - moved to top to avoid initialization issues
 // Add global axios configuration for CORS
 axios.defaults.withCredentials = true; // Send cookies for cross-site requests
+
+// Create axios config function outside of component to avoid initialization issues
+const configureAxiosAuth = (authToken) => {
+  if (authToken) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
+
+// Global interceptors - defined outside component to avoid initialization issues
 axios.interceptors.request.use(
   config => {
     // Add these headers to every request if not already present
@@ -34,21 +61,6 @@ axios.interceptors.response.use(
   }
 );
 
-// Create auth context with safer pattern
-const AuthContext = createContext({
-  user: null,
-  token: null,
-  loading: true,
-  error: null,
-  isAuthenticated: false,
-  login: () => { },
-  register: () => { },
-  logout: () => { },
-  updateProfile: () => { },
-  checkAuthStatus: () => { },
-  clearError: () => { }
-});
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -63,14 +75,57 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   }, []);
 
-  // Configure axios with headers for auth
-  const configureAxiosAuth = useCallback((authToken) => {
-    if (authToken) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
+  // Log the user out - define this early as it's used by checkAuthStatus
+  const logout = useCallback(() => {
+    console.log('Logging out user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+
+    // Remove auth header
+    configureAxiosAuth(null);
+
+    // Navigate to home page happens in the component
   }, []);
+
+  // Check the user's authentication status
+  const checkAuthStatus = useCallback(async (providedToken = null) => {
+    const authToken = providedToken || token;
+    if (!authToken) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    clearError();
+
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      };
+
+      const response = await axios.get(`${API_URL}/auth/profile`, config);
+
+      if (response.data && response.data.user) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      } else {
+        // If no user data, log out
+        logout();
+      }
+    } catch (err) {
+      console.error('Error checking auth status:', err);
+      // If error is 401 (unauthorized), log out
+      if (err.response && err.response.status === 401) {
+        logout();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token, logout, clearError]);
 
   // Log the user in
   const login = useCallback(async (email, password) => {
@@ -139,7 +194,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [clearError, configureAxiosAuth, checkAuthStatus]);
+  }, [clearError, checkAuthStatus]);
 
   // Register a new user
   const register = useCallback(async (firstName, lastName, email, password) => {
@@ -201,21 +256,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [clearError, configureAxiosAuth, checkAuthStatus]);
-
-  // Log the user out
-  const logout = useCallback(() => {
-    console.log('Logging out user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-
-    // Remove auth header
-    configureAxiosAuth(null);
-
-    // Navigate to home page happens in the component
-  }, [configureAxiosAuth]);
+  }, [clearError, checkAuthStatus]);
 
   // Update the user's profile
   const updateProfile = useCallback(async (profileData) => {
@@ -260,49 +301,16 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, clearError]);
 
-  // Check the user's authentication status
-  const checkAuthStatus = useCallback(async (providedToken = null) => {
-    const authToken = providedToken || token;
-    if (!authToken) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    clearError();
-
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      };
-
-      const response = await axios.get(`${API_URL}/auth/profile`, config);
-
-      if (response.data && response.data.user) {
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      } else {
-        // If no user data, log out
-        logout();
-      }
-    } catch (err) {
-      console.error('Error checking auth status:', err);
-      // If error is 401 (unauthorized), log out
-      if (err.response && err.response.status === 401) {
-        logout();
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [token, logout, clearError]);
-
   // Check auth status on mount and when token changes
   useEffect(() => {
     console.log('AuthContext: Checking auth status on mount or token change');
-    checkAuthStatus();
-  }, [checkAuthStatus]);
+    if (token) {
+      configureAxiosAuth(token);
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
+  }, [token, checkAuthStatus]);
 
   // Try to load user data from localStorage on mount
   useEffect(() => {
@@ -317,26 +325,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Set up axios interceptor to handle token
-  useEffect(() => {
-    const interceptor = axios.interceptors.request.use(
-      config => {
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      error => Promise.reject(error)
-    );
-
-    return () => {
-      // Clean up interceptor on unmount
-      axios.interceptors.request.eject(interceptor);
-    };
-  }, [token]);
-
   // Value to be provided by the context
-  const value = {
+  const contextValue = {
     user,
     token,
     loading,
@@ -351,7 +341,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
