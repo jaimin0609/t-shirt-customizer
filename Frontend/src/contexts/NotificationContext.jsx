@@ -7,11 +7,19 @@ import {
     formatNotifications
 } from '../services/notificationService';
 import { useAuth } from './AuthContext';
+import { toast } from 'react-toastify';
 
-// Create context
-const NotificationContext = createContext();
+// Create the notification context
+const NotificationContext = React.createContext({
+    notifications: [],
+    unreadCount: 0,
+    addNotification: () => { },
+    markAsRead: () => { },
+    clearNotifications: () => { },
+    showToast: () => { }
+});
 
-// Export the useNotification hook
+// Custom hook to use the notification context
 export const useNotification = () => {
     const context = useContext(NotificationContext);
     if (!context) {
@@ -150,4 +158,5 @@ export const NotificationProvider = ({ children }) => {
     );
 };
 
-export default NotificationContext; 
+// Export the context itself
+export { NotificationContext }; 

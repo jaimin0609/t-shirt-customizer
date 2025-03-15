@@ -25,6 +25,12 @@ function App() {
   useEffect(() => {
     console.log('App component mounting');
 
+    // Make sure we immediately update the loading state on mount
+    // to prevent the blank screen issue
+    setTimeout(() => {
+      document.documentElement.classList.add('app-ready');
+    }, 100);
+
     // Handle initialization in a safe way
     const initApp = async () => {
       try {
@@ -43,7 +49,11 @@ function App() {
             if (loader && loader.parentNode) {
               console.log('Removing loader from App component');
               loader.style.opacity = '0';
-              setTimeout(() => loader.parentNode.removeChild(loader), 300);
+              setTimeout(() => {
+                if (loader.parentNode) {
+                  loader.parentNode.removeChild(loader);
+                }
+              }, 300);
             }
           });
         }, 500);

@@ -1,8 +1,8 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
 // Create the context
-export const WishlistContext = createContext({
+const WishlistContext = React.createContext({
     wishlist: [],
     addToWishlist: () => { },
     removeFromWishlist: () => { },
@@ -108,4 +108,7 @@ export const WishlistProvider = ({ children }) => {
             {children}
         </WishlistContext.Provider>
     );
-}; 
+};
+
+// Export the context itself
+export { WishlistContext }; 

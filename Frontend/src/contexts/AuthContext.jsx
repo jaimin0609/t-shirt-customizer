@@ -1,7 +1,8 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authService } from '../services/authService';
 
-export const AuthContext = createContext({
+// Create the context with a default value
+const AuthContext = React.createContext({
     user: null,
     login: () => { },
     logout: () => { },
@@ -214,4 +215,7 @@ export const AuthProvider = ({ children }) => {
             {children}
         </AuthContext.Provider>
     );
-}; 
+};
+
+// Export the context itself
+export { AuthContext }; 

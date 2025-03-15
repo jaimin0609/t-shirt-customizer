@@ -1,8 +1,8 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
 // Create the context
-export const CartContext = createContext({
+const CartContext = React.createContext({
     cart: [],
     orders: [],
     appliedCoupon: null,
@@ -305,4 +305,7 @@ export const CartProvider = ({ children }) => {
             {children}
         </CartContext.Provider>
     );
-}; 
+};
+
+// Export the context itself
+export { CartContext }; 

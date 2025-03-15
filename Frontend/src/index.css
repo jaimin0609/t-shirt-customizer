@@ -3,6 +3,16 @@
 @import 'tailwindcss/utilities';
 
 /* Base styles */
+html {
+  height: 100%;
+  width: 100%;
+}
+
+html.app-ready .app-loading {
+  opacity: 0;
+  pointer-events: none;
+}
+
 body {
   margin: 0;
   padding: 0;
