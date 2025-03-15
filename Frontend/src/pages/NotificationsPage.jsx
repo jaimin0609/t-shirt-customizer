@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faBell,
-    faShoppingCart,
-    faUser,
-    faCog,
-    faExclamationTriangle,
-    faCheck,
-    faSpinner,
-    faTimes,
-    faFilter,
-    faSearch
-} from '@fortawesome/free-solid-svg-icons';
+// Temporarily comment out FontAwesome imports to fix build
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import {
+//     faBell,
+//     faShoppingCart,
+//     faUser,
+//     faCog,
+//     faExclamationTriangle,
+//     faCheck,
+//     faSpinner,
+//     faTimes,
+//     faFilter,
+//     faSearch
+// } from '@fortawesome/free-solid-svg-icons';
+
+// Temporary icon component to replace FontAwesome
+const IconPlaceholder = ({ name, className }) => {
+    return <span className={`icon-placeholder ${className}`}>{name}</span>;
+};
 
 const NotificationsPage = () => {
     const {
@@ -75,15 +81,15 @@ const NotificationsPage = () => {
     const getIcon = (notification) => {
         switch (notification.icon) {
             case 'shopping-cart':
-                return <FontAwesomeIcon icon={faShoppingCart} className={notification.iconClass} />;
+                return <IconPlaceholder name="🛒" className={notification.iconClass} />;
             case 'user':
-                return <FontAwesomeIcon icon={faUser} className={notification.iconClass} />;
+                return <IconPlaceholder name="👤" className={notification.iconClass} />;
             case 'cog':
-                return <FontAwesomeIcon icon={faCog} className={notification.iconClass} />;
+                return <IconPlaceholder name="⚙️" className={notification.iconClass} />;
             case 'exclamation-triangle':
-                return <FontAwesomeIcon icon={faExclamationTriangle} className={notification.iconClass} />;
+                return <IconPlaceholder name="⚠️" className={notification.iconClass} />;
             default:
-                return <FontAwesomeIcon icon={faBell} className={notification.iconClass} />;
+                return <IconPlaceholder name="🔔" className={notification.iconClass} />;
         }
     };
 
@@ -104,7 +110,6 @@ const NotificationsPage = () => {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                     <div className="flex items-center space-x-4">
                         <div className="relative">
-                            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                             <select
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
@@ -129,7 +134,6 @@ const NotificationsPage = () => {
                     </div>
 
                     <div className="relative w-full md:w-64">
-                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             placeholder="Search notifications..."
@@ -144,7 +148,6 @@ const NotificationsPage = () => {
             {/* Loading State */}
             {loading && (
                 <div className="flex justify-center items-center py-8">
-                    <FontAwesomeIcon icon={faSpinner} spin className="text-blue-500 text-2xl mr-3" />
                     <span className="text-gray-600">Loading notifications...</span>
                 </div>
             )}
@@ -153,7 +156,6 @@ const NotificationsPage = () => {
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
                     <div className="flex">
-                        <FontAwesomeIcon icon={faTimes} className="text-red-500 mr-3 mt-1" />
                         <div>
                             <p className="font-medium">Error loading notifications</p>
                             <p className="text-sm">{error}</p>
@@ -165,7 +167,6 @@ const NotificationsPage = () => {
             {/* Empty State */}
             {!loading && !error && filteredNotifications.length === 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                    <FontAwesomeIcon icon={faBell} className="text-gray-400 text-4xl mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
                     <p className="text-gray-600">
                         {searchTerm
