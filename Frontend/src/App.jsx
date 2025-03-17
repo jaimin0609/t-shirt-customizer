@@ -16,11 +16,14 @@ import MainLayout from './layouts/MainLayout';
 import { initAnalytics } from './services/analyticsService';
 import ErrorBoundary from './components/ErrorBoundary';
 
+// UI Components
+import SkipLink from './components/UI/SkipLink';
+
 // Loading spinner for Suspense fallback
 const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-screen w-full">
-    <div className="app-loading-spinner"></div>
-    <p className="ml-2">Loading components...</p>
+  <div className="flex items-center justify-center h-screen w-full" aria-live="polite" aria-busy="true">
+    <div className="spinner-optimized" role="status"></div>
+    <p className="ml-2 sr-only">Loading components...</p>
   </div>
 );
 
@@ -29,6 +32,22 @@ function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [initError, setInitError] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  // Check for reduced motion preference
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(prefersReducedMotion.matches);
+
+    const handleMotionPreferenceChange = (event) => {
+      setReducedMotion(event.matches);
+    };
+
+    prefersReducedMotion.addEventListener('change', handleMotionPreferenceChange);
+    return () => {
+      prefersReducedMotion.removeEventListener('change', handleMotionPreferenceChange);
+    };
+  }, []);
 
   // Initialize app and set up error handling
   useEffect(() => {
@@ -127,7 +146,10 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className={`app-container ${isLoaded ? 'app-loaded' : ''}`}>
+        <div className={`app-container ${isLoaded ? 'app-loaded' : ''} ${reducedMotion ? 'reduced-motion' : ''}`}>
+          {/* Skip link for keyboard users */}
+          <SkipLink targetId="main-content" />
+
           <ErrorBoundary fallback={<div>Auth provider error</div>}>
             <AuthProvider>
               <ErrorBoundary fallback={<div>Cart provider error</div>}>

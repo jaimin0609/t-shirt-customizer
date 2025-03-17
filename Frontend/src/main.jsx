@@ -45,9 +45,12 @@ if (!ReactDOM || !ReactDOM.createRoot) {
 window.React = React;
 window.ReactDOM = ReactDOM;
 
-// Import App and CSS
+// Import App and CSS - use the consolidated styles from new structure
 import App from './App.jsx';
-import './index.css';
+import './styles/index.css';
+
+// Don't need to import App.css separately as it's being
+// included through the styles/index.css file now
 
 // Log environment info for debugging
 console.log('App starting in environment:', import.meta.env.MODE);

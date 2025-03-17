@@ -1,0 +1,149 @@
+/* 
+  Accessibility Enhancement Utilities
+  Utilities to improve accessibility across the application.
+*/
+
+/* Improved focus styles */
+.focus-outline {
+    outline: 2px solid rgba(74, 108, 247, 0.5);
+    outline-offset: 2px;
+}
+
+/* Skip links for keyboard users */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #4a6cf7;
+    color: white;
+    padding: 8px;
+    z-index: 100;
+    transition: top 0.2s;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Better contrast text utilities */
+.text-accessible {
+    color: #333333;
+    /* Darker than standard gray for better contrast */
+}
+
+.text-accessible-light {
+    color: #f8fafc;
+    /* Light text with better contrast on dark backgrounds */
+}
+
+/* High contrast borders for inputs and interactive elements */
+.accessible-border {
+    border: 2px solid #333333;
+}
+
+.accessible-border-focus {
+    border: 2px solid #4a6cf7;
+}
+
+/* Accessible motion controls */
+.reduced-motion {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Use this class to make animated content accessible */
+@media (prefers-reduced-motion: reduce) {
+    .motion-safe {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Contrast improvements for common components */
+.button-accessible {
+    background-color: #4a6cf7;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.button-accessible:hover {
+    background-color: #3a57d7;
+}
+
+.button-accessible:focus {
+    outline: 3px solid rgba(74, 108, 247, 0.4);
+    outline-offset: 2px;
+}
+
+/* Secondary button with better contrast */
+.button-accessible-secondary {
+    background-color: white;
+    color: #333333;
+    border: 2px solid #333333;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+}
+
+.button-accessible-secondary:hover {
+    background-color: #f3f4f6;
+}
+
+.button-accessible-secondary:focus {
+    outline: 3px solid rgba(74, 108, 247, 0.4);
+    outline-offset: 2px;
+}
+
+/* Alert/notification styles with better contrast */
+.alert-accessible {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border-left: 4px solid #721c24;
+}
+
+.alert-accessible-success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border-left: 4px solid #155724;
+}
+
+/* Form element improvements */
+.form-label-accessible {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333333;
+}
+
+.form-input-accessible {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid #6b7280;
+    border-radius: 0.25rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-input-accessible:focus {
+    border-color: #4a6cf7;
+    outline: 2px solid rgba(74, 108, 247, 0.3);
+    outline-offset: 1px;
+}
+
+/* Larger tap targets for mobile */
+.tap-target {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Text spacing for better readability */
+.text-readable {
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+}

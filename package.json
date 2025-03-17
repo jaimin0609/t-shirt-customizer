@@ -9,7 +9,12 @@
         "build:install": "npm install && (cd Backend && npm install --legacy-peer-deps) && (cd Frontend && npm install)",
         "start:prod": "cd Backend && NODE_ENV=production npm start",
         "deploy": "npm run build:frontend && npm run start:prod",
-        "setup": "cd Backend && npm install --legacy-peer-deps && cd ../Frontend && npm install"
+        "setup": "cd Backend && npm install --legacy-peer-deps && cd ../Frontend && npm install",
+        "security-check": "node scripts/security-check.js",
+        "pre-deploy": "npm run security-check && npm audit",
+        "dependency-check": "node scripts/check-dependencies.js",
+        "dependency-check:fix": "node scripts/check-dependencies.js --fix",
+        "dependency-check:security": "node scripts/check-dependencies.js --security"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"

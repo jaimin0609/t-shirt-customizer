@@ -1,0 +1,145 @@
+/* 
+  CSS Reset & Basic Styles
+  This file provides a consistent base for styling across all browsers.
+  Works with Tailwind CSS and ensures better accessibility.
+*/
+
+/* Use more readable selection colors */
+::selection {
+    background-color: rgba(74, 108, 247, 0.3);
+    color: #000;
+}
+
+/* Improve default focus styles for accessibility */
+:focus {
+    outline: 2px solid rgba(74, 108, 247, 0.5);
+    outline-offset: 1px;
+}
+
+/* Ensure buttons have visible focus states */
+button:focus {
+    outline: 2px solid rgba(74, 108, 247, 0.5);
+    outline-offset: 2px;
+}
+
+/* Remove outline for mouse users, keep for keyboard navigation */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Add back outline for keyboard navigation */
+:focus-visible {
+    outline: 2px solid rgba(74, 108, 247, 0.5);
+    outline-offset: 2px;
+}
+
+/* Improve scrollbar styling for WebKit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Default text rendering */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Set default text size and line height for better readability */
+html {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Ensure proper box sizing throughout */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Remove default margin on certain elements */
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+    margin: 0;
+}
+
+/* Improve media defaults */
+img,
+picture,
+video,
+canvas,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+/* Make images easier to work with */
+img {
+    height: auto;
+}
+
+/* Ensure buttons are easy to style */
+button {
+    color: inherit;
+    background-color: transparent;
+    border-width: 0;
+    padding: 0;
+}
+
+/* Remove list styles */
+ol,
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Set core root defaults */
+html:focus-within {
+    scroll-behavior: smooth;
+}
+
+/* Set core body defaults */
+body {
+    min-height: 100vh;
+    text-rendering: optimizeSpeed;
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

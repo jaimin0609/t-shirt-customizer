@@ -85,31 +85,59 @@ This will start both the backend and frontend servers in development mode.
 
 ## Deployment
 
-For deployment instructions, see the [Deployment Guide](DEPLOYMENT.md).
+For deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT.md).
 
 ## Project Structure
 
 ```
 t-shirt-customizer/
+├── docs/                # Documentation files
+│   ├── DEPLOYMENT.md    # Deployment instructions
+│   ├── SECURITY.md      # Security best practices
+│   ├── CLOUDINARY_SETUP.md # Cloudinary integration guide
+│   ├── CONTRIBUTING.md  # Contribution guidelines
+│   └── CHANGELOG.md     # Version history
+│
+├── scripts/             # Cross-project scripts
+│   ├── deployment/      # General deployment scripts (legacy location)
+│   └── setup/           # Setup scripts
+│
 ├── Backend/             # Backend Node.js application
 │   ├── config/          # Configuration files
 │   ├── middleware/      # Express middleware
+│   ├── migrations/      # Database migrations
 │   ├── models/          # Sequelize models
 │   ├── routes/          # API routes
+│   ├── scripts/         # Backend-specific scripts
+│   │   └── deployment/  # Backend deployment scripts for Render
+│   ├── services/        # Business logic
+│   ├── tests/           # Backend tests
+│   ├── utils/           # Utility functions
 │   ├── public/          # Static files including admin panel
-│   ├── scripts/         # Utility scripts
+│   ├── render-build.sh  # Wrapper for Render deployment scripts
 │   └── server.js        # Main entry point
 │
 ├── Frontend/            # Frontend React application
 │   ├── public/          # Static assets
-│   └── src/             # Source code
-│       ├── components/  # React components
-│       ├── contexts/    # React contexts
-│       ├── pages/       # Page components
-│       ├── services/    # API services
-│       └── utils/       # Utility functions
+│   ├── scripts/         # Frontend-specific scripts
+│   │   └── deployment/  # Frontend deployment scripts for Vercel
+│   ├── src/             # Source code
+│   │   ├── assets/      # Images, fonts, etc.
+│   │   ├── components/  # React components
+│   │   ├── contexts/    # React contexts
+│   │   ├── layouts/     # Layout components
+│   │   ├── pages/       # Page components
+│   │   ├── services/    # API services
+│   │   ├── styles/      # Global styles
+│   │   ├── utils/       # Utility functions
+│   │   └── App.jsx      # Root component
+│   ├── tests/           # Frontend tests
+│   ├── vercel-build.sh  # Wrapper for Vercel deployment scripts
+│   └── vite.config.js   # Vite configuration
 │
-└── package.json         # Root package.json for scripts
+├── .gitignore           # Git ignore file
+├── package.json         # Root package.json for scripts
+└── README.md            # Project overview
 ```
 
 ## License
@@ -147,4 +175,12 @@ The following security improvements have been implemented:
 - Added security headers to development server
 - Removed unused and duplicate files
 
-For more details on security best practices, see [SECURITY.md](SECURITY.md). 
+For more details on security best practices, see [docs/SECURITY.md](docs/SECURITY.md).
+
+## Contributing
+
+Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Changelog
+
+See [docs/CHANGELOG.md](docs/CHANGELOG.md) for a list of changes in each version. 
