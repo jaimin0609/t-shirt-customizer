@@ -8,6 +8,7 @@ import { auth, isAdmin } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -481,21 +482,37 @@ router.post('/forgot-password', async (req, res) => {
       resetTokenExpiry
     });
 
-    // In a real app, you would send an email with a link to reset password
-    // For demo purposes, we'll just send the token in the response
-    console.log(`Reset token for ${email}: ${resetToken}`);
+    // Build the reset link
+    const frontendUrl = process.env.FRONTEND_URL || 'https://uniquerse-five.vercel.app';
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+    
+    // Send the password reset email
+    const emailSent = await sendPasswordResetEmail(email, resetToken, resetLink);
+    
+    // Log the outcome for debugging
+    if (emailSent) {
+      console.log(`Password reset email sent successfully to ${email}`);
+    } else {
+      console.error(`Failed to send password reset email to ${email}`);
+      // Still return success to avoid revealing email existence
+    }
 
-    // Send email logic would go here
-    // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    // await sendEmail(email, 'Password Reset', `Click here to reset your password: ${resetLink}`);
+    // Log the reset token for development purposes
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Reset token for ${email}: ${resetToken}`);
+      console.log(`Reset link: ${resetLink}`);
+    }
 
     res.status(200).json({ 
       message: 'If your email is registered, you will receive a password reset link shortly',
-      // Only for development - remove in production
-      debug: {
-        resetToken,
-        resetLink: `${process.env.FRONTEND_URL || 'https://yourdomain.com'}/reset-password?token=${resetToken}`
-      }
+      // Only include debug info in development
+      ...(process.env.NODE_ENV !== 'production' && {
+        debug: {
+          resetToken,
+          resetLink,
+          emailSent
+        }
+      })
     });
   } catch (error) {
     console.error('Password reset request error:', error);

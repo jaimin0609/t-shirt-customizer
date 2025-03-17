@@ -12,6 +12,8 @@ import cookieParser from 'cookie-parser';
 import { createRequire } from 'module';
 // Import the database fix function
 import { fixProductImagesColumn } from './scripts/fix-production-images.js';
+// Import email service
+import { initializeEmailService } from './services/emailService.js';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 
@@ -789,8 +791,17 @@ async function startServer() {
         // Start listening for requests
         const PORT = process.env.PORT || 5002;
         app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Server environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`✅ Server running on port ${PORT}`);
+            console.log(`📁 Serving static files from: ${path.join(__dirname, 'public')}`);
+            console.log(`🔗 API Base URL: ${process.env.API_URL || 'http://localhost:' + PORT}`);
+            
+            // Initialize the email service
+            initializeEmailService();
+            
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📋 Available API Routes:');
+                printRoutes();
+            }
             
             // Now that the server is running, manually add the missing attributes to the User model
             try {
