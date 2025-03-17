@@ -30,13 +30,13 @@ window.dispatchEvent(new Event('react-loaded'));
 
 console.log('Main.jsx - React version:', React.version);
 
-// Only import App and context providers after React is globally available
-// This is crucial to avoid createContext errors
-const App = React.lazy(() => import('./App'));
-const { AuthProvider } = React.lazy(() => import('./contexts/AuthContext'));
-const { CartProvider } = React.lazy(() => import('./contexts/CartContext'));
-const { WishlistProvider } = React.lazy(() => import('./contexts/WishlistContext'));
-const { NotificationProvider } = React.lazy(() => import('./contexts/NotificationContext'));
+// IMPORTANT: Import directly to avoid lazy loading issues with context providers
+// Lazy loading doesn't work correctly with named exports from context files
+import App from './App';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { WishlistProvider } from './contexts/WishlistContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 /**
  * Client-side entry point for the application
@@ -51,53 +51,25 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Simple loading component to use while React components are loading
-  const SimpleLoading = () => {
-    return React.createElement('div', {
-      style: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column'
-      }
-    }, [
-      React.createElement('p', { key: 'text' }, 'Loading application components...'),
-      React.createElement('div', {
-        key: 'spinner',
-        style: {
-          width: '50px',
-          height: '50px',
-          border: '5px solid #f3f3f3',
-          borderTop: '5px solid #4a6cf7',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }
-      })
-    ]);
-  };
-
   try {
     // Create root and render app with all providers
     const root = ReactDOM.createRoot(rootElement);
 
-    // Render with Suspense to handle the lazy loading
+    // Use JSX directly instead of createElement to avoid transformation issues
     root.render(
-      React.createElement(React.StrictMode, null,
-        React.createElement(React.Suspense, { fallback: React.createElement(SimpleLoading) },
-          React.createElement(BrowserRouter, null,
-            React.createElement(AuthProvider, null,
-              React.createElement(CartProvider, null,
-                React.createElement(WishlistProvider, null,
-                  React.createElement(NotificationProvider, null,
-                    React.createElement(App, null)
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
+      <React.StrictMode>
+        <BrowserRouter>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <NotificationProvider>
+                  <App />
+                </NotificationProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </React.StrictMode>
     );
 
     console.log('React app rendered successfully');

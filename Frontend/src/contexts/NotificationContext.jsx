@@ -49,6 +49,9 @@ const NotificationContext = createContext({
     closeNotifications: () => { }
 });
 
+// Export NotificationContext for direct use if needed
+export { NotificationContext };
+
 export const NotificationProvider = ({ children }) => {
     const { isAuthenticated } = useAuth();
     const [notifications, setNotifications] = useState([]);
@@ -187,4 +190,6 @@ export const useNotification = () => {
     return context;
 };
 
-export default NotificationContext; 
+// Export both as named export and default export to support different import patterns
+export { NotificationProvider };
+export default NotificationProvider; 

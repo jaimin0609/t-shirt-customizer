@@ -574,6 +574,9 @@ export const CartProvider = ({ children, initialState = null }) => {
   );
 };
 
+// Export CartContext for direct use if needed
+export { CartContext };
+
 // Custom hook to use the cart context
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -583,4 +586,6 @@ export const useCart = () => {
   return context;
 };
 
-export default CartContext; 
+// Export both as named export and default export to support different import patterns
+export { CartProvider };
+export default CartProvider; 

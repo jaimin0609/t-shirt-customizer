@@ -13,6 +13,9 @@ const WishlistContext = createContext({
     clearWishlist: () => { }
 });
 
+// Export WishlistContext for direct use if needed
+export { WishlistContext };
+
 export const WishlistProvider = ({ children }) => {
     const [wishlist, setWishlist] = useState([]);
     const { user } = useAuth();
@@ -124,4 +127,6 @@ export const useWishlist = () => {
     return context;
 };
 
-export default WishlistContext; 
+// Export both as named export and default export to support different import patterns
+export { WishlistProvider };
+export default WishlistProvider; 

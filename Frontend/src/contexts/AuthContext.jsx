@@ -22,6 +22,9 @@ const AuthContext = createContext({
   resetPassword: () => { }
 });
 
+// Export AuthContext for direct use if needed
+export { AuthContext };
+
 // Setup global axios configuration - moved to top to avoid initialization issues
 // Add global axios configuration for CORS
 axios.defaults.withCredentials = true; // Send cookies for cross-site requests
@@ -274,4 +277,6 @@ export const useAuth = () => {
   return context;
 };
 
-export default AuthContext; 
+// Export both as named export and default export to support different import patterns
+export { AuthProvider };
+export default AuthProvider; 
