@@ -70,6 +70,89 @@ const fetchWithCORS = async (url, options = {}) => {
     }
 };
 
+// Get featured products for homepage
+const getFeaturedProducts = async () => {
+    try {
+        const apiUrl = await getWorkingApiUrl();
+        const response = await axios.get(`${apiUrl}/api/products/featured`, {
+            headers: getCorsHeaders()
+        });
+        
+        if (response.data && Array.isArray(response.data)) {
+            return processProductsArray(response.data);
+        }
+        
+        // Handle case where API returned success but invalid data format
+        log('getFeaturedProducts: API returned invalid data format', response.data);
+        
+        // Return mocked data if API response is invalid
+        return getMockedFeaturedProducts();
+    } catch (error) {
+        log('getFeaturedProducts: Error fetching featured products', error);
+        
+        // Fallback to mocked data if API request failed
+        return getMockedFeaturedProducts();
+    }
+};
+
+// Fallback function to get mocked featured products when API is unavailable
+const getMockedFeaturedProducts = () => {
+    return [
+        {
+            id: 'featured-1',
+            name: 'Classic Crew Neck T-shirt',
+            description: 'Premium cotton t-shirt with comfortable fit',
+            price: 24.99,
+            discountPercentage: 10,
+            discountedPrice: 22.49,
+            rating: 4.8,
+            category: 'Men\'s T-shirts',
+            images: ['/images/products/classic-crew-tshirt.jpg'],
+            colors: ['black', 'white', 'navy', 'gray'],
+            sizes: ['S', 'M', 'L', 'XL', 'XXL']
+        },
+        {
+            id: 'featured-2',
+            name: 'Vintage Logo T-shirt',
+            description: 'Retro-inspired design with our classic logo',
+            price: 29.99,
+            discountPercentage: 0,
+            discountedPrice: 29.99,
+            rating: 4.6,
+            category: 'Graphic Tees',
+            images: ['/images/products/vintage-logo-tshirt.jpg'],
+            colors: ['white', 'gray', 'blue'],
+            sizes: ['S', 'M', 'L', 'XL']
+        },
+        {
+            id: 'featured-3',
+            name: 'V-Neck Slim Fit',
+            description: 'Modern slim fit v-neck in soft cotton blend',
+            price: 26.99,
+            discountPercentage: 15,
+            discountedPrice: 22.94,
+            rating: 4.7,
+            category: 'Men\'s T-shirts',
+            images: ['/images/products/vneck-slim-tshirt.jpg'],
+            colors: ['black', 'white', 'red'],
+            sizes: ['S', 'M', 'L', 'XL']
+        },
+        {
+            id: 'featured-4',
+            name: 'Eco-Friendly Organic Tee',
+            description: 'Made from 100% organic cotton, sustainable and eco-friendly',
+            price: 34.99,
+            discountPercentage: 0,
+            discountedPrice: 34.99,
+            rating: 4.9,
+            category: 'Sustainable Collection',
+            images: ['/images/products/eco-friendly-tshirt.jpg'],
+            colors: ['green', 'beige', 'blue'],
+            sizes: ['S', 'M', 'L', 'XL']
+        }
+    ];
+};
+
 export const productService = {
     getAllProducts: async () => {
         try {
@@ -751,7 +834,9 @@ export const productService = {
             console.error(`Failed to delete product with ID ${id}:`, error);
             throw error;
         }
-    }
+    },
+
+    getFeaturedProducts
 };
 
 // Add helper function for getting image URLs
