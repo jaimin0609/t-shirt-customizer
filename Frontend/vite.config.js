@@ -17,7 +17,7 @@ const analyze = process.env.ANALYZE === 'true'
 
 // Create output directories if they don't exist
 const createOutputDirs = () => {
-  const dirs = ['dist', 'dist/client', 'dist/server']
+  const dirs = ['dist']
   dirs.forEach(dir => {
     const dirPath = path.resolve(__dirname, dir)
     if (!fs.existsSync(dirPath)) {
@@ -44,38 +44,6 @@ const configureCriticalCSS = () => {
   }
 }
 
-// SSR Manifest plugin to track asset URLs
-const ssrManifestPlugin = () => {
-  return {
-    name: 'ssr-manifest',
-    apply: 'build',
-    enforce: 'post',
-    generateBundle(_, bundle) {
-      // Only run during client build
-      if (process.env.SSR !== 'server') {
-        const manifest = {}
-        
-        // Collect all generated assets
-        for (const fileName in bundle) {
-          const chunk = bundle[fileName]
-          if (chunk.type === 'chunk') {
-            manifest[chunk.name] = fileName
-          } else if (chunk.type === 'asset') {
-            manifest[fileName] = fileName
-          }
-        }
-        
-        // Write the manifest to a file
-        this.emitFile({
-          type: 'asset',
-          fileName: 'ssr-manifest.json',
-          source: JSON.stringify(manifest, null, 2)
-        })
-      }
-    }
-  }
-}
-
 // Make sure output directories exist
 createOutputDirs()
 
@@ -87,39 +55,13 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current directory.
   const env = Object.assign({}, process.env)
   const isProd = mode === 'production'
-  const isBuildingSSR = process.env.SSR === 'server'
   
-  // Use different configurations for client and server builds
-  const buildConfig = isBuildingSSR ? {
-    // Server build configuration
-    outDir: 'dist/server',
-    ssr: true,
-    target: 'node',
-    rollupOptions: {
-      input: {
-        'entry-server': path.resolve(__dirname, 'src/entry-server.jsx')
-      },
-      output: {
-        entryFileNames: '[name].js',
-        format: 'es'
-      },
-      external: [
-        'react',
-        'react-dom',
-        'react-dom/server',
-        'react-router-dom',
-        'react-router-dom/server'
-      ]
-    }
-  } : {
-    // Client build configuration
-    outDir: 'dist/client',
+  // Client build configuration
+  const buildConfig = {
+    outDir: 'dist',
     minify: isProd,
     sourcemap: !isProd,
     rollupOptions: {
-      input: {
-        'entry-client': path.resolve(__dirname, 'src/entry-client.jsx')
-      },
       output: {
         entryFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
         chunkFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
@@ -178,7 +120,6 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/api/, /^\/admin/]
         }
       }),
-      ssrManifestPlugin(),
       analyze && visualizer({
         filename: path.resolve(__dirname, 'dist/stats.html'),
         open: true,
@@ -245,10 +186,8 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),
       'process.env.REACT_APP_VERSION': JSON.stringify(process.env.npm_package_version || '1.0.0'),
-      // Indicate to code that we're using CDN React in production
-      'process.env.USE_REACT_CDN': JSON.stringify(isProd ? 'true' : 'false'),
-      // Indicate if we're running in SSR mode
-      'process.env.IS_SSR': JSON.stringify(isBuildingSSR ? 'true' : 'false')
+      // Remove the CDN React flag as it causes confusion
+      'process.env.BASE_URL': JSON.stringify('/'),
     }
-  }
-})
+  };
+});

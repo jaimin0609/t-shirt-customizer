@@ -41,21 +41,30 @@ if [ ! -f "public/critical.css" ]; then
   fi
 fi
 
-# Try direct build
-echo "Attempting to build with direct vite command..."
+# Try direct build - MODIFIED TO BUILD DIRECTLY TO DIST ROOT
+echo "Building client bundle directly to dist root..."
 if [ -f "node_modules/.bin/vite" ]; then
   echo "Using local vite from node_modules/.bin"
-  ./node_modules/.bin/vite build
+  ./node_modules/.bin/vite build --outDir dist
 elif command -v npx &> /dev/null; then
   echo "Using npx to run vite"
-  npx vite build
+  npx vite build --outDir dist
 elif command -v vite &> /dev/null; then
   echo "Using global vite"
-  vite build
+  vite build --outDir dist
 else
   echo "Vite not found, installing vite and dependencies..."
   npm install --save-dev vite cssnano postcss tailwindcss autoprefixer
-  ./node_modules/.bin/vite build
+  ./node_modules/.bin/vite build --outDir dist
+fi
+
+# Copy public files to ensure they're accessible
+echo "Copying public files to dist directory..."
+cp -r public/* dist/ || echo "No public files to copy or error copying"
+
+# Make sure index.html exists in dist root
+if [ ! -f "dist/index.html" ]; then
+  echo "WARNING: No index.html found in dist root. This will cause routing issues."
 fi
 
 # Verify the build output
