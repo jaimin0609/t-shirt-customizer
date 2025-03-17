@@ -1,0 +1,105 @@
+/* 
+  Filter Sidebar Fixes
+  Targeted fixes for filter sidebar alignment and checkbox issues
+*/
+
+/* Fix alignment of filter groups */
+.sidebar-filters,
+.filters-sidebar,
+.filter-container,
+aside .filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Fix headings in filter groups */
+.filter-heading,
+.filter-title,
+.filter-group-title,
+.sidebar-heading,
+.filter-section-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #1f2937;
+}
+
+/* Fix alignment of checkbox filter options */
+.filter-option,
+.filter-checkbox,
+.checkbox-option,
+.sidebar-checkbox {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Fix checkboxes appearance and alignment */
+input[type="checkbox"] {
+    margin-right: 0.75rem !important;
+    flex-shrink: 0 !important;
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+/* Fix labels text alignment */
+.filter-option label,
+.filter-checkbox label,
+.checkbox-option label,
+.sidebar-checkbox label {
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+/* Fix checkbox and text alignment for all filter options */
+/* Target by common class name patterns */
+[class*="filter"] label,
+[class*="gender"] label,
+[class*="age"] label,
+[class*="size"] label,
+[class*="color"] label,
+[class*="price"] label,
+[class*="category"] label {
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Fix specific elements you showed in the screenshot */
+.sidebar [class*="Gender"],
+.sidebar [class*="Age Group"] {
+    margin-bottom: 1.5rem;
+}
+
+/* Additional spacing and alignment fixes */
+.filter-group {
+    margin-bottom: 1.5rem;
+}
+
+.filter-group h3,
+.filter-group h4 {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.filter-option {
+    padding-left: 0 !important;
+}
+
+/* Fix the sort dropdown and other controls */
+.sort-dropdown,
+.filter-controls {
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.sort-dropdown select,
+.filter-dropdown select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    background-color: white;
+}

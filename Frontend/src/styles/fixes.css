@@ -140,3 +140,155 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
 }
+
+/* ============= NEW FIXES BELOW ============= */
+
+/* Fix sidebar filter alignment issues */
+.sidebar-filters label,
+.sidebar .checkbox-group label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-filters input[type="checkbox"],
+.sidebar .checkbox-group input[type="checkbox"] {
+    margin-right: 0.75rem;
+}
+
+/* Fix for filters and sidebar alignment */
+aside,
+.filters,
+.sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group,
+.filter-section {
+    margin-bottom: 1.5rem;
+}
+
+.filter-group h3,
+.filter-section h3,
+.filter-group h4,
+.filter-section h4 {
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.filter-option input[type="checkbox"] {
+    margin-right: 0.75rem;
+}
+
+/* More specific filter alignment fixes */
+[class*="filter"] label {
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Fix dropdown menu position issues */
+.header-dropdown {
+    position: relative !important;
+}
+
+.header-dropdown .dropdown-menu,
+.navbar .dropdown-menu,
+header .dropdown-menu,
+[data-headlessui-state="open"]>div,
+[id^="headlessui-menu-items"],
+[id^="headlessui-listbox-options"] {
+    position: absolute !important;
+    top: 100% !important;
+    /* Position below the trigger */
+    left: auto !important;
+    right: 0 !important;
+    /* Align to right for user menu */
+    z-index: 2000 !important;
+    transform: none !important;
+    max-height: 80vh !important;
+    /* Prevent from being too tall */
+    overflow-y: auto !important;
+}
+
+/* Design menu specific fix */
+#design-menu .dropdown-menu,
+.design-dropdown .dropdown-menu {
+    left: 0 !important;
+    right: auto !important;
+}
+
+/* Fix for search icon placement */
+.search-container {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.search-container input {
+    padding-right: 2.5rem !important;
+}
+
+.search-icon {
+    position: absolute !important;
+    right: 0.75rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    pointer-events: none !important;
+}
+
+.search-form {
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
+}
+
+.search-form svg,
+.search-form button {
+    position: absolute !important;
+    right: 0.75rem !important;
+}
+
+/* Mobile specific fixes for navbar and dropdowns */
+@media (max-width: 768px) {
+
+    /* Fix for mobile menu positioning */
+    .mobile-menu {
+        position: fixed !important;
+        top: 60px !important;
+        /* Adjust based on your header height */
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 1000 !important;
+        overflow-y: auto !important;
+    }
+
+    /* Ensure dropdown menus appear below their triggers on mobile */
+    .dropdown-menu {
+        position: static !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    /* Fix search field on mobile */
+    .search-container {
+        width: 100% !important;
+    }
+
+    /* Use a fixed header for mobile to prevent content jumping */
+    header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1000 !important;
+        background-color: white !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+}

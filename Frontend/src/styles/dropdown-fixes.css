@@ -1,0 +1,118 @@
+/* 
+  Dropdown Menu Fixes
+  Targeted fixes for dropdown menus in the navigation and throughout the site
+*/
+
+/* Ensure all dropdown menus have proper positioning context */
+.relative,
+[data-headlessui-state],
+.dropdown-container,
+.dropdown-wrapper,
+.dropdown-parent,
+.dropdown-trigger {
+    position: relative !important;
+}
+
+/* Fix dropdown menu positioning - make sure they appear BELOW triggers */
+.dropdown-menu,
+[role="menu"],
+[data-headlessui-state="open"]>div,
+button[data-headlessui-state="open"]+div,
+[id^="headlessui-menu-items"],
+[id^="headlessui-listbox-options"] {
+    position: absolute !important;
+    top: 100% !important;
+    left: auto !important;
+    right: 0 !important;
+    z-index: 2000 !important;
+    transform: none !important;
+    max-height: calc(100vh - 100px) !important;
+    overflow-y: auto !important;
+    margin-top: 0.25rem !important;
+    background-color: white !important;
+    border-radius: 0.375rem !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Design-specific dropdown - should open to the left */
+#design-menu .dropdown-menu,
+.design-dropdown .dropdown-menu,
+nav a[href*="design"]+div,
+a:contains("Design")+div {
+    left: 0 !important;
+    right: auto !important;
+}
+
+/* Specific fix for user/profile dropdown in top right */
+.profile-dropdown .dropdown-menu,
+.user-dropdown .dropdown-menu,
+.account-dropdown .dropdown-menu,
+header [data-headlessui-state="open"]:last-child>div,
+header button[data-headlessui-state="open"]:last-child+div {
+    right: 0 !important;
+    left: auto !important;
+}
+
+/* Fix search box positioning */
+form[role="search"],
+[aria-label="Search"],
+.search-container,
+.search-form,
+.search-wrapper {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.search-input,
+input[type="search"],
+input[placeholder*="Search"],
+[aria-label="Search"] input {
+    padding-right: 2.5rem !important;
+    width: 100% !important;
+}
+
+.search-button,
+button[aria-label="Search"],
+.search-submit,
+.search-icon {
+    position: absolute !important;
+    right: 0.5rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    color: #6b7280 !important;
+    padding: 0.25rem !important;
+}
+
+/* Mobile-specific dropdown fixes */
+@media (max-width: 768px) {
+
+    .dropdown-menu,
+    [role="menu"],
+    [data-headlessui-state="open"]>div,
+    [id^="headlessui-menu-items"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 250px !important;
+    }
+
+    /* Ensure header is on top of content */
+    header,
+    nav,
+    .navigation,
+    .navbar {
+        z-index: 1050 !important;
+        position: relative !important;
+    }
+
+    /* Fix any multi-level dropdowns on mobile */
+    .dropdown-menu .dropdown-menu {
+        position: static !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin-left: 1rem !important;
+    }
+}

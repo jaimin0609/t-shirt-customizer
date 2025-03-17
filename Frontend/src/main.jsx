@@ -10,6 +10,8 @@ import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
 import './styles/fixes.css'; // Import the new fixes
+import './styles/dropdown-fixes.css'; // Import dropdown-specific fixes
+import './styles/filter-sidebar-fixes.css'; // Import filter sidebar fixes
 
 // Ensure React is globally available in case any modules are looking for it
 // This needs to happen before importing any components that might use createContext
