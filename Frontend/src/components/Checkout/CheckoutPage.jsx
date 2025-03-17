@@ -109,7 +109,7 @@ const CheckoutForm = ({ totalAmount, shippingAddress, finalizeCheckout }) => {
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700'}`}
             >
-                {processing ? 'Processing...' : `Pay $${parseFloat(totalAmount).toFixed(2)}`}
+                {processing ? 'Processing...' : `Pay $${(parseFloat(totalAmount) || 0).toFixed(2)}`}
             </button>
         </form>
     );
@@ -182,13 +182,17 @@ const CheckoutPage = () => {
         }
     }, [user, cart, navigate]);
 
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => {
+        // Ensure price is a valid number
+        const price = parseFloat(item.price) || 0;
+        return sum + (price * item.quantity);
+    }, 0);
     const tax = subtotal * 0.1; // 10% tax
     const shipping = 5.99;
 
     // Apply coupon discount if available
-    const discountAmount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
-    const discountedSubtotal = appliedCoupon ? parseFloat(appliedCoupon.newTotal) : subtotal;
+    const discountAmount = appliedCoupon ? (parseFloat(appliedCoupon.discountAmount) || 0) : 0;
+    const discountedSubtotal = appliedCoupon ? (parseFloat(appliedCoupon.newTotal) || subtotal) : subtotal;
 
     // Calculate final total with tax and shipping
     const total = discountedSubtotal + tax + shipping;
@@ -265,22 +269,12 @@ const CheckoutPage = () => {
                                         className="flex items-center gap-4 border-b pb-4">
                                         <div className="w-20 h-20 bg-gray-100 rounded">
                                             <img
-                                                src={item.thumbnail || item.image || `/assets/placeholder-product.jpg`}
+                                                src={item.thumbnail || item.image || item.product?.image || 'https://placehold.co/200x200?text=No+Image'}
                                                 alt={item.name}
                                                 className="w-full h-full object-cover rounded"
                                                 onError={(e) => {
-                                                    console.log(`Failed to load product image for ${item.name}`);
-                                                    // Try with API URL prefix if the path is relative
-                                                    if (!e.target.src.startsWith('http')) {
-                                                        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-                                                        const baseUrl = apiBaseUrl.replace('/api', '');
-                                                        e.target.src = `${baseUrl}${e.target.src}`;
-                                                        console.log(`Retrying with full URL: ${e.target.src}`);
-                                                    } else {
-                                                        // If that fails too, use placeholder
-                                                        e.target.onerror = null; // Prevent infinite loop
-                                                        e.target.src = 'https://placehold.co/200x200?text=No+Image';
-                                                    }
+                                                    e.target.onerror = null; // Prevent infinite loop
+                                                    e.target.src = 'https://placehold.co/200x200?text=No+Image';
                                                 }}
                                             />
                                         </div>
@@ -295,7 +289,7 @@ const CheckoutPage = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className="font-medium">
-                                                ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                                                ${((parseFloat(item.price) || 0) * item.quantity).toFixed(2)}
                                             </p>
                                         </div>
                                     </div>

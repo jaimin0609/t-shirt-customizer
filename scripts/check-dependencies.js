@@ -106,7 +106,7 @@ function checkSecurityVulnerabilities(dirPath) {
 /**
  * Format and display outdated dependencies
  */
-function displayOutdatedDependencies(outdatedResult, directoryName) {
+function displayOutdatedDependencies(outdatedResult, directoryName, directoryPath) {
   if (!outdatedResult.success) {
     console.log(`${colors.red}Error checking outdated packages in ${directoryName}: ${outdatedResult.error}${colors.reset}`);
     return;
@@ -129,9 +129,9 @@ function displayOutdatedDependencies(outdatedResult, directoryName) {
   // Table rows
   Object.entries(outdated).forEach(([packageName, info]) => {
     const nameCol = packageName.padEnd(25);
-    const currentCol = info.current.padEnd(14);
-    const wantedCol = info.wanted.padEnd(14);
-    const latestCol = info.latest.padEnd(14);
+    const currentCol = (info.current || 'unknown').toString().padEnd(14);
+    const wantedCol = (info.wanted || 'unknown').toString().padEnd(14);
+    const latestCol = (info.latest || 'unknown').toString().padEnd(14);
     const typeCol = info.type || '';
     
     let rowColor = colors.white;
@@ -158,7 +158,7 @@ function displayOutdatedDependencies(outdatedResult, directoryName) {
 /**
  * Format and display security vulnerabilities
  */
-function displaySecurityVulnerabilities(auditResult, directoryName) {
+function displaySecurityVulnerabilities(auditResult, directoryName, directoryPath) {
   if (!auditResult.success) {
     console.log(`${colors.red}Error checking security vulnerabilities in ${directoryName}: ${auditResult.error}${colors.reset}`);
     return;
@@ -287,12 +287,12 @@ async function main() {
     if (!securityOnly) {
       console.log(`\n${colors.bold}Checking for outdated dependencies...${colors.reset}`);
       const outdatedResult = checkOutdatedDependencies(directoryPath);
-      displayOutdatedDependencies(outdatedResult, directoryName);
+      displayOutdatedDependencies(outdatedResult, directoryName, directoryPath);
     }
     
     console.log(`\n${colors.bold}Checking for security vulnerabilities...${colors.reset}`);
     const auditResult = checkSecurityVulnerabilities(directoryPath);
-    displaySecurityVulnerabilities(auditResult, directoryName);
+    displaySecurityVulnerabilities(auditResult, directoryName, directoryPath);
     
     console.log('\n' + '-'.repeat(80) + '\n');
   }
