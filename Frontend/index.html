@@ -55,15 +55,6 @@
         padding: 0;
         height: 100%;
       }
-      /* Fonts with font-display swap for better loading behavior */
-      @font-face {
-        font-family: 'Roboto';
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'Montserrat';
-        font-display: swap;
-      }
     </style>
     
     <!-- Load Google Fonts with font-display=swap in the URL -->
@@ -124,7 +115,7 @@
       /* Skip to content link for accessibility */
       .skip-to-content {
         position: absolute;
-        top: -40px;
+        top: -9999px;
         left: 0;
         background: #4a6cf7;
         color: white;
@@ -148,30 +139,40 @@
         box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         z-index: 9000;
         display: none;
-        justify-content: space-between;
-        align-items: center;
       }
-      .pwa-install-prompt.show {
+      
+      .pwa-install-prompt.visible {
         display: flex;
+        flex-direction: column;
+        animation: slideUp 0.3s ease-out forwards;
       }
-      .pwa-install-prompt .pwa-buttons {
-        display: flex;
-        gap: 0.5rem;
+      
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
       }
-      .pwa-install-btn {
+      
+      .pwa-install-prompt button {
         background-color: #4a6cf7;
         color: white;
         border: none;
         padding: 0.5rem 1rem;
         border-radius: 0.25rem;
         cursor: pointer;
+        font-weight: 500;
+        margin-top: 0.5rem;
       }
-      .pwa-close-btn {
-        background-color: transparent;
-        border: 1px solid #d1d5db;
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        cursor: pointer;
+      
+      .pwa-install-prompt .close-button {
+        background: transparent;
+        color: #6b7280;
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
       }
     </style>
     
@@ -208,14 +209,10 @@
     
     <!-- PWA install prompt -->
     <div id="pwa-install-prompt" class="pwa-install-prompt">
-      <div>
-        <strong>Add UniQVerse to your home screen</strong>
-        <p>Install this app on your device for quick access and improved experience.</p>
-      </div>
-      <div class="pwa-buttons">
-        <button id="pwa-install-btn" class="pwa-install-btn">Install App</button>
-        <button id="pwa-close-btn" class="pwa-close-btn">Not Now</button>
-      </div>
+      <button class="close-button" id="pwa-close-button">✕</button>
+      <h3>Install UniQVerse App</h3>
+      <p>Install our app for a better experience!</p>
+      <button id="pwa-install-button">Install Now</button>
     </div>
     
     <!-- React error detection script - Must be before the main script -->
@@ -280,8 +277,8 @@
         // Handle beforeinstallprompt event for custom install UI
         let deferredPrompt;
         const installPrompt = document.getElementById('pwa-install-prompt');
-        const installBtn = document.getElementById('pwa-install-btn');
-        const closeBtn = document.getElementById('pwa-close-btn');
+        const installBtn = document.getElementById('pwa-install-button');
+        const closeBtn = document.getElementById('pwa-close-button');
         
         window.addEventListener('beforeinstallprompt', (e) => {
           // Prevent Chrome 67 and earlier from automatically showing the prompt
@@ -293,14 +290,14 @@
           if (!localStorage.getItem('pwaPromptDismissed')) {
             // Show the install prompt after 10 seconds
             setTimeout(() => {
-              installPrompt.classList.add('show');
+              installPrompt.classList.add('visible');
             }, 10000);
           }
         });
         
         installBtn.addEventListener('click', (e) => {
           // Hide the app provided install promotion
-          installPrompt.classList.remove('show');
+          installPrompt.classList.remove('visible');
           
           // Show the install prompt
           if (deferredPrompt) {
@@ -320,7 +317,7 @@
         
         closeBtn.addEventListener('click', (e) => {
           // Hide the app provided install promotion
-          installPrompt.classList.remove('show');
+          installPrompt.classList.remove('visible');
           // Don't show again for a week
           localStorage.setItem('pwaPromptDismissed', Date.now());
         });
@@ -334,7 +331,7 @@
         // Handle installed event
         window.addEventListener('appinstalled', (evt) => {
           console.log('Application was installed to home screen');
-          installPrompt.classList.remove('show');
+          installPrompt.classList.remove('visible');
         });
       }
     </script>

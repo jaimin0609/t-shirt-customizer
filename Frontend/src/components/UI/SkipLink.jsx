@@ -19,11 +19,10 @@ const SkipLink = ({
         <a
             href={`#${targetId}`}
             className={`
-        absolute top-0 left-0 -translate-y-full p-2 bg-primary-500 text-white
-        z-50 focus:translate-y-0 transition-transform duration-200
-        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
-        ${className}
-      `}
+                skip-to-content
+                ${className}
+            `}
+            data-testid="skip-link"
         >
             {children}
         </a>

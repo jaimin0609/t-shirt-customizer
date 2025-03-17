@@ -1,0 +1,101 @@
+/* 
+  CSS Fixes for Layout Issues
+  This file contains fixes for various layout issues in the application.
+*/
+
+/* Fix for blue sidebar issue */
+body {
+    background-color: #f9fafb !important;
+    background-image: none !important;
+    overflow-x: hidden;
+    /* Prevent horizontal scrolling */
+}
+
+html,
+body,
+#root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Fix for skip to content link */
+.skip-to-content {
+    position: absolute;
+    top: -9999px;
+    left: 0;
+    background: #4a6cf7;
+    color: white;
+    padding: 8px 16px;
+    z-index: 9999;
+    transition: top 0.3s;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* Fix for promotion banner */
+.promotion-banner {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    z-index: 10 !important;
+}
+
+/* Fix for container width */
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Fix for mobile layout */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* Ensure no blue sidebar on mobile */
+    body::before {
+        display: none !important;
+    }
+}
+
+/* Fix for any pseudo-elements that might be causing the blue sidebar */
+body::before,
+body::after,
+#root::before,
+#root::after,
+.app-container::before,
+.app-container::after {
+    display: none !important;
+}
+
+/* Ensure main content takes full width */
+main {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Fix for any potential z-index issues */
+.dropdown-menu,
+.absolute,
+[role="menu"],
+[data-headlessui-state="open"] {
+    z-index: 1000 !important;
+}
+
+/* Fix for header on mobile */
+@media (max-width: 640px) {
+    header {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
