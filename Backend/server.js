@@ -598,11 +598,20 @@ async function applyResetTokenMigration() {
     // Add resetToken column if it doesn't exist
     if (!existingColumns.includes('resettoken')) {
       console.log(`Adding resetToken column to ${tableName} table...`);
-      await sequelize.query(`
-        ALTER TABLE ${tableRef} 
-        ADD COLUMN "${isPostgres ? 'resetToken' : 'resetToken'}" VARCHAR(255) NULL
-      `);
-      console.log('Added resetToken column successfully');
+      try {
+        await sequelize.query(`
+          ALTER TABLE ${tableRef} 
+          ADD COLUMN "${isPostgres ? 'resetToken' : 'resetToken'}" VARCHAR(255) NULL
+        `);
+        console.log('Added resetToken column successfully');
+      } catch (error) {
+        // Specifically handle column already exists error
+        if (error.message && error.message.includes('already exists')) {
+          console.log('resetToken column already exists (caught in error handler)');
+        } else {
+          console.error('Error adding resetToken column:', error.message);
+        }
+      }
     } else {
       console.log('resetToken column already exists');
     }
@@ -610,11 +619,20 @@ async function applyResetTokenMigration() {
     // Add resetTokenExpiry column if it doesn't exist
     if (!existingColumns.includes('resettokenexpiry')) {
       console.log(`Adding resetTokenExpiry column to ${tableName} table...`);
-      await sequelize.query(`
-        ALTER TABLE ${tableRef} 
-        ADD COLUMN "${isPostgres ? 'resetTokenExpiry' : 'resetTokenExpiry'}" TIMESTAMP NULL
-      `);
-      console.log('Added resetTokenExpiry column successfully');
+      try {
+        await sequelize.query(`
+          ALTER TABLE ${tableRef} 
+          ADD COLUMN "${isPostgres ? 'resetTokenExpiry' : 'resetTokenExpiry'}" TIMESTAMP NULL
+        `);
+        console.log('Added resetTokenExpiry column successfully');
+      } catch (error) {
+        // Specifically handle column already exists error
+        if (error.message && error.message.includes('already exists')) {
+          console.log('resetTokenExpiry column already exists (caught in error handler)');
+        } else {
+          console.error('Error adding resetTokenExpiry column:', error.message);
+        }
+      }
     } else {
       console.log('resetTokenExpiry column already exists');
     }

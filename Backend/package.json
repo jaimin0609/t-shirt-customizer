@@ -10,7 +10,12 @@
     "create-admin": "node scripts/createAdmin.js",
     "reset-admin": "node scripts/resetAdminCredentials.js",
     "check-admins": "node scripts/checkAdminUsers.js",
-    "coupon-manager": "node scripts/couponManager.js"
+    "coupon-manager": "node scripts/couponManager.js",
+    "run-safe-migration": "node run-safe-migration.cjs",
+    "track-migration": "node track-reset-token-migration.cjs",
+    "manual-migration": "node manual-migration.cjs",
+    "test-migration": "node test-migration.cjs",
+    "start-with-migration": "node manual-migration.cjs && node server.js"
   },
   "keywords": [],
   "author": "",
