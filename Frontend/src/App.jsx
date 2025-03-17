@@ -179,6 +179,8 @@ function App() {
               </ErrorBoundary>
             </AuthProvider>
           </ErrorBoundary>
+
+          {/* Promotional banner is handled by the PromotionBanner component in MainLayout */}
         </div>
       </Router>
     </ErrorBoundary>

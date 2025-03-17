@@ -22,7 +22,11 @@ const CartPage = () => {
         if (cart) {
             setIsLoading(false);
             const total = cart.reduce(
-                (sum, item) => sum + parseFloat(item.price) * item.quantity,
+                (sum, item) => {
+                    // Ensure price is a valid number
+                    const price = parseFloat(item.price) || 0;
+                    return sum + price * item.quantity;
+                },
                 0
             );
             setSubtotal(total);
@@ -42,12 +46,12 @@ const CartPage = () => {
             // Calculate the discount amount properly based on coupon type
             if (appliedCoupon.discountType === 'percentage') {
                 // Calculate percentage discount
-                const discount = (subtotal * parseFloat(appliedCoupon.discountValue)) / 100;
+                const discount = (subtotal * parseFloat(appliedCoupon.discountValue || 0)) / 100;
                 setDiscountAmount(parseFloat(discount.toFixed(2)));
                 console.log(`Calculated percentage discount: ${discount.toFixed(2)}`);
             } else {
                 // Fixed amount discount
-                setDiscountAmount(parseFloat(appliedCoupon.discountValue));
+                setDiscountAmount(parseFloat(appliedCoupon.discountValue) || 0);
                 console.log(`Using fixed discount: ${appliedCoupon.discountValue}`);
             }
         } else {
@@ -96,10 +100,11 @@ const CartPage = () => {
         setCouponError('');
 
         try {
+            // Apply coupon using the backend API
             const result = await contextApplyCoupon(couponCode, subtotal);
 
             if (!result.success) {
-                setCouponError(result.message);
+                setCouponError(result.message || 'Invalid coupon code');
             } else {
                 setCouponError('');
             }
@@ -177,7 +182,7 @@ const CartPage = () => {
         );
     }
 
-    if (cart.length === 0) {
+    if (!cart || cart.length === 0) {
         return (
             <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
                 <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
@@ -217,7 +222,7 @@ const CartPage = () => {
     const taxEstimate = subtotal * 0.08;
 
     // Calculate final order total including discount
-    const orderTotal = subtotal - discountAmount + shippingCost + taxEstimate;
+    const orderTotal = (subtotal - discountAmount + shippingCost + taxEstimate) || 0;
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
@@ -245,25 +250,17 @@ const CartPage = () => {
                                     <div className="md:hidden">
                                         <div className="flex items-start">
                                             {/* Product Image */}
-                                            <img
-                                                src={getImageUrl(item.image)}
-                                                alt={item.name}
-                                                className="w-20 h-20 object-cover rounded"
-                                                onError={(e) => {
-                                                    console.log(`Failed to load product image for ${item.name}`);
-                                                    // Try with API URL prefix if the path is relative
-                                                    if (!e.target.src.startsWith('http')) {
-                                                        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-                                                        const baseUrl = apiBaseUrl.replace('/api', '');
-                                                        e.target.src = `${baseUrl}${e.target.src}`;
-                                                        console.log(`Retrying with full URL: ${e.target.src}`);
-                                                    } else {
-                                                        // If that fails too, use placeholder
+                                            <div className="product-image">
+                                                <img
+                                                    src={item.image || item.product?.image || 'https://placehold.co/200x200?text=No+Image'}
+                                                    alt={item.name}
+                                                    className="w-24 h-24 object-cover rounded"
+                                                    onError={(e) => {
                                                         e.target.onerror = null; // Prevent infinite loop
                                                         e.target.src = 'https://placehold.co/200x200?text=No+Image';
-                                                    }
-                                                }}
-                                            />
+                                                    }}
+                                                />
+                                            </div>
 
                                             {/* Product Details */}
                                             <div className="ml-4 flex-grow">
@@ -340,25 +337,17 @@ const CartPage = () => {
                                         {/* Product */}
                                         <div className="col-span-6">
                                             <div className="flex items-center">
-                                                <img
-                                                    src={getImageUrl(item.image)}
-                                                    alt={item.name}
-                                                    className="w-20 h-20 object-cover rounded"
-                                                    onError={(e) => {
-                                                        console.log(`Failed to load product image for ${item.name}`);
-                                                        // Try with API URL prefix if the path is relative
-                                                        if (!e.target.src.startsWith('http')) {
-                                                            const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-                                                            const baseUrl = apiBaseUrl.replace('/api', '');
-                                                            e.target.src = `${baseUrl}${e.target.src}`;
-                                                            console.log(`Retrying with full URL: ${e.target.src}`);
-                                                        } else {
-                                                            // If that fails too, use placeholder
+                                                <div className="product-image">
+                                                    <img
+                                                        src={item.image || item.product?.image || 'https://placehold.co/200x200?text=No+Image'}
+                                                        alt={item.name}
+                                                        className="w-24 h-24 object-cover rounded"
+                                                        onError={(e) => {
                                                             e.target.onerror = null; // Prevent infinite loop
                                                             e.target.src = 'https://placehold.co/200x200?text=No+Image';
-                                                        }
-                                                    }}
-                                                />
+                                                        }}
+                                                    />
+                                                </div>
                                                 <div className="ml-4">
                                                     <h3 className="font-medium text-gray-900">{item.name}</h3>
                                                     {item.size && (
@@ -540,7 +529,7 @@ const CartPage = () => {
 
                             {shippingCost > 0 && (
                                 <div className="text-sm text-green-600">
-                                    Add ${(50 - subtotal).toFixed(2)} more to qualify for FREE shipping
+                                    Add ${Math.max(0, (50 - subtotal)).toFixed(2)} more to qualify for FREE shipping
                                 </div>
                             )}
 

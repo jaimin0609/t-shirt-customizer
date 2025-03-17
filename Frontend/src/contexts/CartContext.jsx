@@ -123,8 +123,13 @@ export const CartProvider = ({ children }) => {
       }
 
       const existingItemIndex = cart.findIndex(
-        item => item.product.id === processedProduct.id &&
-          JSON.stringify(item.options) === JSON.stringify(options)
+        item => {
+          const itemProductId = item.product?.id || item.productId;
+          const productId = processedProduct.id;
+
+          return itemProductId === productId &&
+            JSON.stringify(item.options || {}) === JSON.stringify(options);
+        }
       );
 
       let updatedCart;
@@ -136,15 +141,18 @@ export const CartProvider = ({ children }) => {
         console.log(`Updated quantity of existing item in cart: ${processedProduct.name}`);
       } else {
         // Add new item
-        updatedCart = [
-          ...cart,
-          {
-            product: processedProduct,
-            quantity,
-            options,
-            addedAt: new Date().toISOString()
-          }
-        ];
+        const cartItem = {
+          product: processedProduct,
+          productId: processedProduct.id,
+          name: processedProduct.name,
+          price: processedProduct.price || 0,
+          image: processedProduct.image,
+          quantity,
+          options,
+          addedAt: new Date().toISOString()
+        };
+
+        updatedCart = [...cart, cartItem];
         console.log(`Added new item to cart: ${processedProduct.name}`);
       }
 
@@ -158,13 +166,13 @@ export const CartProvider = ({ children }) => {
 
       return true;
     } catch (err) {
-      console.error('Failed to add item to cart:', err);
+      console.error('Failed to add to cart:', err);
       setError('Failed to add item to cart. Please try again.');
       return false;
     } finally {
       setLoading(false);
     }
-  }, [cart, token, isAuthenticated, appliedCoupon]);
+  }, [cart, saveCart, appliedCoupon]);
 
   // Remove item from cart
   const removeFromCart = useCallback(async (itemId, options = {}) => {
@@ -192,7 +200,7 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [cart, token, isAuthenticated, appliedCoupon]);
+  }, [cart, saveCart, appliedCoupon]);
 
   // Update item quantity in cart
   const updateQuantity = useCallback(async (itemId, quantity, options = {}) => {
@@ -227,7 +235,7 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [cart, removeFromCart, token, isAuthenticated, appliedCoupon]);
+  }, [cart, removeFromCart, saveCart, appliedCoupon]);
 
   // Clear cart
   const clearCart = useCallback(async () => {
@@ -252,7 +260,7 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, isAuthenticated]);
+  }, [saveCart, isAuthenticated, token]);
 
   // Apply coupon to cart
   const applyCoupon = useCallback(async (couponCode) => {
@@ -390,13 +398,21 @@ export const CartProvider = ({ children }) => {
     }
   }, [cart, appliedCoupon, clearCart, isAuthenticated, token]);
 
-  // Calculate cart total
+  // Get cart total amount
   const getCartTotal = useCallback(() => {
     const subtotal = cart.reduce((total, item) => {
       // Ensure price is treated as a number
-      const price = typeof item.product.price === 'string'
-        ? parseFloat(item.product.price)
-        : item.product.price;
+      let price;
+
+      if (item.product && typeof item.product.price !== 'undefined') {
+        price = typeof item.product.price === 'string'
+          ? parseFloat(item.product.price)
+          : item.product.price;
+      } else {
+        price = typeof item.price === 'string'
+          ? parseFloat(item.price)
+          : item.price;
+      }
 
       // Check if price is a valid number
       const validPrice = !isNaN(price) ? price : 0;
@@ -407,10 +423,10 @@ export const CartProvider = ({ children }) => {
     // Apply discount if coupon is present
     if (appliedCoupon) {
       if (appliedCoupon.type === 'percentage') {
-        const discount = subtotal * (appliedCoupon.value / 100);
+        const discount = subtotal * ((appliedCoupon.value || 0) / 100);
         return subtotal - discount;
       } else if (appliedCoupon.type === 'fixed') {
-        return Math.max(0, subtotal - appliedCoupon.value);
+        return Math.max(0, subtotal - (appliedCoupon.value || 0));
       }
     }
 
