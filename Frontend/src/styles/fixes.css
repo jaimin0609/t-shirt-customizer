@@ -8,7 +8,9 @@ body {
     background-color: #f9fafb !important;
     background-image: none !important;
     overflow-x: hidden;
-    /* Prevent horizontal scrolling */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 html,
@@ -17,6 +19,15 @@ body,
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    flex: 1;
 }
 
 /* Fix for skip to content link */
@@ -55,8 +66,23 @@ body,
     padding-right: 1rem;
 }
 
-/* Fix for mobile layout */
+/* Responsive fixes */
+@media (min-width: 769px) {
+
+    /* Desktop-specific fixes */
+    .container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    main {
+        padding-bottom: 2rem;
+    }
+}
+
 @media (max-width: 768px) {
+
+    /* Mobile-specific fixes */
     .container {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
@@ -78,10 +104,13 @@ body::after,
     display: none !important;
 }
 
-/* Ensure main content takes full width */
+/* Ensure main content takes full width and proper height */
 main {
     width: 100%;
     max-width: 100%;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Fix for any potential z-index issues */
@@ -98,4 +127,16 @@ main {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
+}
+
+/* Footer fixes */
+footer {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* Fix for any text scaling issues */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }

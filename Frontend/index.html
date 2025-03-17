@@ -244,6 +244,59 @@
       });
     </script>
     
+    <!-- Debugging script to help diagnose desktop vs mobile issues -->
+    <script>
+      // Log browser information
+      (function() {
+        const isDesktop = window.innerWidth >= 1024;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const browserInfo = {
+          userAgent: navigator.userAgent,
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight
+          },
+          isDesktop: isDesktop,
+          isMobile: isMobile,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log('Browser environment:', browserInfo);
+        
+        // Create a visible error display for blank page issue
+        setTimeout(function() {
+          const root = document.getElementById('root');
+          const hasContent = root && (root.innerHTML.trim().length > 500 || root.children.length > 2);
+          
+          if (!hasContent) {
+            console.error('Blank page detected - adding debug display');
+            const debugDisplay = document.createElement('div');
+            debugDisplay.style.position = 'fixed';
+            debugDisplay.style.top = '0';
+            debugDisplay.style.left = '0';
+            debugDisplay.style.right = '0';
+            debugDisplay.style.padding = '15px';
+            debugDisplay.style.backgroundColor = '#f8d7da';
+            debugDisplay.style.color = '#721c24';
+            debugDisplay.style.borderBottom = '1px solid #f5c6cb';
+            debugDisplay.style.zIndex = '10000';
+            debugDisplay.innerHTML = `
+              <h3>Debugging Info - Blank Page Detected</h3>
+              <p>Your browser: ${navigator.userAgent}</p>
+              <p>Screen size: ${window.innerWidth}x${window.innerHeight}</p>
+              <button onclick="window.location.reload()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
+                Reload Page
+              </button>
+              <button onclick="localStorage.clear(); window.location.reload()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; margin-left: 10px; cursor: pointer;">
+                Clear Cache & Reload
+              </button>
+            `;
+            document.body.prepend(debugDisplay);
+          }
+        }, 3000);
+      })();
+    </script>
+    
     <!-- Main application script - must be after React loader script -->
     <script type="module" src="/src/main.jsx"></script>
     
