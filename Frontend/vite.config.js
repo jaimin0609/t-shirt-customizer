@@ -66,31 +66,21 @@ export default defineConfig(({ mode }) => {
         entryFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
         chunkFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
         assetFileNames: isProd ? 'assets/[name].[hash].[ext]' : 'assets/[name].[ext]',
+        // Instead of using complex manual chunks which might cause issues with React context
+        // Use a simpler strategy that keeps React together and creates fewer chunks
         manualChunks: (id) => {
-          // Split vendor code into separate chunks
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('scheduler')) {
-              return 'vendor-react'
-            } else if (id.includes('router')) {
-              return 'vendor-router'
-            } else {
-              return 'vendor'
+            // Keep all React and related packages in a single chunk
+            if (id.includes('react') || 
+                id.includes('scheduler') || 
+                id.includes('jsx') || 
+                id.includes('prop-types')) {
+              return 'vendor-react';
             }
+            
+            // Group all other dependencies
+            return 'vendor';
           }
-          
-          // Split app code into logical chunks
-          if (id.includes('/components/')) {
-            return 'components'
-          } else if (id.includes('/pages/')) {
-            return 'pages'
-          } else if (id.includes('/contexts/')) {
-            return 'contexts'
-          } else if (id.includes('/utils/') || id.includes('/services/')) {
-            return 'utils'
-          }
-          
-          // Default chunk
-          return undefined
         }
       }
     },
@@ -107,7 +97,14 @@ export default defineConfig(({ mode }) => {
   // Combine with main configuration
   return {
     plugins: [
-      react(),
+      react({
+        // Optimize React rendering
+        jsxRuntime: 'automatic',
+        babel: {
+          // Add default babel plugins for better compatibility
+          plugins: []
+        }
+      }),
       VitePWA({
         registerType: 'prompt',
         includeAssets: ['favicon.ico', 'logo.png', 'icons/*.png'],
@@ -130,11 +127,14 @@ export default defineConfig(({ mode }) => {
     build: buildConfig,
     
     optimizeDeps: {
+      // Force inclusion of React dependencies to ensure they're processed correctly
       include: [
         'react',
         'react-dom',
+        'react/jsx-runtime',
         'react-router-dom',
-        'react-toastify'
+        'react-toastify',
+        'scheduler'
       ],
       esbuildOptions: {
         target: 'es2020'
@@ -188,6 +188,9 @@ export default defineConfig(({ mode }) => {
       'process.env.REACT_APP_VERSION': JSON.stringify(process.env.npm_package_version || '1.0.0'),
       // Remove the CDN React flag as it causes confusion
       'process.env.BASE_URL': JSON.stringify('/'),
+      // Explicitly set React global
+      'global.React': 'React',
+      'window.React': 'React'
     }
   };
 });

@@ -10,6 +10,20 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import './index.css';
 import './App.css';
 
+// Ensure React is globally available in case any modules are looking for it
+// This is a fallback for the createContext errors
+window.React = React;
+window.ReactDOM = ReactDOM;
+
+// Store these in a global variable for the react-loader script
+window.__REACT_MODULES = {
+  React,
+  ReactDOM
+};
+
+// Mark React as loaded
+window.__REACT_LOADED = true;
+
 console.log('Main.jsx - React version:', React.version);
 
 /**
@@ -48,6 +62,27 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('React app rendered successfully');
   } catch (error) {
     console.error('Error rendering React application:', error);
+
+    // Display error on the page for better debugging
+    const errorDiv = document.createElement('div');
+    errorDiv.style.padding = '20px';
+    errorDiv.style.margin = '20px';
+    errorDiv.style.backgroundColor = '#fee2e2';
+    errorDiv.style.border = '1px solid #ef4444';
+    errorDiv.style.borderRadius = '4px';
+    errorDiv.innerHTML = `
+      <h2 style="color: #b91c1c;">React Rendering Error</h2>
+      <p>${error.message}</p>
+      <pre style="background: #f9fafb; padding: 10px; overflow: auto;">${error.stack}</pre>
+      <button onclick="window.location.reload()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
+        Reload Page
+      </button>
+    `;
+
+    // Add to document body for visibility
+    if (rootElement.parentNode) {
+      rootElement.parentNode.insertBefore(errorDiv, rootElement.nextSibling);
+    }
   }
 
   // Remove loading indicator

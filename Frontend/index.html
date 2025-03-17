@@ -22,13 +22,11 @@
     <!-- DNS Prefetch and Preconnect for external resources -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://fonts.gstatic.com">
-    <link rel="dns-prefetch" href="https://unpkg.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
     
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     
@@ -36,6 +34,9 @@
     <link rel="preload" as="image" href="/logo.png" type="image/png">
     <link rel="preload" href="/critical.css" as="style">
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" as="style">
+    
+    <!-- React Loader Script - THIS IS CRITICAL and must come before React bundle -->
+    <script src="/react-loader.js"></script>
     
     <!-- Add Tailwind CSS from CDN as fallback with font-display=swap for better font loading -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
@@ -177,6 +178,16 @@
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to main content</a>
     
+    <!-- Error state display for React loading issues -->
+    <div id="react-error" style="display: none; padding: 20px; margin: 20px; background-color: #fee2e2; border: 1px solid #ef4444; border-radius: 4px;">
+      <h2 style="color: #b91c1c;">React Loading Error</h2>
+      <p>There was a problem loading React. This is a technical issue that needs to be fixed.</p>
+      <p id="react-error-message"></p>
+      <button onclick="window.location.reload()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
+        Reload Page
+      </button>
+    </div>
+    
     <div id="root">
       <!-- Initial loading state that will be replaced by React -->
       <div class="app-loading" id="initial-loading" role="status" aria-live="polite">
@@ -204,7 +215,36 @@
       </div>
     </div>
     
-    <!-- Main application script - must be after React CDN scripts -->
+    <!-- React error detection script - Must be before the main script -->
+    <script>
+      window.addEventListener('error', function(event) {
+        // Check if this is a React-related error
+        if (event.error && (
+          event.error.toString().includes('createContext') || 
+          event.error.toString().includes('React') ||
+          event.error.toString().includes('react')
+        )) {
+          console.error('React error detected:', event.error);
+          
+          // Show error message
+          var errorEl = document.getElementById('react-error');
+          var errorMessageEl = document.getElementById('react-error-message');
+          
+          if (errorEl && errorMessageEl) {
+            errorEl.style.display = 'block';
+            errorMessageEl.textContent = event.error.toString();
+          }
+          
+          // Hide loading spinner
+          var loadingEl = document.getElementById('initial-loading');
+          if (loadingEl) {
+            loadingEl.style.display = 'none';
+          }
+        }
+      });
+    </script>
+    
+    <!-- Main application script - must be after React loader script -->
     <script type="module" src="/src/main.jsx"></script>
     
     <!-- Service Worker Registration -->
