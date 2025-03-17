@@ -12,6 +12,9 @@
     <meta property="og:image" content="/social-preview.png" />
     <meta name="twitter:card" content="summary_large_image" />
     
+    <!-- CRITICAL: React polyfill MUST be first script to ensure React.createContext is available -->
+    <script src="/react-polyfill.js"></script>
+    
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -35,7 +38,7 @@
     <link rel="preload" href="/critical.css" as="style">
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" as="style">
     
-    <!-- React Loader Script - THIS IS CRITICAL and must come before React bundle -->
+    <!-- React Loader Script - comes after polyfill -->
     <script src="/react-loader.js"></script>
     
     <!-- Add Tailwind CSS from CDN as fallback with font-display=swap for better font loading -->

@@ -2,18 +2,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import { AuthProvider } from './contexts/AuthContext';
-import { CartProvider } from './contexts/CartContext';
-import { WishlistProvider } from './contexts/WishlistContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 import './index.css';
 import './App.css';
 
 // Ensure React is globally available in case any modules are looking for it
-// This is a fallback for the createContext errors
+// This needs to happen before importing any components that might use createContext
 window.React = React;
 window.ReactDOM = ReactDOM;
+
+// Explicitly make createContext globally available
+if (React && React.createContext) {
+  console.log('Making React.createContext globally available');
+  window.React.createContext = React.createContext;
+} else {
+  console.error('React.createContext is not available!');
+}
 
 // Store these in a global variable for the react-loader script
 window.__REACT_MODULES = {
@@ -21,10 +24,19 @@ window.__REACT_MODULES = {
   ReactDOM
 };
 
-// Mark React as loaded
+// Mark React as loaded and dispatch an event other scripts can listen for
 window.__REACT_LOADED = true;
+window.dispatchEvent(new Event('react-loaded'));
 
 console.log('Main.jsx - React version:', React.version);
+
+// Only import App and context providers after React is globally available
+// This is crucial to avoid createContext errors
+const App = React.lazy(() => import('./App'));
+const { AuthProvider } = React.lazy(() => import('./contexts/AuthContext'));
+const { CartProvider } = React.lazy(() => import('./contexts/CartContext'));
+const { WishlistProvider } = React.lazy(() => import('./contexts/WishlistContext'));
+const { NotificationProvider } = React.lazy(() => import('./contexts/NotificationContext'));
 
 /**
  * Client-side entry point for the application
@@ -39,24 +51,53 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // Simple loading component to use while React components are loading
+  const SimpleLoading = () => {
+    return React.createElement('div', {
+      style: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column'
+      }
+    }, [
+      React.createElement('p', { key: 'text' }, 'Loading application components...'),
+      React.createElement('div', {
+        key: 'spinner',
+        style: {
+          width: '50px',
+          height: '50px',
+          border: '5px solid #f3f3f3',
+          borderTop: '5px solid #4a6cf7',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }
+      })
+    ]);
+  };
+
   try {
     // Create root and render app with all providers
     const root = ReactDOM.createRoot(rootElement);
 
+    // Render with Suspense to handle the lazy loading
     root.render(
-      <React.StrictMode>
-        <BrowserRouter>
-          <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <NotificationProvider>
-                  <App />
-                </NotificationProvider>
-              </WishlistProvider>
-            </CartProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </React.StrictMode>
+      React.createElement(React.StrictMode, null,
+        React.createElement(React.Suspense, { fallback: React.createElement(SimpleLoading) },
+          React.createElement(BrowserRouter, null,
+            React.createElement(AuthProvider, null,
+              React.createElement(CartProvider, null,
+                React.createElement(WishlistProvider, null,
+                  React.createElement(NotificationProvider, null,
+                    React.createElement(App, null)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
     );
 
     console.log('React app rendered successfully');

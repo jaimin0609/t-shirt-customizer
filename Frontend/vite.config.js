@@ -61,28 +61,31 @@ export default defineConfig(({ mode }) => {
     outDir: 'dist',
     minify: isProd,
     sourcemap: !isProd,
+    // Ensure React is included in the main bundle
     rollupOptions: {
       output: {
         entryFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
         chunkFileNames: isProd ? 'assets/[name].[hash].js' : 'assets/[name].js',
         assetFileNames: isProd ? 'assets/[name].[hash].[ext]' : 'assets/[name].[ext]',
-        // Instead of using complex manual chunks which might cause issues with React context
-        // Use a simpler strategy that keeps React together and creates fewer chunks
+        // Disable code splitting for React packages by including them in the main bundle
         manualChunks: (id) => {
+          // Critical React dependencies must be in the main bundle to avoid context errors
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/scheduler') ||
+              id.includes('node_modules/prop-types')) {
+            return 'index'; // "index" is the main entry chunk
+          }
+          
+          // Other dependencies can be in the vendor chunk
           if (id.includes('node_modules')) {
-            // Keep all React and related packages in a single chunk
-            if (id.includes('react') || 
-                id.includes('scheduler') || 
-                id.includes('jsx') || 
-                id.includes('prop-types')) {
-              return 'vendor-react';
-            }
-            
-            // Group all other dependencies
             return 'vendor';
           }
+          
+          return undefined; // default to automatic chunk naming
         }
-      }
+      },
+      preserveEntrySignatures: "strict"
     },
     // Generate compressed chunks for modern browsers
     target: 'esnext',
@@ -100,6 +103,8 @@ export default defineConfig(({ mode }) => {
       react({
         // Optimize React rendering
         jsxRuntime: 'automatic',
+        // Disable React Fast Refresh which can interfere with context
+        fastRefresh: false,
         babel: {
           // Add default babel plugins for better compatibility
           plugins: []
@@ -134,7 +139,8 @@ export default defineConfig(({ mode }) => {
         'react/jsx-runtime',
         'react-router-dom',
         'react-toastify',
-        'scheduler'
+        'scheduler',
+        'prop-types'
       ],
       esbuildOptions: {
         target: 'es2020'
@@ -173,7 +179,8 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
         // Add aliases for direct imports - ensure paths are correct
         'react': path.resolve(__dirname, 'node_modules/react'),
-        'react-dom': path.resolve(__dirname, 'node_modules/react-dom')
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+        'react/jsx-runtime': path.resolve(__dirname, 'node_modules/react/jsx-runtime')
       },
       // Ensure .jsx extensions are handled properly
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
