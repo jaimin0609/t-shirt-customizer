@@ -7,6 +7,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from '../components/Header/Header';
 import LogoFooter from '../components/Header/LogoFooter';
+import Logo from '../components/Header/Logo';
 import TShirtBrowser from '../components/MainContent/TShirtBrowser';
 import OrdersPage from '../components/Orders/OrdersPage';
 import CheckoutPage from '../components/Checkout/CheckoutPage';
@@ -187,12 +188,9 @@ const MainLayout = () => {
             <div className="bg-white shadow-md w-full" style={{ display: 'block', visibility: 'visible', zIndex: 9999, position: 'relative' }}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ display: 'block', visibility: 'visible' }}>
                     <div className="flex items-center justify-between h-16" style={{ display: 'flex', visibility: 'visible' }}>
-                        {/* Logo */}
+                        {/* Logo - Using Logo component instead of static image */}
                         <div className="flex-shrink-0" style={{ display: 'block', visibility: 'visible' }}>
-                            <Link to="/" className="flex items-center">
-                                <img src="/logo.png" alt="UniQVerse Logo" className="h-10 w-10" />
-                                <span className="ml-2 text-lg font-semibold">UniQVerse</span>
-                            </Link>
+                            <Logo />
                         </div>
 
                         {/* Navigation Links */}
@@ -490,8 +488,7 @@ const MainLayout = () => {
                         {/* Company Info */}
                         <div className="md:col-span-1">
                             <div className="flex items-center mb-4">
-                                <img src="/logo.png" alt="UniQVerse Logo" className="h-10 w-10" />
-                                <span className="ml-2 text-lg font-semibold">UniQVerse</span>
+                                <LogoFooter />
                             </div>
                             <p className="text-gray-400 mb-4">Create unique, custom t-shirts that express your individual style. Our easy-to-use platform helps you design the perfect shirt for any occasion.</p>
                             <div className="flex space-x-4">
