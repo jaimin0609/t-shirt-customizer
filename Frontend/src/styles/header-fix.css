@@ -1,0 +1,165 @@
+/* 
+  EMERGENCY HEADER FIX - This file contains critical CSS for ensuring the header is always visible 
+*/
+
+/* HIGHEST PRIORITY FIXES - !important on everything */
+/* Target all possible selector combinations for the header */
+
+/* ==========  HEADER ROOT ELEMENT FIXES ========== */
+header,
+nav,
+.navbar,
+.navigation,
+.header,
+.header-container,
+.bg-white.shadow-md,
+.bg-white.shadow-md.w-full {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 9999 !important;
+    width: 100% !important;
+    min-height: 60px !important;
+    background-color: white !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    overflow: visible !important;
+}
+
+/* ==========  CHILDREN VISIBILITY FIXES ========== */
+/* Force all header children to be visible */
+header *,
+nav *,
+.navbar *,
+.navigation *,
+.header *,
+.header-container *,
+.bg-white.shadow-md *,
+.bg-white.shadow-md.w-full * {
+    visibility: visible !important;
+}
+
+/* ==========  FLEX CONTAINER FIXES ========== */
+header .container,
+nav .container,
+.navbar .container,
+header>div,
+nav>div,
+.navbar>div,
+.flex-container,
+.flex,
+.items-center,
+.justify-between,
+header .flex,
+nav .flex {
+    display: flex !important;
+    visibility: visible !important;
+}
+
+/* ==========  FLEX ITEMS FIXES ========== */
+header .flex-shrink-0,
+nav .flex-shrink-0,
+header .flex>div,
+nav .flex>div,
+.flex-1,
+.flex-auto,
+.flex-initial,
+.flex-none,
+.flex-shrink,
+.flex-grow {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* ==========  LINKS AND BUTTONS FIXES ========== */
+header a,
+nav a,
+header button,
+nav button,
+.header-link,
+.nav-link,
+.navbar-link {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+}
+
+/* ==========  MOBILE MENU FIXES ========== */
+.mobile-menu-button,
+[data-headlessui-state],
+.disclosure-button,
+header [data-headlessui-state],
+nav [data-headlessui-state] {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* ==========  ANIMATION FIXES ========== */
+/* Prevent animations from hiding header */
+@keyframes none {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+header,
+nav,
+.navbar,
+.header-container {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* ==========  HEADLESSUI SPECIFIC FIXES ========== */
+[data-headlessui-state="open"],
+[data-headlessui-state="closed"],
+[data-headlessui-portal],
+[role="menu"],
+[role="menuitem"],
+.disclosure,
+.disclosure-panel,
+.transition {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* ==========  Z-INDEX STACK FIXES ========== */
+/* Ensure proper stacking context */
+header {
+    z-index: 9999 !important;
+}
+
+header>* {
+    z-index: 9998 !important;
+}
+
+header>*>* {
+    z-index: 9997 !important;
+}
+
+header>*>*>* {
+    z-index: 9996 !important;
+}
+
+header>*>*>*>* {
+    z-index: 9995 !important;
+}
+
+/* ==========  SVG AND ICON FIXES ========== */
+header svg,
+nav svg,
+.header-icon,
+.nav-icon {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}

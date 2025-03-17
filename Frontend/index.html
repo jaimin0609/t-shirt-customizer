@@ -177,6 +177,37 @@
     </style>
     
     <title>UniQVerse - Custom T-Shirt Design</title>
+    
+    <!-- Header Visibility Debugging Script -->
+    <script>
+      // This script helps diagnose header visibility issues
+      window.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          const header = document.querySelector('header');
+          const headerContainer = document.querySelector('.header-container');
+          const fallbackHeader = document.querySelector('.bg-white.shadow-md.w-full');
+          
+          console.log('Header Debug:', {
+            headerExists: !!header,
+            headerVisible: header ? window.getComputedStyle(header).display !== 'none' : false,
+            headerContainerExists: !!headerContainer,
+            headerContainerVisible: headerContainer ? window.getComputedStyle(headerContainer).display !== 'none' : false,
+            fallbackHeaderExists: !!fallbackHeader,
+            fallbackHeaderVisible: fallbackHeader ? window.getComputedStyle(fallbackHeader).display !== 'none' : false
+          });
+          
+          // Force header visibility if it exists but is hidden
+          if (header && window.getComputedStyle(header).display === 'none') {
+            header.style.display = 'block';
+            header.style.visibility = 'visible';
+            header.style.opacity = '1';
+            header.style.position = 'relative';
+            header.style.zIndex = '9999';
+            console.log('Header visibility forced by debug script');
+          }
+        }, 1000); // Check after 1 second to allow for rendering
+      });
+    </script>
   </head>
   <body>
     <!-- Skip to content link for accessibility -->
