@@ -14,7 +14,10 @@
         "pre-deploy": "npm run security-check && npm audit",
         "dependency-check": "node scripts/check-dependencies.js",
         "dependency-check:fix": "node scripts/check-dependencies.js --fix",
-        "dependency-check:security": "node scripts/check-dependencies.js --security"
+        "dependency-check:security": "node scripts/check-dependencies.js --security",
+        "security-update": "node scripts/security-update.js",
+        "security-update:frontend": "node scripts/security-update.js --frontend",
+        "security-update:backend": "node scripts/security-update.js --backend"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
