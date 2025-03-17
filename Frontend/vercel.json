@@ -1,7 +1,7 @@
 {
     "version": 2,
     "framework": null,
-    "buildCommand": "npm install --save-dev vite@latest cssnano postcss tailwindcss autoprefixer && npm install && chmod +x ./vercel-build.sh && ./vercel-build.sh",
+    "buildCommand": "npm install && chmod +x ./vercel-build.sh && ./vercel-build.sh",
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "github": {
