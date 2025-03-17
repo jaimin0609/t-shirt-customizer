@@ -1,44 +1,41 @@
-// Email service for sending emails
+// Email service for sending emails using Brevo (formerly Sendinblue)
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const nodemailer = require('nodemailer');
+const Brevo = require('@getbrevo/brevo');
 
-let transporter = null;
+let apiInstance = null;
 
 /**
- * Initialize email transporter
+ * Initialize Brevo email service
  * Call this on application startup
  */
 export const initializeEmailService = () => {
   try {
     // Check for required environment variables
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.warn('Email configuration is incomplete. Email sending will be disabled.');
-      console.log('Required environment variables: EMAIL_HOST, EMAIL_USER, EMAIL_PASS');
+    if (!process.env.BREVO_API_KEY) {
+      console.warn('Brevo API key is not set. Email sending will be disabled.');
+      console.log('Required environment variable: BREVO_API_KEY');
       return false;
     }
 
-    // Create a transporter
-    transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT || 587,
-      secure: process.env.EMAIL_SECURE === 'true',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    console.log('Email service initialized successfully');
+    // Configure API key authorization
+    const defaultClient = Brevo.ApiClient.instance;
+    const apiKey = defaultClient.authentications['api-key'];
+    apiKey.apiKey = process.env.BREVO_API_KEY;
+    
+    // Create API instance for sending transactional emails
+    apiInstance = new Brevo.TransactionalEmailsApi();
+    
+    console.log('Brevo email service initialized successfully');
     return true;
   } catch (error) {
-    console.error('Failed to initialize email service:', error);
+    console.error('Failed to initialize Brevo email service:', error);
     return false;
   }
 };
 
 /**
- * Send an email
+ * Send an email using Brevo
  * @param {string} to - Recipient email address
  * @param {string} subject - Email subject
  * @param {string} text - Plain text content
@@ -47,32 +44,44 @@ export const initializeEmailService = () => {
  */
 export const sendEmail = async (to, subject, text, html = null) => {
   try {
-    // If transporter is not initialized
-    if (!transporter) {
-      console.warn('Email service not initialized. Attempting to initialize...');
+    // If API instance is not initialized
+    if (!apiInstance) {
+      console.warn('Brevo email service not initialized. Attempting to initialize...');
       const initialized = initializeEmailService();
       if (!initialized) {
-        console.error('Failed to send email: Email service not initialized');
+        console.error('Failed to send email: Brevo email service not initialized');
         return false;
       }
     }
 
-    // Configure email options
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to,
-      subject,
-      text,
-      ...(html && { html }),
+    // Configure the sender
+    const sender = {
+      email: process.env.EMAIL_FROM || 'noreply@yourapp.com',
+      name: process.env.EMAIL_FROM_NAME || 'Your App'
     };
 
-    // Send the email
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`Email sent: ${info.messageId}`);
-    console.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+    // Configure the recipient
+    const toEmail = {
+      email: to
+    };
+
+    // Create the send email object
+    const sendEmailData = new Brevo.SendSmtpEmail();
+    sendEmailData.sender = sender;
+    sendEmailData.to = [toEmail];
+    sendEmailData.subject = subject;
+    sendEmailData.textContent = text;
+    
+    if (html) {
+      sendEmailData.htmlContent = html;
+    }
+
+    // Send the email using Brevo API
+    const data = await apiInstance.sendTransacEmail(sendEmailData);
+    console.log(`Email sent via Brevo. Message ID: ${data.messageId}`);
     return true;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('Failed to send email via Brevo:', error);
     return false;
   }
 };
