@@ -275,7 +275,4 @@ export const useAuth = () => {
   }
 
   return context;
-};
-
-// Export named export only to avoid build errors with duplicate exports
-export { AuthProvider }; 
+}; 

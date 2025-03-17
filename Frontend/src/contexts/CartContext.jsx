@@ -584,7 +584,4 @@ export const useCart = () => {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-};
-
-// Export named export only to avoid build errors with duplicate exports
-export { CartProvider }; 
+}; 

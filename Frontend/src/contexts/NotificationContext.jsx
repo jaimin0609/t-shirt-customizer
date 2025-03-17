@@ -188,7 +188,4 @@ export const useNotification = () => {
         throw new Error('useNotification must be used within a NotificationProvider');
     }
     return context;
-};
-
-// Export named export only to avoid build errors with duplicate exports
-export { NotificationProvider }; 
+}; 

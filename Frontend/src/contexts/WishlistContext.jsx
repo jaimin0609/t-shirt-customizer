@@ -125,7 +125,4 @@ export const useWishlist = () => {
         throw new Error('useWishlist must be used within a WishlistProvider');
     }
     return context;
-};
-
-// Export named export only to avoid build errors with duplicate exports
-export { WishlistProvider }; 
+}; 
