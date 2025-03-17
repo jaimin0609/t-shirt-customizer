@@ -410,13 +410,16 @@ const MainLayout = () => {
             </main>
 
             {/* Footer Section */}
-            <footer className="bg-gray-800 text-white pt-12 pb-8 px-4">
+            <footer className="bg-gray-800 text-white py-8 px-4">
                 <div className="container mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         {/* Company Info */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">UniQVerse</h3>
-                            <p className="text-gray-400 mb-4">Customize your own unique t-shirts and apparel with our easy-to-use design tools.</p>
+                        <div className="md:col-span-1">
+                            <div className="flex items-center mb-4">
+                                <img src="/logo.png" alt="UniQVerse Logo" className="h-10 w-10" />
+                                <span className="ml-2 text-lg font-semibold">UniQVerse</span>
+                            </div>
+                            <p className="text-gray-400 mb-4">Create unique, custom t-shirts that express your individual style. Our easy-to-use platform helps you design the perfect shirt for any occasion.</p>
                             <div className="flex space-x-4">
                                 <a href="#" className="text-gray-400 hover:text-white transition-colors">
                                     <span className="sr-only">Facebook</span>
@@ -439,48 +442,42 @@ const MainLayout = () => {
                             </div>
                         </div>
 
-                        {/* Shop Categories */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">Shop Categories</h3>
+                        {/* Shop Links */}
+                        <div className="md:col-span-1">
+                            <h3 className="text-lg font-semibold mb-4">Shop</h3>
                             <ul className="space-y-2">
-                                <li><Link to="/products?category=t-shirts" className="text-gray-400 hover:text-white transition-colors">T-Shirts</Link></li>
-                                <li><Link to="/products?category=hoodies" className="text-gray-400 hover:text-white transition-colors">Hoodies</Link></li>
-                                <li><Link to="/products?category=tank-tops" className="text-gray-400 hover:text-white transition-colors">Tank Tops</Link></li>
-                                <li><Link to="/products?category=accessories" className="text-gray-400 hover:text-white transition-colors">Accessories</Link></li>
+                                <li><Link to="/products" className="text-gray-400 hover:text-white transition-colors">All Products</Link></li>
                                 <li><Link to="/designs" className="text-gray-400 hover:text-white transition-colors">Design Gallery</Link></li>
+                                <li><Link to="/custom-design" className="text-gray-400 hover:text-white transition-colors">Custom Design</Link></li>
+                                <li><Link to="/3d-designer" className="text-gray-400 hover:text-white transition-colors">3D Designer</Link></li>
                             </ul>
                         </div>
 
                         {/* Customer Service */}
-                        <div>
+                        <div className="md:col-span-1">
                             <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
                             <ul className="space-y-2">
                                 <li><Link to="/contact-us" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
                                 <li><Link to="/faq" className="text-gray-400 hover:text-white transition-colors">FAQ</Link></li>
-                                <li><Link to="/shipping-info" className="text-gray-400 hover:text-white transition-colors">Shipping Information</Link></li>
+                                <li><Link to="/shipping-info" className="text-gray-400 hover:text-white transition-colors">Shipping Info</Link></li>
                                 <li><Link to="/returns-policy" className="text-gray-400 hover:text-white transition-colors">Returns Policy</Link></li>
-                                <li><Link to="/sitemap" className="text-gray-400 hover:text-white transition-colors">Sitemap</Link></li>
                             </ul>
                         </div>
 
                         {/* Company Links */}
-                        <div>
+                        <div className="md:col-span-1">
                             <h3 className="text-lg font-semibold mb-4">Company</h3>
                             <ul className="space-y-2">
                                 <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
                                 <li><Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
                                 <li><Link to="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+                                <li><Link to="/sitemap" className="text-gray-400 hover:text-white transition-colors">Sitemap</Link></li>
                             </ul>
                         </div>
-                    </div>
-
-                    <div className="mt-12 pt-8 border-t border-gray-700 text-center text-gray-400">
-                        <p>© {new Date().getFullYear()} UniQVerse. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
 
-            <LogoFooter />
             <AiChatWidget />
         </div>
     );
