@@ -2,8 +2,11 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const Brevo = require('@getbrevo/brevo');
+const nodemailer = require('nodemailer');
 
 let apiInstance = null;
+let smtpTransporter = null;
+let useSmtp = false;
 
 /**
  * Initialize Brevo email service
@@ -11,23 +14,41 @@ let apiInstance = null;
  */
 export const initializeEmailService = () => {
   try {
-    // Check for required environment variables
-    if (!process.env.BREVO_API_KEY) {
-      console.warn('Brevo API key is not set. Email sending will be disabled.');
-      console.log('Required environment variable: BREVO_API_KEY');
-      return false;
+    // First try to initialize SMTP if credentials are available
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
+      smtpTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
+      
+      useSmtp = true;
+      console.log('Brevo SMTP service initialized successfully');
+      return true;
     }
-
-    // Configure API key authorization
-    const defaultClient = Brevo.ApiClient.instance;
-    const apiKey = defaultClient.authentications['api-key'];
-    apiKey.apiKey = process.env.BREVO_API_KEY;
     
-    // Create API instance for sending transactional emails
-    apiInstance = new Brevo.TransactionalEmailsApi();
+    // Fall back to API if SMTP is not configured
+    if (process.env.BREVO_API_KEY) {
+      // Configure API key authorization
+      const defaultClient = Brevo.ApiClient.instance;
+      const apiKey = defaultClient.authentications['api-key'];
+      apiKey.apiKey = process.env.BREVO_API_KEY;
+      
+      // Create API instance for sending transactional emails
+      apiInstance = new Brevo.TransactionalEmailsApi();
+      
+      console.log('Brevo API service initialized successfully');
+      return true;
+    }
     
-    console.log('Brevo email service initialized successfully');
-    return true;
+    // No configuration available
+    console.warn('No email configuration found. Email sending will be disabled.');
+    console.log('Required environment variables: Either BREVO_API_KEY or (SMTP_HOST, SMTP_USER, SMTP_PASSWORD)');
+    return false;
   } catch (error) {
     console.error('Failed to initialize Brevo email service:', error);
     return false;
@@ -44,44 +65,68 @@ export const initializeEmailService = () => {
  */
 export const sendEmail = async (to, subject, text, html = null) => {
   try {
-    // If API instance is not initialized
-    if (!apiInstance) {
-      console.warn('Brevo email service not initialized. Attempting to initialize...');
+    // If neither transporter is initialized, try to initialize
+    if (!apiInstance && !smtpTransporter) {
+      console.warn('Email service not initialized. Attempting to initialize...');
       const initialized = initializeEmailService();
       if (!initialized) {
-        console.error('Failed to send email: Brevo email service not initialized');
+        console.error('Failed to send email: Email service not initialized');
         return false;
       }
     }
 
     // Configure the sender
-    const sender = {
-      email: process.env.EMAIL_FROM || 'noreply@yourapp.com',
-      name: process.env.EMAIL_FROM_NAME || 'Your App'
-    };
+    const senderEmail = process.env.EMAIL_FROM || 'noreply@yourapp.com';
+    const senderName = process.env.EMAIL_FROM_NAME || 'Your App';
 
-    // Configure the recipient
-    const toEmail = {
-      email: to
-    };
+    // Use SMTP if available
+    if (useSmtp && smtpTransporter) {
+      const mailOptions = {
+        from: `"${senderName}" <${senderEmail}>`,
+        to,
+        subject,
+        text,
+        ...(html && { html }),
+      };
 
-    // Create the send email object
-    const sendEmailData = new Brevo.SendSmtpEmail();
-    sendEmailData.sender = sender;
-    sendEmailData.to = [toEmail];
-    sendEmailData.subject = subject;
-    sendEmailData.textContent = text;
-    
-    if (html) {
-      sendEmailData.htmlContent = html;
+      const info = await smtpTransporter.sendMail(mailOptions);
+      console.log(`Email sent via SMTP. Message ID: ${info.messageId}`);
+      return true;
+    } 
+    // Otherwise use the API
+    else if (apiInstance) {
+      // Configure the sender
+      const sender = {
+        email: senderEmail,
+        name: senderName
+      };
+
+      // Configure the recipient
+      const toEmail = {
+        email: to
+      };
+
+      // Create the send email object
+      const sendEmailData = new Brevo.SendSmtpEmail();
+      sendEmailData.sender = sender;
+      sendEmailData.to = [toEmail];
+      sendEmailData.subject = subject;
+      sendEmailData.textContent = text;
+      
+      if (html) {
+        sendEmailData.htmlContent = html;
+      }
+
+      // Send the email using Brevo API
+      const data = await apiInstance.sendTransacEmail(sendEmailData);
+      console.log(`Email sent via Brevo API. Message ID: ${data.messageId}`);
+      return true;
     }
-
-    // Send the email using Brevo API
-    const data = await apiInstance.sendTransacEmail(sendEmailData);
-    console.log(`Email sent via Brevo. Message ID: ${data.messageId}`);
-    return true;
+    
+    console.error('No valid email transport method available');
+    return false;
   } catch (error) {
-    console.error('Failed to send email via Brevo:', error);
+    console.error('Failed to send email:', error);
     return false;
   }
 };
