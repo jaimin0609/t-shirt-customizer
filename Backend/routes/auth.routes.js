@@ -269,6 +269,37 @@ router.post('/customer/register', async (req, res) => {
     }
 });
 
+// Get user profile
+router.get('/profile', auth, async (req, res) => {
+    try {
+        // Get user ID from auth middleware
+        const userId = req.user.id;
+        
+        // Find user by ID, exclude password
+        const user = await User.findByPk(userId, {
+            attributes: { exclude: ['password'] }
+        });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if user has an associated customer profile
+        const customer = await Customer.findOne({ where: { userId } });
+        
+        // Return user data with customer profile if exists
+        return res.status(200).json({
+            user: {
+                ...user.toJSON(),
+                customer: customer || null
+            }
+        });
+    } catch (error) {
+        console.error('Profile fetch error:', error);
+        res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    }
+});
+
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
     try {

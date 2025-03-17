@@ -733,6 +733,7 @@ router.get('/:id', async (req, res) => {
         
         // Check if productId is undefined, "undefined", or otherwise invalid
         if (!productId || productId === 'undefined' || productId === 'null') {
+            console.log(`Invalid product ID provided: ${productId}`);
             return res.status(400).json({ message: 'Invalid product ID' });
         }
         
@@ -1434,6 +1435,7 @@ router.get('/:id/similar', async (req, res) => {
         
         // Check if productId is undefined, "undefined", or otherwise invalid
         if (!productId || productId === 'undefined' || productId === 'null') {
+            console.log(`Invalid product ID provided for similar products: ${productId}`);
             return res.status(400).json({ message: 'Invalid product ID' });
         }
         
@@ -1441,7 +1443,9 @@ router.get('/:id/similar', async (req, res) => {
         const product = await Product.findByPk(productId);
         
         if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
+            console.log(`Product not found for similar products: ${productId}`);
+            // Return empty array instead of 404 to make it more resilient
+            return res.status(200).json([]);
         }
         
         // Find products in the same category but exclude current product

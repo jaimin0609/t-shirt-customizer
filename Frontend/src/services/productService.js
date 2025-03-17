@@ -169,6 +169,12 @@ export const productService = {
 
     getProductById: async (productId) => {
         try {
+            // Validate product ID
+            if (!productId || productId === 'undefined' || productId === 'null') {
+                console.error('Invalid product ID provided:', productId);
+                throw new Error('Invalid product ID');
+            }
+            
             // Try to get a working API URL
             const baseUrl = await getWorkingApiUrl();
             
@@ -192,6 +198,12 @@ export const productService = {
     getSimilarProducts: async (productId) => {
         try {
             log(`[ProductService] Fetching similar products for: ${productId}`);
+            
+            // Validate product ID
+            if (!productId || productId === 'undefined' || productId === 'null') {
+                console.error('[ProductService] Invalid product ID provided:', productId);
+                return []; // Return empty array instead of throwing
+            }
             
             // Get token if available, but don't require it for public product listing
             const token = localStorage.getItem('token');

@@ -77,6 +77,13 @@ const ProductDetailPage = () => {
     useEffect(() => {
         const fetchProductDetails = async () => {
             try {
+                // Validate product ID
+                if (!productId || productId === 'undefined' || productId === 'null') {
+                    setError('Invalid product ID. Please try a different product.');
+                    setLoading(false);
+                    return;
+                }
+
                 setLoading(true);
                 setError(null);
 
