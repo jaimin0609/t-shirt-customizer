@@ -68,759 +68,271 @@ const app = express();
 // This fixes the "ERR_ERL_UNEXPECTED_X_FORWARDED_FOR" warning
 app.set('trust proxy', 1);
 
+// Create and configure allowlist of domains for CORS
+const createCorsAllowList = () => {
+  // Start with essential domains
+  const staticAllowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5002',
+    'http://127.0.0.1:5002',
+    'https://t-shirt-customizer-backend.onrender.com',
+    'https://uniqverse-five.vercel.app',
+    'https://uniqverse.vercel.app'
+  ];
+  
+  // Add any additional domains from environment variable if present
+  const envAllowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : [];
+  
+  // Combine both lists
+  return [...new Set([...staticAllowedOrigins, ...envAllowedOrigins])];
+};
+
+const corsAllowList = createCorsAllowList();
+
 // Middleware
 app.use(cors({
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps, curl, etc)
         if (!origin) return callback(null, true);
         
-        // Check allowed origins list
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'http://localhost:5002',
-            'http://127.0.0.1:5002',
-            'https://t-shirt-customizer-backend.onrender.com',
-            'https://uniqverse-59yxjdrud-jaimin0609s-projects.vercel.app',
-            'https://uniqverse-8ub2zql8o-jaimin0609s-projects.vercel.app',
-            'https://uniqverse.vercel.app',
-            'https://uniqverse-five.vercel.app',
-            'https://uniqverse-7dymb389x-jaimin0609s-projects.vercel.app'
-        ];
-        
-        // Check if origin is in allowed list
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            return callback(null, true);
+        // Check if origin is in allowlist
+        if (corsAllowList.includes(origin)) {
+            callback(null, true);
+        } else if (origin.endsWith('.vercel.app')) {
+            // Allow specific vercel subdomains for development
+            callback(null, true);
+        } else {
+            console.warn(`Origin rejected by CORS policy: ${origin}`);
+            callback(new Error(`Origin ${origin} not allowed by CORS policy`));
         }
-        
-        // Allow all vercel.app domains
-        if (origin.endsWith('.vercel.app')) {
-            return callback(null, true);
-        }
-        
-        // Log rejected origins in development
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn(`Origin ${origin} not allowed by CORS`);
-        }
-        
-        // By default, allow the request but log it
-        callback(null, true);
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept', 'X-Auth-Token'],
-    exposedHeaders: ['Content-Length', 'X-Auth-Token'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-    maxAge: 86400 // Cache preflight requests for 24 hours
+    maxAge: 86400 // 24 hours
 }));
 
-// Special handling for OPTIONS requests
-app.options('*', (req, res) => {
-    // Get origin from request headers
-    const origin = req.headers.origin || '*';
-    
-    // Handle preflight requests
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-Auth-Token');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400'); // Cache preflight requests for 24 hours
-    res.status(204).end();
-});
-
-// Middleware to ensure CORS headers are properly set on all responses
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
-    // Define a 'vary' header to tell caches that the response will vary by Origin header
-    res.setHeader('Vary', 'Origin');
-    
-    // Continue processing the request
-    next();
-});
-
-// Add a health check endpoint for connectivity testing
-app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'Server is up and running' });
-});
-
-// Log CORS requests in development
-if (process.env.NODE_ENV !== 'production') {
-    app.use((req, res, next) => {
-        console.log(`${req.method} ${req.path} - Origin: ${req.get('origin') || 'No origin'}`);
-        next();
-    });
-}
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Add security headers in production
-if (process.env.NODE_ENV === 'production') {
-    app.use(helmet({
-        contentSecurityPolicy: {
-            directives: {
-                defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
-                styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-                imgSrc: [
-                    "'self'", 
-                    "data:", 
-                    "blob:",
-                    "https://cdn.jsdelivr.net", 
-                    "https://img.icons8.com", 
-                    "https://res.cloudinary.com",
-                    "https://*.cloudinary.com",
-                    "http://localhost:5002",
-                    "https://t-shirt-customizer-backend.onrender.com"
-                ],
-                connectSrc: [
-                    "'self'", 
-                    "https://api.cloudinary.com",
-                    "https://*.cloudinary.com",
-                    "https://t-shirt-customizer-backend.onrender.com",
-                    "*"
-                ],
-                fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
-                objectSrc: ["'none'"],
-                mediaSrc: ["'self'", "https://res.cloudinary.com"],
-                frameSrc: ["'self'"],
-                scriptSrcAttr: ["'unsafe-inline'"],  // Allow inline event handlers
-                upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
-            }
+// Enhanced security headers with Helmet
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com', 'https://cdn.jsdelivr.net'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
+            imgSrc: ["'self'", 'https://res.cloudinary.com', 'data:', 'blob:'],
+            connectSrc: ["'self'", ...corsAllowList],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'self'", 'https://js.stripe.com'],
+            upgradeInsecureRequests: [],
         },
-        crossOriginEmbedderPolicy: false,
-        crossOriginOpenerPolicy: false,
-        crossOriginResourcePolicy: { policy: "cross-origin" },
-        xssFilter: true,
-        noSniff: true,
-        referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
-    }));
-    
-    // Add rate limiting in production
-    const apiLimiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100, // limit each IP to 100 requests per windowMs
-        message: 'Too many requests from this IP, please try again later'
-    });
-    app.use('/api/', apiLimiter);
-    
-    console.log('Production security measures enabled');
-}
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        return res.status(400).json({ message: 'Invalid JSON' });
-    }
-    next(err);
-});
-
-// Add a special CORS handler for the uploads directory to ensure images are accessible
-app.use('/uploads', (req, res, next) => {
-    // Allow from any origin
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
-    // Add cache headers for images
-    const filePath = req.path;
-    if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-        res.header('Cache-Control', 'public, max-age=86400'); // 24 hours
-    }
-    
-    next();
-});
-
-// Serve static files with proper MIME types
-app.use(express.static(path.join(__dirname, 'public'), {
-    setHeaders: (res, filePath) => {
-        // Set appropriate content type for image files
-        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
-            res.setHeader('Content-Type', 'image/jpeg');
-        } else if (filePath.endsWith('.png')) {
-            res.setHeader('Content-Type', 'image/png');
-        } else if (filePath.endsWith('.gif')) {
-            res.setHeader('Content-Type', 'image/gif');
-        }
-        
-        // Set caching headers
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-    }
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding resources from approved domains
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Needed for OAuth flows
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Required for loading resources from CDNs
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    },
+    xssFilter: true,
+    noSniff: true,
+    dnsPrefetchControl: { allow: false },
 }));
 
-// Add more specific static routes with proper URL paths
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
-    setHeaders: (res, filePath) => {
-        // Set appropriate content type for image files
-        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
-            res.setHeader('Content-Type', 'image/jpeg');
-        } else if (filePath.endsWith('.png')) {
-            res.setHeader('Content-Type', 'image/png');
-        } else if (filePath.endsWith('.gif')) {
-            res.setHeader('Content-Type', 'image/gif');
-        }
-        
-        // Set caching headers
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-    }
-}));
+// Body parser middleware
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(cookieParser());
 
-// Add specific handlers for product images
-app.use('/uploads/products', express.static(path.join(__dirname, 'public/uploads/products'), {
-    setHeaders: (res, filePath) => {
-        console.log('Serving product image:', filePath);
-        // Set appropriate content type for image files
-        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
-            res.setHeader('Content-Type', 'image/jpeg');
-        } else if (filePath.endsWith('.png')) {
-            res.setHeader('Content-Type', 'image/png');
-        } else if (filePath.endsWith('.gif')) {
-            res.setHeader('Content-Type', 'image/gif');
-        }
-        
-        // Set caching headers
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-    }
-}));
-
-// Add explicit route for direct access to images
-app.get('/uploads/products/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'public/uploads/products', filename);
-    
-    console.log(`Direct image request for: ${filename}`);
-    console.log(`Looking for file at: ${filePath}`);
-    
-    if (fs.existsSync(filePath)) {
-        console.log('File found, sending response');
-        
-        // Set MIME type based on extension
-        if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
-            res.setHeader('Content-Type', 'image/jpeg');
-        } else if (filename.endsWith('.png')) {
-            res.setHeader('Content-Type', 'image/png');
-        } else if (filename.endsWith('.gif')) {
-            res.setHeader('Content-Type', 'image/gif');
-        }
-        
-        // Set caching headers
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-        
-        res.sendFile(filePath);
-    } else {
-        console.log('File not found');
-        res.status(404).send('Image not found');
+// Rate limiting for all routes
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // limit each IP to 500 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    skip: (req) => {
+        // Skip rate limiting for development environment
+        return process.env.NODE_ENV === 'development' || 
+               req.ip === '127.0.0.1' || 
+               req.ip === '::1';
     }
 });
 
-// Log the static file paths for debugging
-console.log('Static file paths:');
-console.log('- Public directory:', path.join(__dirname, 'public'));
-console.log('- Uploads directory:', path.join(__dirname, 'public/uploads'));
-console.log('- Product images directory:', path.join(__dirname, 'public/uploads/products'));
+// Apply rate limiter to all routes
+app.use(apiLimiter);
 
-// Verify uploads directories exist
-const uploadsProductsDir = path.join(__dirname, 'public/uploads/products');
-if (!fs.existsSync(uploadsProductsDir)) {
-    console.log('Creating missing uploads/products directory');
-    fs.mkdirSync(uploadsProductsDir, { recursive: true });
-} else {
-    // List existing files in the directory
-    const files = fs.readdirSync(uploadsProductsDir);
-    console.log(`Found ${files.length} existing files in uploads/products directory`);
-    if (files.length > 0) {
-        console.log('Sample files:', files.slice(0, 5));
-    }
-}
-
-// Path rewrites for common JS and CSS files
-app.use('/js', (req, res) => {
-    // Redirect requests from /js/* to /admin/js/*
-    res.redirect(`/admin/js${req.path}`);
+// Stricter rate limiting for authentication routes to prevent brute force attacks
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 30, // limit each IP to 30 login/register requests per hour
+    message: 'Too many login attempts, please try again after an hour',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => process.env.NODE_ENV === 'development'
 });
 
-app.use('/css', (req, res) => {
-    // Redirect requests from /css/* to /admin/css/*
-    res.redirect(`/admin/css${req.path}`);
-});
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Admin panel CSS and JS files - serve with correct MIME types
-app.use('/admin/js', (req, res, next) => {
-    res.set('Content-Type', 'application/javascript');
-    next();
-}, express.static(path.join(__dirname, 'public/admin/js')));
-
-app.use('/admin/css', (req, res, next) => {
-    res.set('Content-Type', 'text/css');
-    next();
-}, express.static(path.join(__dirname, 'public/admin/css')));
-
-// Image files
-app.use('/admin/images', express.static(path.join(__dirname, 'public/admin/images')));
-app.use('/admin/img', express.static(path.join(__dirname, 'public/admin/img')));
-
-// Admin panel routes - serve entire admin directory
-app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
-
-// Admin panel index route - handle the root admin page
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/admin/index.html'));
-});
-
-// Admin login page
-app.get('/admin/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/admin/login.html'));
-});
-
-// Handle 404 errors for admin panel pages
-app.get('/admin/*', (req, res, next) => {
-    // Check if the requested file exists
-    const requestedPath = path.join(__dirname, 'public', req.path);
-    if (fs.existsSync(requestedPath)) {
-        // If it exists, let express.static handle it
-        next();
-    } else {
-        // If it doesn't exist, send the admin index.html for client-side routing
-        res.sendFile(path.join(__dirname, 'public/admin/index.html'));
-    }
-});
-
-// Add this before the API Routes section
+// Additional security: clear sensitive headers that might be added by underlying platforms
 app.use((req, res, next) => {
-    // Log all requests for JavaScript and CSS files
-    if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
-        console.log(`[DEBUG] Resource request: ${req.method} ${req.path}`, {
-            'User-Agent': req.headers['user-agent'],
-            'Accept': req.headers['accept'],
-            'Referer': req.headers['referer'] || 'not specified'
-        });
-    }
+    res.removeHeader('X-Powered-By');
     next();
 });
 
-// Add this near the database connection setup
-// Determine if we're using PostgreSQL
-const isPostgres = process.env.DATABASE_URL ? process.env.DATABASE_URL.startsWith('postgres') : false;
-console.log(`Using ${isPostgres ? 'PostgreSQL' : 'MySQL/MariaDB'} database`);
-
-// API Routes
-app.use('/api/auth', authRoutes);
+// Routes
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/admin', adminProfileRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/admin-profile', adminProfileRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/product-variants', productVariantsRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
-app.use('/api/admin-tools', adminRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// Error handler - should be after all routes
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is healthy', environment: process.env.NODE_ENV || 'development' });
+});
+
+// Route to redirect to admin panel
+app.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Redirecting to Admin Panel</title>
+            <meta http-equiv="refresh" content="3;url=/admin">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background-color: #f5f5f5;
+                }
+                .container {
+                    text-align: center;
+                    padding: 2rem;
+                    background-color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }
+                h1 {
+                    color: #4a6cf7;
+                }
+                .spinner {
+                    margin: 20px auto;
+                    border: 4px solid rgba(0,0,0,0.1);
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border-left-color: #4a6cf7;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                a {
+                    display: inline-block;
+                    margin-top: 20px;
+                    color: #4a6cf7;
+                    text-decoration: none;
+                    font-weight: bold;
+                }
+                a:hover {
+                    text-decoration: underline;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Welcome to Uniqverse Admin Panel</h1>
+                <p>If you are not redirected automatically, click the link below to go to the admin panel.</p>
+                <div class="spinner"></div>
+                <a href="/admin">Go to Admin Panel</a>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+// Admin panel route
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
+
+// Fallback route - handle React router for admin panel
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
+
+// Error handling middleware
 app.use(errorHandler);
 
-// Default route
-app.get('/', (req, res) => {
-    // If user agent is a browser (contains Mozilla, Safari, Chrome, etc.)
-    const userAgent = req.headers['user-agent'] || '';
-    if (userAgent.includes('Mozilla') || userAgent.includes('Chrome') || userAgent.includes('Safari')) {
-        // Redirect browser requests to admin panel
-        return res.redirect('/admin');
-    }
-    
-    // For API clients, return JSON
-    res.json({ 
-        message: 'T-Shirt Customizer API is running',
-        docs: 'API Documentation is not available. Please check the frontend application.',
-        adminPanel: `${req.protocol}://${req.get('host')}/admin`,
-        status: 'healthy'
-    });
-});
-
-// Global 404 handler for API routes
-app.use('/api/*', (req, res) => {
+// Handle 404 routes
+app.use((req, res) => {
     res.status(404).json({
-        error: 'API endpoint not found',
-        path: req.originalUrl
+        error: 'Not Found',
+        message: 'The requested resource does not exist'
     });
 });
 
-// Diagnostic route for admin panel files
-app.get('/check-admin-files', (req, res) => {
-    try {
-        const adminDir = path.join(__dirname, 'public/admin');
-        const files = fs.readdirSync(adminDir);
-        
-        // Check if key files exist
-        const hasIndexHtml = files.includes('index.html');
-        const hasLoginHtml = files.includes('login.html');
-        
-        // Check JS directory
-        let jsFiles = [];
-        const jsDir = path.join(adminDir, 'js');
-        if (fs.existsSync(jsDir)) {
-            jsFiles = fs.readdirSync(jsDir);
-        }
-        
-        res.json({
-            success: true,
-            adminDirExists: true,
-            adminFiles: files,
-            hasIndexHtml,
-            hasLoginHtml,
-            jsDirectoryExists: fs.existsSync(jsDir),
-            jsFiles,
-            adminPath: adminDir
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            stack: process.env.NODE_ENV === 'production' ? null : error.stack
-        });
-    }
-});
-
-// Add this route for testing image serving
-app.get('/test-image', (req, res) => {
-    const testImagePath = path.join(__dirname, 'public/uploads/products');
-    fs.readdir(testImagePath, (err, files) => {
-        if (err) {
-            console.error('Error reading uploads directory:', err);
-            return res.status(500).json({ error: 'Cannot read uploads directory' });
-        }
-        res.json({
-            message: 'Image directory contents',
-            files: files,
-            directory: testImagePath
-        });
+// Catch unhandled errors
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({
+        error: 'Server Error',
+        message: process.env.NODE_ENV === 'production' 
+            ? 'An unexpected error occurred' 
+            : err.message
     });
 });
 
-// Remove debug route handlers
-app.get('/direct-image/:filename', (req, res) => {
-    const { filename } = req.params;
-    const filePath = path.join(__dirname, 'public/uploads/products', filename);
-    
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath);
-    }
-    
-    // Fallback to placeholder if file doesn't exist
-    res.status(404).json({ error: 'Image not found' });
-});
+// Start server
+const PORT = process.env.PORT || 3001;
 
-// Custom middleware to log all API requests (remove in production)
-if (process.env.NODE_ENV !== 'production') {
-    app.use('/api', (req, res, next) => {
-        // Only log API requests in non-production environments
-        next();
-    });
-}
-
-// In the database connection section, before 'startServer()' function call
-// Add this function:
-
-async function applyResetTokenMigration() {
-  try {
-    console.log('Checking and adding resetToken/resetTokenExpiry columns if needed...');
-    
-    // First test if we can connect and run a query
-    try {
-      await sequelize.query('SELECT 1+1 AS result');
-      console.log('Database connection verified for migration');
-    } catch (connError) {
-      console.error('Cannot connect to database for migration:', connError);
-      return; // Exit the migration function but don't throw error
-    }
-    
-    // Determine the actual table name based on the dialect
-    let tableName = 'Users';
-    
-    // In PostgreSQL, we need to check what the actual table name is (case sensitivity)
-    if (isPostgres) {
-      try {
-        const [tables] = await sequelize.query(
-          `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'`
-        );
-        
-        // Find the users table regardless of case
-        const usersTable = tables.find(t => 
-          (t.tablename || '').toLowerCase() === 'users'
-        );
-        
-        if (usersTable) {
-          tableName = usersTable.tablename;
-          console.log(`Found actual users table name: "${tableName}"`);
-        } else {
-          console.log('Could not find Users table, using default: "Users"');
-        }
-      } catch (err) {
-        console.error('Error finding actual table name:', err);
-        console.log('Proceeding with default table name: "Users"');
-      }
-    }
-    
-    // Use a PostgreSQL compatible query to check if columns exist
-    const query = isPostgres 
-      ? `
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = '${tableName.toLowerCase()}' 
-        AND column_name IN ('resettoken', 'resettokenexpiry')
-      `
-      : `
-        SELECT COLUMN_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = '${tableName}' 
-        AND COLUMN_NAME IN ('resetToken', 'resetTokenExpiry')
-      `;
-    
-    console.log('Running column check query:', query);
-    const [resetTokenResults] = await sequelize.query(query);
-    console.log('Column check results:', resetTokenResults);
-    
-    // Handle different case sensitivity between PostgreSQL and MySQL
-    const existingColumns = resetTokenResults.map(r => 
-      (r.column_name || r.COLUMN_NAME || '').toLowerCase()
-    );
-    
-    // For PostgreSQL, we need to use quoted table names
-    const tableRef = isPostgres ? `"${tableName}"` : tableName;
-    
-    // Add resetToken column if it doesn't exist
-    if (!existingColumns.includes('resettoken')) {
-      console.log(`Adding resetToken column to ${tableName} table...`);
-      try {
-        await sequelize.query(`
-          ALTER TABLE ${tableRef} 
-          ADD COLUMN "${isPostgres ? 'resetToken' : 'resetToken'}" VARCHAR(255) NULL
-        `);
-        console.log('Added resetToken column successfully');
-      } catch (error) {
-        // Specifically handle column already exists error
-        if (error.message && error.message.includes('already exists')) {
-          console.log('resetToken column already exists (caught in error handler)');
-        } else {
-          console.error('Error adding resetToken column:', error.message);
-        }
-      }
-    } else {
-      console.log('resetToken column already exists');
-    }
-    
-    // Add resetTokenExpiry column if it doesn't exist
-    if (!existingColumns.includes('resettokenexpiry')) {
-      console.log(`Adding resetTokenExpiry column to ${tableName} table...`);
-      try {
-        await sequelize.query(`
-          ALTER TABLE ${tableRef} 
-          ADD COLUMN "${isPostgres ? 'resetTokenExpiry' : 'resetTokenExpiry'}" TIMESTAMP NULL
-        `);
-        console.log('Added resetTokenExpiry column successfully');
-      } catch (error) {
-        // Specifically handle column already exists error
-        if (error.message && error.message.includes('already exists')) {
-          console.log('resetTokenExpiry column already exists (caught in error handler)');
-        } else {
-          console.error('Error adding resetTokenExpiry column:', error.message);
-        }
-      }
-    } else {
-      console.log('resetTokenExpiry column already exists');
-    }
-    
-    console.log('Reset token migration completed successfully');
-
-    // Now update the User model to exclude these fields temporarily
-    try {
-      // Use a workaround - modify the User model attributes to exclude resetToken and resetTokenExpiry
-      // until the migration is complete to avoid errors with findOne queries
-      console.log('Adjusting User model to avoid query errors...');
-      if (models.User && models.User.rawAttributes) {
-        // Create a temporary model for initial admin check
-        models.AdminUser = sequelize.define('AdminUser', {
-          id: { type: sequelize.Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-          username: sequelize.Sequelize.STRING,
-          email: sequelize.Sequelize.STRING,
-          password: sequelize.Sequelize.STRING,
-          role: sequelize.Sequelize.STRING
-        }, {
-          tableName: tableName
-        });
-      }
-    } catch (modelError) {
-      console.error('Error adjusting User model:', modelError);
-    }
-  } catch (error) {
-    console.error('Error applying reset token migration:', error);
-    console.log('Attempting to continue startup despite migration error');
-    // Don't throw the error, allow the server to continue starting
-  }
-}
-
-// Main startup function
-async function startServer() {
+// Connect to database and start server
+const startServer = async () => {
     try {
         // Test database connection
         await sequelize.authenticate();
-        console.log('Database connection has been established successfully.');
-
-        // Run database fixes
-        console.log('Fixing database schema and data...');
-        try {
-            await fixProductImagesColumn();
-            console.log('Database fixes completed successfully.');
-            
-            // Check if we need to populate sample products
-            const [productCount] = await sequelize.query('SELECT COUNT(*) as count FROM "Products"');
-            if (productCount[0].count === 0) {
-                console.log('No products found in database. Adding sample products...');
-                // Import and run the populate script
-                const { populateSampleProducts } = await import('./scripts/populate-sample-products.js');
-                await populateSampleProducts();
-            } else {
-                console.log(`Found ${productCount[0].count} products in the database.`);
-            }
-        } catch (fixError) {
-            console.error('Error during database fixes:', fixError);
-            console.log('Continuing with server startup despite fix errors');
-        }
+        console.log('✅ Database connection has been established successfully');
         
-        // Sync database models
-        await sequelize.sync();
-        console.log('Database synchronized');
+        // Initialize email service
+        await initializeEmailService();
+        console.log('✅ Email service initialized successfully');
         
-        // Add this line before checking for admin users
-        await applyResetTokenMigration();
-        
-        try {
-            // Check for admin user, create if it doesn't exist
-            // Try using the temporary model first if it exists
-            let adminUser = null;
-            
-            if (models.AdminUser) {
-                console.log('Using temporary AdminUser model to check for admin user');
-                try {
-                    // Create a direct query instead of using the model
-                    const [adminResult] = await sequelize.query(
-                        `SELECT id, username, email, role FROM "${isPostgres ? 'Users' : 'Users'}" WHERE role = 'admin' LIMIT 1`
-                    );
-                    adminUser = adminResult.length > 0 ? adminResult[0] : null;
-                    console.log('Admin check result:', adminUser ? 'Admin user found' : 'No admin user found');
-                } catch (tempModelError) {
-                    console.error('Error using temporary model:', tempModelError);
-                }
-            } else {
-                console.log('Using User model to check for admin user');
-                adminUser = await models.User.findOne({ where: { role: 'admin' } });
-            }
-            
-            if (!adminUser) {
-                console.log('No admin user found, creating one...');
-                const hashedPassword = await bcrypt.hash('Admin123!', 10);
-                
-                // Use a direct query to create admin user without resetToken fields
-                const adminData = {
-                    username: 'admin',
-                    name: 'Administrator',
-                    email: 'admin@example.com',
-                    password: hashedPassword,
-                    role: 'admin',
-                    status: 'active',
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                };
-                
-                if (isPostgres) {
-                    const [insertResults] = await sequelize.query(
-                        `INSERT INTO "Users" (username, name, email, password, role, status, "createdAt", "updatedAt") 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-                        { 
-                            bind: [
-                                adminData.username, 
-                                adminData.name, 
-                                adminData.email, 
-                                adminData.password, 
-                                adminData.role, 
-                                adminData.status,
-                                adminData.createdAt,
-                                adminData.updatedAt
-                            ]
-                        }
-                    );
-                    console.log('Admin user created successfully via direct query:', insertResults);
-                } else {
-                    await models.User.create(adminData);
-                    console.log('Admin user created successfully via model');
-                }
-            } else {
-                // Ensure admin password is updated to the known password if env var is set
-                if (process.env.RESET_ADMIN_PASSWORD === 'true') {
-                    console.log('Resetting admin password to known value due to RESET_ADMIN_PASSWORD flag');
-                    const hashedPassword = await bcrypt.hash('Admin123!', 10);
-                    
-                    if (isPostgres) {
-                        await sequelize.query(
-                            `UPDATE "Users" SET password = $1, "updatedAt" = $2 WHERE id = $3`,
-                            { 
-                                bind: [hashedPassword, new Date(), adminUser.id] 
-                            }
-                        );
-                    } else if (adminUser.update) {
-                        await adminUser.update({ password: hashedPassword });
-                    }
-                    
-                    console.log('Admin password reset successfully');
-                }
-            }
-        } catch (adminError) {
-            console.error('Error handling admin user:', adminError);
-            console.log('Continuing with server startup despite admin user errors');
-        }
-        
-        // Start listening for requests
-        const PORT = process.env.PORT || 5002;
+        // Start server after database connection is established
         app.listen(PORT, () => {
             console.log(`✅ Server running on port ${PORT}`);
-            console.log(`📁 Serving static files from: ${path.join(__dirname, 'public')}`);
-            console.log(`🔗 API Base URL: ${process.env.API_URL || 'http://localhost:' + PORT}`);
-            
-            // Initialize the email service
-            initializeEmailService();
-            
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📋 Available API Routes:');
-                printRoutes();
-            }
-            
-            // Now that the server is running, manually add the missing attributes to the User model
-            try {
-                console.log('Updating User model schema with resetToken fields');
-                if (models.User) {
-                    // Perform a sync on just this model to ensure it has the latest schema
-                    models.User.sync();
-                    console.log('User model synchronized with database');
-                }
-            } catch (modelUpdateError) {
-                console.error('Error updating User model schema:', modelUpdateError);
-            }
+            console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log('🔒 Security features enabled with enhanced CORS and Helmet');
         });
     } catch (error) {
-        console.error('Error starting server:', error);
+        console.error('❌ Unable to connect to the database or start server:', error);
         process.exit(1);
     }
-}
+};
 
-startServer();
-
-export default app; 
+startServer(); 

@@ -1,6 +1,5 @@
 // Direct import React as fallback
-import React from 'react';
-import { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config/api';
 import { useAuth } from './AuthContext';
@@ -24,9 +23,24 @@ const CartContext = createContext({
   getCartCount: () => 0
 });
 
-export const CartProvider = ({ children }) => {
+// Check if we're running on the server
+const isServer = typeof window === 'undefined' || process.env.IS_SSR === 'true';
+
+// Provider component
+export const CartProvider = ({ children, initialState = null }) => {
   const { user, token, isAuthenticated } = useAuth();
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    if (initialState) {
+      return initialState.items || [];
+    }
+
+    if (!isServer) {
+      const storedCart = localStorage.getItem('cart');
+      return storedCart ? JSON.parse(storedCart) : [];
+    }
+
+    return [];
+  });
   const [orders, setOrders] = useState([]);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -96,6 +110,8 @@ export const CartProvider = ({ children }) => {
 
   // Add item to cart
   const addToCart = useCallback(async (product, quantity = 1, options = {}) => {
+    if (isServer) return;
+
     if (!product) {
       setError('Cannot add product to cart: Product information is missing');
       return;
@@ -176,6 +192,8 @@ export const CartProvider = ({ children }) => {
 
   // Remove item from cart
   const removeFromCart = useCallback(async (itemId, options = {}) => {
+    if (isServer) return;
+
     try {
       setLoading(true);
 
@@ -204,6 +222,8 @@ export const CartProvider = ({ children }) => {
 
   // Update item quantity in cart
   const updateQuantity = useCallback(async (itemId, quantity, options = {}) => {
+    if (isServer) return;
+
     try {
       setLoading(true);
 
@@ -239,6 +259,8 @@ export const CartProvider = ({ children }) => {
 
   // Clear cart
   const clearCart = useCallback(async () => {
+    if (isServer) return;
+
     try {
       setLoading(true);
       setCart([]);
@@ -264,6 +286,8 @@ export const CartProvider = ({ children }) => {
 
   // Apply coupon to cart
   const applyCoupon = useCallback(async (couponCode) => {
+    if (isServer) return;
+
     if (!couponCode) {
       setError('Please enter a coupon code');
       return { success: false, error: 'Please enter a coupon code' };
@@ -299,7 +323,7 @@ export const CartProvider = ({ children }) => {
 
   // Fetch user's order history
   const getOrderHistory = useCallback(async () => {
-    if (!isAuthenticated || !token) {
+    if (isServer || !isAuthenticated || !token) {
       setError('You must be logged in to view your orders');
       return { success: false, error: 'Not authenticated' };
     }
@@ -330,7 +354,7 @@ export const CartProvider = ({ children }) => {
 
   // Get order details
   const getOrderDetails = useCallback(async (orderId) => {
-    if (!isAuthenticated || !token) {
+    if (isServer || !isAuthenticated || !token) {
       setError('You must be logged in to view order details');
       return { success: false, error: 'Not authenticated' };
     }
@@ -360,7 +384,7 @@ export const CartProvider = ({ children }) => {
 
   // Create a new order
   const createOrder = useCallback(async (orderData) => {
-    if (!isAuthenticated || !token) {
+    if (isServer || !isAuthenticated || !token) {
       setError('You must be logged in to place an order');
       return { success: false, error: 'Not authenticated' };
     }
@@ -438,26 +462,113 @@ export const CartProvider = ({ children }) => {
     return cart.reduce((count, item) => count + item.quantity, 0);
   }, [cart]);
 
+  // Sync cart with the server for logged-in users
+  const syncCartWithServer = useCallback(async () => {
+    if (isServer || !isAuthenticated || !token) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Example API call - replace with your actual API call
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ items: cart })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync cart with server');
+      }
+
+      const data = await response.json();
+
+      // Update local cart with server response if needed
+      if (data.items) {
+        setCart(data.items);
+      }
+
+      return true;
+    } catch (err) {
+      setError(err.message);
+      console.error('Error syncing cart:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, token, cart]);
+
+  // Load cart from server when user logs in
+  useEffect(() => {
+    if (isServer || !isAuthenticated || !token) return;
+
+    const fetchCartFromServer = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Example API call - replace with your actual API call
+        const response = await fetch('/api/cart', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch cart from server');
+        }
+
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+          // Merge server cart with local cart (implementation depends on your business logic)
+          setCart(prevItems => {
+            // Simple merge strategy: prefer server items, add local items that aren't on server
+            const serverItemIds = data.items.map(item => item.productId);
+            const localItemsToKeep = prevItems.filter(item =>
+              !serverItemIds.includes(item.productId)
+            );
+
+            return [...data.items, ...localItemsToKeep];
+          });
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching cart:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCartFromServer();
+  }, [isAuthenticated, token]);
+
+  // Context value
+  const contextValue = {
+    cart,
+    orders,
+    appliedCoupon,
+    loading,
+    error,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    applyCoupon,
+    getOrderHistory,
+    createOrder,
+    getOrderDetails,
+    getCartTotal,
+    getCartCount,
+    syncCartWithServer
+  };
+
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        orders,
-        appliedCoupon,
-        loading,
-        error,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        applyCoupon,
-        getOrderHistory,
-        createOrder,
-        getOrderDetails,
-        getCartTotal,
-        getCartCount
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );

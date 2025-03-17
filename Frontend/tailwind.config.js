@@ -65,6 +65,12 @@ export default {
           800: '#5c5c5c',
           900: '#474747',
         },
+        // Improved text colors for better contrast
+        text: {
+          primary: '#1a202c', // Darker primary text for better contrast
+          secondary: '#4a5568', // Darker secondary text
+          light: '#718096', // Improved light text that still passes contrast checks
+        }
       },
       fontFamily: {
         sans: ['Roboto', 'Montserrat', 'sans-serif'],
@@ -76,5 +82,4 @@ export default {
     },
   },
   plugins: [],
-  important: true, // This ensures Tailwind styles take precedence
 } 

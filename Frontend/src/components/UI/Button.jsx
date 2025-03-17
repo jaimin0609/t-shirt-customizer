@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import LoadingSpinner from './LoadingSpinner';
 
 /**
  * Button component with consistent styling and accessibility features
@@ -16,6 +17,7 @@ import PropTypes from 'prop-types';
  * @param {Function} props.onClick - Click handler
  * @param {string} props.className - Additional CSS classes
  * @param {React.ReactNode} props.children - Button content
+ * @param {string} props.ariaLabel - Accessible label for screen readers (if different from text content)
  * @returns {JSX.Element}
  */
 const Button = ({
@@ -30,6 +32,7 @@ const Button = ({
     onClick,
     className = '',
     children,
+    ariaLabel,
     ...rest
 }) => {
     // Base classes that apply to all buttons
@@ -65,47 +68,39 @@ const Button = ({
     ${className}
   `;
 
+    // Generate an ID for the loading spinner
+    const loadingId = `loading-spinner-${Math.random().toString(36).substring(2, 9)}`;
+
     return (
         <button
             type={type}
             className={buttonClasses}
             disabled={disabled || isLoading}
             onClick={onClick}
+            aria-busy={isLoading}
+            aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}
+            aria-describedby={isLoading ? loadingId : undefined}
             {...rest}
         >
             {/* Show left icon if provided */}
-            {leftIcon && <span className={`mr-2 ${isLoading ? 'opacity-0' : ''}`}>{leftIcon}</span>}
+            {leftIcon && <span className={`mr-2 ${isLoading ? 'opacity-0' : ''}`} aria-hidden="true">{leftIcon}</span>}
 
             {/* Main content */}
             <span className={isLoading ? 'opacity-0' : ''}>{children}</span>
 
             {/* Show right icon if provided */}
-            {rightIcon && <span className={`ml-2 ${isLoading ? 'opacity-0' : ''}`}>{rightIcon}</span>}
+            {rightIcon && <span className={`ml-2 ${isLoading ? 'opacity-0' : ''}`} aria-hidden="true">{rightIcon}</span>}
 
-            {/* Loading spinner (shown only when isLoading is true) */}
+            {/* Show loading spinner when isLoading is true */}
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <svg
-                        className="animate-spin h-5 w-5 text-current"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                        />
-                        <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                    </svg>
-                </div>
+                <span
+                    className="absolute inset-0 flex items-center justify-center"
+                    id={loadingId}
+                    aria-live="polite"
+                >
+                    <LoadingSpinner size={size === 'sm' ? 'xs' : (size === 'lg' ? 'md' : 'sm')} />
+                    <span className="sr-only">Loading...</span>
+                </span>
             )}
         </button>
     );
@@ -123,6 +118,7 @@ Button.propTypes = {
     onClick: PropTypes.func,
     className: PropTypes.string,
     children: PropTypes.node.isRequired,
+    ariaLabel: PropTypes.string,
 };
 
 export default Button; 

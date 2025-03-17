@@ -8,13 +8,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build",
-    "build:server": "cross-env SSR=server vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "start": "node server.js",
-    "analyze": "cross-env ANALYZE=true npm run build"
+    "prebuild": "node ./vercel-setup.cjs",
+    "build": "vite build",
+    "build:vercel": "bash ./vercel-build.sh",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
@@ -29,7 +27,7 @@
     "@react-three/fiber": "^8.13.0",
     "@stripe/react-stripe-js": "^3.1.1",
     "@stripe/stripe-js": "^5.7.0",
-    "axios": "^1.8.3",
+    "axios": "^1.8.1",
     "babylonjs": "^7.51.1",
     "classnames": "^2.5.1",
     "fabric": "^5.3.0",

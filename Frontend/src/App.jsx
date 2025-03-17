@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -27,30 +27,37 @@ const LoadingSpinner = () => (
   </div>
 );
 
-function App() {
-  // Track loaded state and any errors
+/**
+ * App component - the main application wrapper
+ * 
+ * @param {Object} props Component props
+ * @param {boolean} props.isSSR Whether the app is being rendered on the server
+ * @param {Object} props.initialState Initial state data from server
+ */
+const App = ({ isSSR = false, initialState = {} }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [initError, setInitError] = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Check for reduced motion preference
+  // Lazily load route components for code splitting in client
+  // During SSR, these would be pre-rendered
+  const HomePage = React.lazy(() => import('./pages/HomePage'));
+  const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
+  const ProductDetailPage = React.lazy(() => import('./pages/ProductDetailPage'));
+  const DesignStudioPage = React.lazy(() => import('./pages/DesignStudioPage'));
+  const AboutPage = React.lazy(() => import('./pages/AboutPage'));
+  const CartPage = React.lazy(() => import('./pages/CartPage'));
+  const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+  const SignupPage = React.lazy(() => import('./pages/SignupPage'));
+  const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+  const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+  const WishlistPage = React.lazy(() => import('./pages/WishlistPage'));
+  const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(prefersReducedMotion.matches);
+    // Skip client-side initialization if we're rendering on the server
+    if (isSSR) return;
 
-    const handleMotionPreferenceChange = (event) => {
-      setReducedMotion(event.matches);
-    };
-
-    prefersReducedMotion.addEventListener('change', handleMotionPreferenceChange);
-    return () => {
-      prefersReducedMotion.removeEventListener('change', handleMotionPreferenceChange);
-    };
-  }, []);
-
-  // Initialize app and set up error handling
-  useEffect(() => {
     console.log('App component mounting - React version:', React.version);
 
     // Make sure we immediately update the loading state on mount
@@ -120,7 +127,20 @@ function App() {
       window.removeEventListener('error', errorHandler);
       clearTimeout(timeoutId);
     };
-  }, [isLoaded]);
+  }, [isLoaded, isSSR]);
+
+  // Auto-scroll to top on page change
+  const ScrollToTop = () => {
+    const { pathname } = useLocation();
+
+    useEffect(() => {
+      if (!isSSR) {
+        window.scrollTo(0, 0);
+      }
+    }, [pathname]);
+
+    return null;
+  };
 
   // Render error message if initialization failed
   if (initError || loadError) {
@@ -142,49 +162,46 @@ function App() {
     );
   }
 
-  // Render main application with nested providers and error boundaries
-  return (
-    <ErrorBoundary>
-      <Router>
-        <div className={`app-container ${isLoaded ? 'app-loaded' : ''} ${reducedMotion ? 'reduced-motion' : ''}`}>
-          {/* Skip link for keyboard users */}
-          <SkipLink targetId="main-content" />
-
-          <ErrorBoundary fallback={<div>Auth provider error</div>}>
-            <AuthProvider>
-              <ErrorBoundary fallback={<div>Cart provider error</div>}>
-                <CartProvider>
-                  <ErrorBoundary fallback={<div>Wishlist provider error</div>}>
-                    <WishlistProvider>
-                      <ErrorBoundary fallback={<div>Notification provider error</div>}>
-                        <NotificationProvider>
-                          <Suspense fallback={<LoadingSpinner />}>
-                            <MainLayout />
-                          </Suspense>
-                          <ToastContainer
-                            position="bottom-right"
-                            autoClose={3000}
-                            hideProgressBar={false}
-                            newestOnTop
-                            closeOnClick
-                            pauseOnFocusLoss
-                            draggable
-                            pauseOnHover
-                          />
-                        </NotificationProvider>
-                      </ErrorBoundary>
-                    </WishlistProvider>
-                  </ErrorBoundary>
-                </CartProvider>
-              </ErrorBoundary>
-            </AuthProvider>
-          </ErrorBoundary>
-
-          {/* Promotional banner is handled by the PromotionBanner component in MainLayout */}
-        </div>
-      </Router>
-    </ErrorBoundary>
+  // On the server, we don't need to wrap in Router (StaticRouter is used in entry-server.jsx)
+  const AppContent = () => (
+    <>
+      <SkipLink />
+      <ToastContainer position="top-right" autoClose={5000} />
+      <ErrorBoundary>
+        <ScrollToTop />
+        <MainLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/custom-design-studio" element={<DesignStudioPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </MainLayout>
+      </ErrorBoundary>
+    </>
   );
-}
+
+  // If running on server or client has already initialized, render normally
+  if (isSSR || isLoaded) {
+    return <AppContent />;
+  }
+
+  // During client-side initialization, show the loading state
+  return (
+    <div className="app-initializing">
+      <LoadingSpinner />
+    </div>
+  );
+};
 
 export default App;

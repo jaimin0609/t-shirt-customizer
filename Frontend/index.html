@@ -5,10 +5,37 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="UniQVerse - Customize your own unique t-shirts and apparel" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#4a6cf7" />
     <meta property="og:title" content="UniQVerse - Custom T-Shirt Design" />
     <meta property="og:description" content="Design and purchase your own custom apparel" />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/social-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Uniqverse" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    
+    <!-- DNS Prefetch and Preconnect for external resources -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" as="image" href="/logo.png" type="image/png">
+    <link rel="preload" href="/critical.css" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" as="style">
     
     <!-- Add CDN React with specific version - MUST be before app script -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -36,7 +63,7 @@
     }
     </script>
     
-    <!-- Add Tailwind CSS from CDN as fallback -->
+    <!-- Add Tailwind CSS from CDN as fallback with font-display=swap for better font loading -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
     
     <!-- Additional CSS resets to ensure compatibility -->
@@ -50,12 +77,19 @@
         padding: 0;
         height: 100%;
       }
+      /* Fonts with font-display swap for better loading behavior */
+      @font-face {
+        font-family: 'Roboto';
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Montserrat';
+        font-display: swap;
+      }
     </style>
     
-    <!-- Preconnect to Google Fonts to improve load time -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Load Google Fonts with font-display=swap in the URL -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap&font-display=swap" rel="stylesheet">
     
     <!-- Critical CSS loaded directly in head -->
     <link rel="stylesheet" href="/critical.css">
@@ -144,28 +178,185 @@
         border-radius: 0.25rem;
         color: #b91c1c;
       }
+      
+      /* Skip to content link for accessibility */
+      .skip-to-content {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #4a6cf7;
+        color: white;
+        padding: 8px;
+        z-index: 100;
+        transition: top 0.3s;
+      }
+      .skip-to-content:focus {
+        top: 0;
+      }
+      
+      /* PWA install prompt */
+      .pwa-install-prompt {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #ffffff;
+        border-top: 4px solid #4a6cf7;
+        padding: 1rem;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 9000;
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .pwa-install-prompt.show {
+        display: flex;
+      }
+      .pwa-install-prompt .pwa-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .pwa-install-btn {
+        background-color: #4a6cf7;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        cursor: pointer;
+      }
+      .pwa-close-btn {
+        background-color: transparent;
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        cursor: pointer;
+      }
     </style>
-    
-    <!-- Preload critical resources -->
-    <link rel="preload" as="image" href="/logo.png">
     
     <title>UniQVerse - Custom T-Shirt Design</title>
   </head>
   <body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
     <div id="root">
       <!-- Initial loading state that will be replaced by React -->
-      <div class="app-loading" id="initial-loading">
+      <div class="app-loading" id="initial-loading" role="status" aria-live="polite">
         <img src="/logo.png" alt="UniQVerse Logo" width="120" height="120">
-        <div class="app-loading-spinner"></div>
+        <div class="app-loading-spinner" aria-hidden="true"></div>
         <p>Loading UniQVerse...</p>
-        <div class="loading-error">
+        <div class="loading-error" role="alert">
           Taking longer than expected. <button onclick="window.location.reload()">Refresh the page</button>
         </div>
       </div>
     </div>
     
+    <!-- Main content marker for skip link -->
+    <div id="main-content" tabindex="-1"></div>
+    
+    <!-- PWA install prompt -->
+    <div id="pwa-install-prompt" class="pwa-install-prompt">
+      <div>
+        <strong>Install Uniqverse App</strong>
+        <p>Add to your home screen for a better experience</p>
+      </div>
+      <div class="pwa-buttons">
+        <button id="pwa-install-btn" class="pwa-install-btn">Install</button>
+        <button id="pwa-close-btn" class="pwa-close-btn">Not now</button>
+      </div>
+    </div>
+    
     <!-- Main application script - must be after React CDN scripts -->
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Register service worker for PWA support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('ServiceWorker registration failed: ', error);
+            });
+        });
+        
+        // Handle offline/online events
+        window.addEventListener('online', function() {
+          document.body.classList.remove('offline');
+          document.body.classList.add('online');
+          console.log('You are now online');
+        });
+        
+        window.addEventListener('offline', function() {
+          document.body.classList.remove('online');
+          document.body.classList.add('offline');
+          console.log('You are now offline');
+        });
+        
+        // Handle beforeinstallprompt event for custom install UI
+        let deferredPrompt;
+        const installPrompt = document.getElementById('pwa-install-prompt');
+        const installBtn = document.getElementById('pwa-install-btn');
+        const closeBtn = document.getElementById('pwa-close-btn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+          // Prevent Chrome 67 and earlier from automatically showing the prompt
+          e.preventDefault();
+          // Stash the event so it can be triggered later
+          deferredPrompt = e;
+          
+          // Only show if not installed and not already dismissed
+          if (!localStorage.getItem('pwaPromptDismissed')) {
+            // Show the install prompt after 10 seconds
+            setTimeout(() => {
+              installPrompt.classList.add('show');
+            }, 10000);
+          }
+        });
+        
+        installBtn.addEventListener('click', (e) => {
+          // Hide the app provided install promotion
+          installPrompt.classList.remove('show');
+          
+          // Show the install prompt
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            deferredPrompt.userChoice.then((choiceResult) => {
+              if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+              } else {
+                console.log('User dismissed the install prompt');
+              }
+              deferredPrompt = null;
+            });
+          }
+        });
+        
+        closeBtn.addEventListener('click', (e) => {
+          // Hide the app provided install promotion
+          installPrompt.classList.remove('show');
+          // Don't show again for a week
+          localStorage.setItem('pwaPromptDismissed', Date.now());
+        });
+        
+        // Clear pwaPromptDismissed after a week
+        const lastDismissed = localStorage.getItem('pwaPromptDismissed');
+        if (lastDismissed && Date.now() - lastDismissed > 7 * 24 * 60 * 60 * 1000) {
+          localStorage.removeItem('pwaPromptDismissed');
+        }
+        
+        // Handle installed event
+        window.addEventListener('appinstalled', (evt) => {
+          console.log('Application was installed to home screen');
+          installPrompt.classList.remove('show');
+        });
+      }
+    </script>
     
     <!-- Error detection and recovery -->
     <script>
