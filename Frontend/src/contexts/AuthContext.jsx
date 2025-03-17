@@ -277,6 +277,5 @@ export const useAuth = () => {
   return context;
 };
 
-// Export both as named export and default export to support different import patterns
-export { AuthProvider };
-export default AuthProvider; 
+// Export named export only to avoid build errors with duplicate exports
+export { AuthProvider }; 

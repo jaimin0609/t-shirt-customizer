@@ -190,6 +190,5 @@ export const useNotification = () => {
     return context;
 };
 
-// Export both as named export and default export to support different import patterns
-export { NotificationProvider };
-export default NotificationProvider; 
+// Export named export only to avoid build errors with duplicate exports
+export { NotificationProvider }; 

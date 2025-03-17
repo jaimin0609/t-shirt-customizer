@@ -586,6 +586,5 @@ export const useCart = () => {
   return context;
 };
 
-// Export both as named export and default export to support different import patterns
-export { CartProvider };
-export default CartProvider; 
+// Export named export only to avoid build errors with duplicate exports
+export { CartProvider }; 

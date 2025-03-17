@@ -127,6 +127,5 @@ export const useWishlist = () => {
     return context;
 };
 
-// Export both as named export and default export to support different import patterns
-export { WishlistProvider };
-export default WishlistProvider; 
+// Export named export only to avoid build errors with duplicate exports
+export { WishlistProvider }; 
