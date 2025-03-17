@@ -37,32 +37,6 @@
     <link rel="preload" href="/critical.css" as="style">
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;600;700&display=swap" as="style">
     
-    <!-- Add CDN React with specific version - MUST be before app script -->
-    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    
-    <!-- Backup CDN links from alternate CDN -->
-    <script>
-      // Ensure React is globally available
-      if (!window.React) {
-        console.warn('Loading React from backup CDN...');
-        document.write('<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"><\/script>');
-        document.write('<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"><\/script>');
-      }
-    </script>
-    
-    <!-- Add import map for ES modules -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/stable/react@18.2.0/es2022/react.mjs",
-        "react-dom": "https://esm.sh/stable/react-dom@18.2.0/es2022/react-dom.mjs",
-        "react-dom/client": "https://esm.sh/stable/react-dom@18.2.0/es2022/client.mjs",
-        "react/jsx-runtime": "https://esm.sh/stable/react@18.2.0/es2022/jsx-runtime.mjs"
-      }
-    }
-    </script>
-    
     <!-- Add Tailwind CSS from CDN as fallback with font-display=swap for better font loading -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
     
@@ -96,42 +70,6 @@
     
     <!-- Fallback CSS in case bundled CSS fails to load -->
     <link rel="stylesheet" href="/fallback.css">
-    
-    <!-- Verify React loaded properly -->
-    <script>
-      window.addEventListener('DOMContentLoaded', function() {
-        if (!window.React || typeof window.React.createElement !== 'function') {
-          console.error('React failed to load properly from CDN');
-          document.getElementById('root').innerHTML = `
-            <div style="padding: 20px; text-align: center; font-family: 'Roboto', sans-serif;">
-              <h2 style="color: #e53e3e; margin-bottom: 16px;">React Loading Error</h2>
-              <p>The application could not load React properly.</p>
-              <button onclick="window.location.reload()" 
-                      style="background-color: #4a6cf7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                Reload Page
-              </button>
-            </div>
-          `;
-        }
-      });
-      
-      // Auto-reload if page is stuck loading for too long
-      setTimeout(function() {
-        // Check if the app has loaded by looking for a specific element
-        if (document.querySelector('.app-loading') && !document.querySelector('.app-loaded')) {
-          console.log('App appears to be stuck loading, reloading page...');
-          window.location.reload();
-        }
-      }, 30000);
-      
-      // Show error message after 15 seconds if app is still loading
-      setTimeout(function() {
-        var errorMessage = document.querySelector('.loading-error');
-        if (errorMessage && document.querySelector('.app-loading')) {
-          errorMessage.style.display = 'block';
-        }
-      }, 15000);
-    </script>
     
     <!-- Inject inline critical CSS directly -->
     <style>
@@ -257,12 +195,12 @@
     <!-- PWA install prompt -->
     <div id="pwa-install-prompt" class="pwa-install-prompt">
       <div>
-        <strong>Install Uniqverse App</strong>
-        <p>Add to your home screen for a better experience</p>
+        <strong>Add UniQVerse to your home screen</strong>
+        <p>Install this app on your device for quick access and improved experience.</p>
       </div>
       <div class="pwa-buttons">
-        <button id="pwa-install-btn" class="pwa-install-btn">Install</button>
-        <button id="pwa-close-btn" class="pwa-close-btn">Not now</button>
+        <button id="pwa-install-btn" class="pwa-install-btn">Install App</button>
+        <button id="pwa-close-btn" class="pwa-close-btn">Not Now</button>
       </div>
     </div>
     
@@ -360,57 +298,35 @@
     
     <!-- Error detection and recovery -->
     <script>
-      // This script fires if there's an issue loading our main bundle
-      var scriptLoadError = false;
-      
-      window.addEventListener('error', function(event) {
-        // Check if the error is related to script loading
-        if (event.target && event.target.tagName === 'SCRIPT') {
-          scriptLoadError = true;
-          console.error('Script loading error:', event);
-          
-          // Show error message for script loading issues
-          var errorMsg = document.querySelector('.loading-error');
-          if (errorMsg) {
-            errorMsg.innerHTML = `
-              Error loading application scripts. Please <button onclick="window.location.reload()">refresh the page</button>
-              or try clearing your browser cache.
-            `;
-            errorMsg.style.display = 'block';
-          }
+      // Auto-reload if page is stuck loading for too long
+      setTimeout(function() {
+        if (document.querySelector('.app-loading') && 
+            !document.querySelector('.app-loaded')) {
+          console.log('App appears to be stuck loading, reloading page...');
+          window.location.reload();
         }
-      }, true); // Use capturing to catch the event
+      }, 30000);
       
-      // Final failsafe to ensure loader is removed
+      // Show error message after 15 seconds if app is still loading
+      setTimeout(function() {
+        var errorMessage = document.querySelector('.loading-error');
+        if (errorMessage && document.querySelector('.app-loading')) {
+          errorMessage.style.display = 'block';
+        }
+      }, 15000);
+      
+      // Fallback: Remove loading indicator after page has loaded completely
       window.addEventListener('load', function() {
         setTimeout(function() {
-          var loader = document.getElementById('initial-loading');
-          if (loader && loader.parentNode) {
+          var loadingEl = document.getElementById('initial-loading');
+          if (loadingEl && loadingEl.parentNode) {
             console.log('Fallback: Removing loader after page load');
-            loader.style.opacity = '0';
+            loadingEl.style.opacity = '0';
             setTimeout(function() {
-              if (loader.parentNode) {
-                loader.parentNode.removeChild(loader);
+              if (loadingEl.parentNode) {
+                loadingEl.parentNode.removeChild(loadingEl);
               }
             }, 500);
-          }
-        }, 5000);
-      });
-      
-      // Also handle errors
-      window.addEventListener('error', function(event) {
-        console.error('Global error caught in index.html:', event.error);
-        // Try to show something to the user
-        setTimeout(function() {
-          if (document.querySelector('.app-loading')) {
-            var errorMsg = document.querySelector('.loading-error');
-            if (errorMsg) {
-              errorMsg.innerHTML = `
-                Error loading application. Please <button onclick="window.location.reload()">refresh the page</button>.
-                <br><small style="font-size: 0.8em; color: #777;">${event.message || 'Unknown error'}</small>
-              `;
-              errorMsg.style.display = 'block';
-            }
           }
         }, 1000);
       });
