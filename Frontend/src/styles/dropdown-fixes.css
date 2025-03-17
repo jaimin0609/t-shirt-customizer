@@ -3,6 +3,29 @@
   Targeted fixes for dropdown menus in the navigation and throughout the site
 */
 
+/* CRITICAL FIX: Ensure header and navigation is always visible */
+header,
+.navbar,
+nav,
+.navigation,
+.header,
+.header-container {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 9999 !important;
+    background-color: white !important;
+}
+
+/* Force header children to be visible */
+header *,
+nav *,
+.navbar *,
+.header * {
+    visibility: visible !important;
+}
+
 /* Ensure all dropdown menus have proper positioning context */
 .relative,
 [data-headlessui-state],
@@ -18,6 +41,7 @@ header .relative,
 nav button,
 nav .relative {
     position: relative !important;
+    visibility: visible !important;
 }
 
 /* Fix dropdown menu positioning - make sure they appear directly BELOW triggers */
@@ -51,16 +75,29 @@ nav [data-headlessui-state] div {
     min-width: 180px !important;
 }
 
-/* Improved sticky header that stays visible */
+/* Improved header visibility settings */
 header,
 .navbar,
 nav,
 .navigation {
-    position: sticky !important;
+    display: block !important;
+    position: relative !important;
     top: 0 !important;
-    z-index: 1000 !important;
+    z-index: 9000 !important;
     background: white !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    width: 100% !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Force flex display on container elements */
+header .container,
+nav .container,
+.flex-container,
+.items-center,
+.flex {
+    display: flex !important;
 }
 
 /* Fix navigation dropdown positioning and styling */

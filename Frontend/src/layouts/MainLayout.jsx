@@ -181,8 +181,10 @@ const MainLayout = () => {
             {/* Skip to main content target */}
             <div id="main-content" tabIndex="-1"></div>
 
-            {/* Header - sticky positioning through CSS */}
-            <Header />
+            {/* Header - force display */}
+            <div className="header-container" style={{ display: 'block', visibility: 'visible', zIndex: 9999, position: 'relative', width: '100%' }}>
+                <Header />
+            </div>
 
             {/* Promotion banner */}
             <div style={{ position: 'relative', zIndex: 5 }}>

@@ -79,16 +79,16 @@ const Header = () => {
     };
 
     return (
-        <Disclosure as="nav" className="bg-white shadow-md">
+        <Disclosure as="nav" className="bg-white shadow-md" style={{ display: 'block', visibility: 'visible', zIndex: 9999 }}>
             {({ open }) => (
                 <>
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center justify-between h-16">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ display: 'block', visibility: 'visible' }}>
+                        <div className="flex items-center justify-between h-16" style={{ display: 'flex', visibility: 'visible' }}>
+                            <div className="flex items-center" style={{ display: 'flex', visibility: 'visible' }}>
+                                <div className="flex-shrink-0" style={{ display: 'block', visibility: 'visible' }}>
                                     <Logo />
                                 </div>
-                                <div className="hidden sm:ml-8 sm:flex sm:space-x-6">
+                                <div className="hidden sm:ml-8 sm:flex sm:space-x-6" style={{ display: 'flex', visibility: 'visible' }}>
                                     {navigation.map((item) =>
                                         item.isDropdown ? (
                                             <div key={item.name} className="relative">
@@ -140,7 +140,7 @@ const Header = () => {
                             <div className="hidden md:block mx-4 flex-1 max-w-md">
                                 <SearchBar />
                             </div>
-                            <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-4" style={{ display: 'flex', visibility: 'visible' }}>
                                 <Link
                                     to="/wishlist"
                                     className="p-2 text-gray-500 hover:text-red-500 relative group transition-colors duration-200"

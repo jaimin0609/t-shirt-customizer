@@ -115,40 +115,155 @@ main {
 
 /* ============= TOPBAR/NAVBAR FIXES ============= */
 
-/* Fix header positioning and styling */
+/* Critical fix for header visibility */
 header,
 .navbar,
-nav {
-    position: sticky !important;
-    top: 0;
-    z-index: 1050 !important;
+nav,
+.header,
+.navigation {
+    display: block !important;
+    position: relative !important;
+    /* Changed from sticky to ensure it displays first */
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     width: 100% !important;
+    z-index: 9999 !important;
+    /* Use highest z-index to ensure visibility */
     background-color: white !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    padding: 0.75rem 0 !important;
+    min-height: 60px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
-/* Ensure proper spacing in the header */
+/* Force header visibility by specifically targeting all header elements */
+header *,
+.navbar *,
+nav *,
+.header *,
+.navigation * {
+    visibility: visible !important;
+    display: block !important;
+}
+
+/* Only flex items in header that should be flex */
 header .container,
-nav .container {
+nav .container,
+header>div,
+nav>div,
+.flex-container {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
+    width: 100% !important;
 }
 
-/* Style navigation links */
+/* Ensure header links are properly styled and visible */
+header a,
 nav a,
-header a {
+.navbar a,
+header button,
+nav button {
+    display: inline-block !important;
     text-decoration: none !important;
+    color: #1f2937 !important;
     padding: 0.5rem 0.75rem !important;
     border-radius: 0.375rem !important;
     transition: all 0.2s ease-in-out !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-nav a:hover,
-header a:hover {
-    background-color: rgba(0, 0, 0, 0.05) !important;
+/* Make container flex items appear inline */
+header a,
+nav a,
+header button,
+nav button,
+.nav-item,
+.flex-item {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* Make sure navigation items are visible */
+header .logo,
+.navbar-brand,
+.site-logo,
+header img,
+header svg {
+    display: inline-block !important;
+    height: auto !important;
+    max-height: 40px !important;
+}
+
+/* Fix for promotion banner */
+.promotion-banner {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    z-index: 10 !important;
+}
+
+/* Fix for container width */
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Responsive fixes */
+@media (min-width: 769px) {
+
+    /* Desktop-specific fixes */
+    .container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* Mobile-specific fixes */
+    .container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* Ensure no blue sidebar on mobile */
+    body::before {
+        display: none !important;
+    }
+
+    /* Mobile header fixes */
+    header,
+    .navbar,
+    nav {
+        padding: 0.5rem 0 !important;
+    }
+}
+
+/* Fix for any pseudo-elements that might be causing the blue sidebar */
+body::before,
+body::after,
+#root::before,
+#root::after,
+.app-container::before,
+.app-container::after {
+    display: none !important;
+}
+
+/* Ensure main content takes full width */
+main {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Fix spacing between nav items */
