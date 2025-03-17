@@ -1,0 +1,103 @@
+/* 
+  Search Field Fixes
+  Targeted fixes for search fields and search icons
+*/
+
+/* Target the search container in the header */
+header form,
+nav form,
+.search-form,
+.header-search,
+.navbar-search,
+form[role="search"],
+[aria-label="Search"],
+.search-container {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 400px !important;
+}
+
+/* Ensure search input has proper styling */
+.search-input,
+input[type="search"],
+input[placeholder*="Search"],
+input[placeholder*="search"],
+header input[type="text"],
+nav input[type="text"],
+header input {
+    width: 100% !important;
+    border-radius: 0.375rem !important;
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem !important;
+    /* Right padding for the icon */
+    border: 1px solid #d1d5db !important;
+    background-color: white !important;
+    outline: none !important;
+}
+
+/* Position search icon correctly */
+.search-button,
+form button[type="submit"],
+button[aria-label="Search"],
+.search-icon,
+.search-submit,
+form button:has(svg),
+[aria-label="Search"] button,
+header button svg,
+nav button svg,
+.search-form svg,
+header svg[stroke],
+header svg[fill] {
+    position: absolute !important;
+    right: 0.5rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    z-index: 10 !important;
+    color: #6b7280 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Specific fix for search magnifying glass icon */
+[class*="search"] svg,
+form svg,
+button svg[stroke],
+svg[viewBox*="24"],
+svg[width="24"],
+header svg {
+    position: absolute !important;
+    right: 0.75rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    pointer-events: none !important;
+}
+
+/* Fallback for nested search icon */
+.search-form button svg,
+[type="submit"] svg {
+    position: static !important;
+    transform: none !important;
+}
+
+/* Mobile search fixes */
+@media (max-width: 768px) {
+
+    header form,
+    nav form,
+    .search-form,
+    .header-search,
+    .navbar-search {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .search-input,
+    input[type="search"],
+    input[placeholder*="Search"] {
+        font-size: 16px !important;
+        /* Prevent iOS zoom */
+    }
+}

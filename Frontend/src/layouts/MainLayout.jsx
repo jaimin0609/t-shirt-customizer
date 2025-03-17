@@ -163,7 +163,7 @@ const MainLayout = () => {
     }, []);
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
             {/* Toast notifications */}
             <ToastContainer
                 position="top-right"
@@ -186,7 +186,7 @@ const MainLayout = () => {
                 <PromotionBanner />
             </div>
 
-            <main className="flex-1">
+            <main className="flex-1 overflow-y-auto">
                 <Transition
                     show={true}
                     appear={true}
