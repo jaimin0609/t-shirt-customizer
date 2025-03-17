@@ -163,7 +163,7 @@ const MainLayout = () => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
+        <div className="flex flex-col min-h-screen bg-gray-50">
             {/* Toast notifications */}
             <ToastContainer
                 position="top-right"
@@ -181,12 +181,16 @@ const MainLayout = () => {
             {/* Skip to main content target */}
             <div id="main-content" tabIndex="-1"></div>
 
+            {/* Header - sticky positioning through CSS */}
             <Header />
+
+            {/* Promotion banner */}
             <div style={{ position: 'relative', zIndex: 5 }}>
                 <PromotionBanner />
             </div>
 
-            <main className="flex-1 overflow-y-auto">
+            {/* Main content */}
+            <main className="flex-1">
                 <Transition
                     show={true}
                     appear={true}
