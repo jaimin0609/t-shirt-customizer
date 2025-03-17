@@ -1,0 +1,401 @@
+/* 
+  T-Shirt Customizer Main Stylesheet
+  A consolidated stylesheet that combines previously scattered fixes into a well-organized structure
+*/
+
+/* ==================== BASE STYLES ==================== */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    background-color: #f9fafb !important;
+    background-image: none !important;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Fix for any pseudo-elements that might be causing layout issues */
+body::before,
+body::after,
+#root::before,
+#root::after,
+.app-container::before,
+.app-container::after {
+    display: none !important;
+}
+
+/* Container styling */
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+main {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+/* Skip to content link for accessibility */
+.skip-to-content {
+    position: absolute;
+    top: -9999px;
+    left: 0;
+    background: #4a6cf7;
+    color: white;
+    padding: 8px 16px;
+    z-index: 9999;
+    transition: top 0.3s;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* ==================== HEADER & NAVIGATION ==================== */
+header,
+.navbar,
+nav,
+.header,
+.navigation {
+    display: block !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 9999 !important;
+    background-color: white !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    padding: 0.75rem 0 !important;
+    min-height: 60px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Force header visibility */
+header *,
+.navbar *,
+nav *,
+.header *,
+.navigation * {
+    visibility: visible !important;
+    display: block !important;
+}
+
+/* Header layout containers */
+header .container,
+nav .container,
+header>div,
+nav>div,
+.flex-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+
+/* Header links and buttons */
+header a,
+nav a,
+.navbar a,
+header button,
+nav button {
+    display: inline-block !important;
+    text-decoration: none !important;
+    color: #1f2937 !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 0.375rem !important;
+    transition: all 0.2s ease-in-out !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Make container flex items appear inline */
+header a,
+nav a,
+header button,
+nav button,
+.nav-item,
+.flex-item {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* Logo styling */
+header .logo,
+.navbar-brand,
+.site-logo,
+header img,
+header svg {
+    display: inline-block !important;
+    height: auto !important;
+    max-height: 40px !important;
+}
+
+/* ==================== DROPDOWN MENUS ==================== */
+.relative,
+.dropdown,
+.dropdown-container,
+.has-dropdown,
+.menu-item-has-children {
+    position: relative !important;
+}
+
+.dropdown-menu,
+.submenu,
+.mega-menu,
+.dropdown-content {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    z-index: 9998 !important;
+    min-width: 220px !important;
+    background-color: white !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    padding: 0.5rem 0 !important;
+    margin-top: 0.5rem !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+/* Animation for dropdown menus */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Show dropdown when parent is clicked/hovered */
+[data-headlessui-state="open"]>div,
+.dropdown:hover .dropdown-menu,
+.dropdown.show .dropdown-menu {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+    animation: dropdownFadeIn 0.2s ease forwards;
+}
+
+/* Dropdown items */
+.dropdown-item,
+.dropdown-menu a,
+.submenu a {
+    display: block !important;
+    padding: 0.5rem 1rem !important;
+    color: #374151 !important;
+    text-decoration: none !important;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-menu a:hover,
+.submenu a:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+/* ==================== PROMOTION BANNER ==================== */
+.promotion-banner {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    z-index: 10 !important;
+}
+
+/* ==================== SIDEBAR & FILTERS ==================== */
+aside,
+.sidebar,
+.filter-sidebar {
+    position: sticky !important;
+    top: 80px !important;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter groups */
+.filter-group,
+.sidebar-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.filter-group:last-child,
+.sidebar-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-group h3,
+.sidebar-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+}
+
+/* Filter options */
+.sidebar-filters label,
+.filter-option label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem 0;
+}
+
+.sidebar-filters input[type="checkbox"],
+.filter-option input[type="checkbox"] {
+    margin-right: 0.75rem;
+}
+
+/* Sort dropdown */
+.sort-dropdown {
+    position: relative;
+    min-width: 200px;
+}
+
+.sort-dropdown select {
+    appearance: none;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    width: 100%;
+    font-size: 0.875rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+}
+
+/* ==================== RESPONSIVE STYLES ==================== */
+/* Desktop styles */
+@media (min-width: 769px) {
+    .container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    /* Desktop-specific dropdown positioning */
+    nav .dropdown-menu,
+    .navbar .dropdown-menu {
+        right: auto;
+        left: 0;
+    }
+
+    /* Header styles for desktop */
+    header .container {
+        height: 60px;
+    }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* Ensure no blue sidebar on mobile */
+    body::before {
+        display: none !important;
+    }
+
+    /* Mobile header fixes */
+    header,
+    .navbar,
+    nav {
+        padding: 0.5rem 0 !important;
+    }
+
+    /* Mobile sidebar styles */
+    aside,
+    .sidebar,
+    .filter-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 85% !important;
+        max-width: 320px !important;
+        z-index: 9999 !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    aside.open,
+    .sidebar.open,
+    .filter-sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Mobile dropdown styles */
+    .dropdown-menu,
+    .submenu {
+        position: static !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        margin-top: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Mobile menu */
+    .mobile-menu {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 9998;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .mobile-menu.open {
+        opacity: 1;
+        visibility: visible;
+    }
+}

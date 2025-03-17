@@ -4,16 +4,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import './App.css';
-// Import CSS fixes
+// Import CSS files
 import './styles/reset.css';
 import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
-import './styles/fixes.css'; // Import the new fixes
-import './styles/dropdown-fixes.css'; // Import dropdown-specific fixes
-import './styles/filter-sidebar-fixes.css'; // Import filter sidebar fixes
-import './styles/search-fixes.css'; // Import search field fixes
-import './styles/header-fix.css'; // EMERGENCY HEADER FIX - highest priority
+import './styles/main.css'; // Consolidated stylesheet that replaces all fix files
 
 // Ensure React is globally available in case any modules are looking for it
 // This needs to happen before importing any components that might use createContext
