@@ -24,30 +24,6 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Helper function for proper PostgreSQL JSON handling
-const formatArrayForPostgres = (value) => {
-    if (process.env.DATABASE_URL) { // PostgreSQL needs proper JSON strings
-        if (value === null || value === undefined) {
-            return '[]';
-        }
-        if (typeof value === 'string') {
-            try {
-                // If it's already a valid JSON string, just return it
-                JSON.parse(value);
-                return value;
-            } catch (e) {
-                // Not valid JSON, stringify it
-                return JSON.stringify(value);
-            }
-        }
-        // Not a string, stringify it
-        return JSON.stringify(value || []);
-    } else {
-        // MySQL can handle arrays directly
-        return value;
-    }
-};
-
 // Ensure uploads directory exists for local development fallback
 const uploadDir = path.join(__dirname, '../public/uploads/products');
 
