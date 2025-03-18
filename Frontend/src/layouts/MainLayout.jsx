@@ -38,9 +38,6 @@ import SitemapPage from '../pages/SitemapPage';
 import AiChatWidget from '../components/AiAssistant/AiChatWidget';
 import { useEffect } from 'react';
 
-// Verify banner is imported
-console.log('✅ MainLayout loaded, PromotionBanner import status:', !!PromotionBanner);
-
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
     const { user, isLoading } = useAuth();
@@ -93,78 +90,6 @@ const MainLayout = () => {
         });
     }, [user, isAuthenticated, cart, cartCount]);
 
-    // Add a style tag to ensure proper dropdown layering
-    useEffect(() => {
-        // Create a style element
-        const style = document.createElement('style');
-        style.innerHTML = `
-            /* Aggressive z-index fixes injected directly in DOM */
-            .dropdown-menu, [role="menu"], [data-headlessui-state="open"], .absolute {
-                z-index: 1000 !important;
-                position: relative !important;
-            }
-            
-            /* Special rules for dropdown content */
-            [data-headlessui-state="open"] > div,
-            button[data-headlessui-state="open"] + div,
-            [id^="headlessui-menu-items"],
-            [id^="headlessui-listbox-options"] {
-                z-index: 2000 !important;
-                position: absolute !important;
-            }
-            
-            /* Specific fixes for components we know have issues */
-            #design-menu, .category-dropdown {
-                z-index: 5000 !important;
-                position: relative !important;
-            }
-            
-            /* Force banner to lower z-index */
-            .promotion-banner {
-                z-index: 5 !important;
-            }
-            
-            /* Force wrappers to respect z-index */
-            .relative {
-                position: relative !important;
-            }
-        `;
-
-        // Add it to the head
-        document.head.appendChild(style);
-
-        // Also add a MutationObserver to ensure dropdowns added dynamically get the proper z-index
-        const fixDropdowns = () => {
-            const dropdowns = document.querySelectorAll('.dropdown-menu, [role="menu"], [data-headlessui-state="open"]');
-            dropdowns.forEach(dropdown => {
-                dropdown.style.zIndex = '2000';
-                if (dropdown.parentElement) {
-                    dropdown.parentElement.style.position = 'relative';
-                }
-            });
-        };
-
-        // Run once right away
-        setTimeout(fixDropdowns, 1000);
-
-        // Set up observer
-        const observer = new MutationObserver(mutations => {
-            fixDropdowns();
-        });
-
-        // Start observing
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        return () => {
-            // Clean up on unmount
-            document.head.removeChild(style);
-            observer.disconnect();
-        };
-    }, []);
-
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
             {/* Toast notifications */}
@@ -184,78 +109,11 @@ const MainLayout = () => {
             {/* Skip to main content target */}
             <div id="main-content" tabIndex="-1"></div>
 
-            {/* FALLBACK HARDCODED HEADER */}
-            <div className="bg-white shadow-md w-full" style={{ display: 'block', visibility: 'visible', zIndex: 9999, position: 'relative' }}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ display: 'block', visibility: 'visible' }}>
-                    <div className="flex items-center justify-between h-16" style={{ display: 'flex', visibility: 'visible' }}>
-                        {/* Logo - Using Logo component instead of static image */}
-                        <div className="flex-shrink-0" style={{ display: 'block', visibility: 'visible' }}>
-                            <Logo />
-                        </div>
-
-                        {/* Navigation Links */}
-                        <div className="hidden md:flex space-x-6" style={{ display: 'flex', visibility: 'visible' }}>
-                            <Link to="/" className="text-gray-700 hover:text-blue-500 px-3 py-2">
-                                Home
-                            </Link>
-                            <Link to="/designs" className="text-gray-700 hover:text-blue-500 px-3 py-2">
-                                Designs
-                            </Link>
-                            <Link to="/custom-design" className="text-gray-700 hover:text-blue-500 px-3 py-2">
-                                Custom Design
-                            </Link>
-                            <Link to="/about" className="text-gray-700 hover:text-blue-500 px-3 py-2">
-                                About
-                            </Link>
-                        </div>
-
-                        {/* User Actions */}
-                        <div className="flex items-center space-x-4" style={{ display: 'flex', visibility: 'visible' }}>
-                            <Link to="/wishlist" className="text-gray-700 hover:text-blue-500 px-2 py-2 relative">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
-                                {wishlistCount > 0 && (
-                                    <span className="absolute top-0 right-0 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {wishlistCount}
-                                    </span>
-                                )}
-                            </Link>
-                            <Link to="/cart" className="text-gray-700 hover:text-blue-500 px-2 py-2 relative">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                {cartCount > 0 && (
-                                    <span className="absolute top-0 right-0 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {cartCount}
-                                    </span>
-                                )}
-                            </Link>
-                            {isAuthenticated ? (
-                                <Link to="/profile" className="text-gray-700 hover:text-blue-500 px-2 py-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </Link>
-                            ) : (
-                                <Link to="/login" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
-                                    Sign In
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Original header - try to render it as fallback */}
-            <div className="header-container" style={{ display: 'none' }}>
-                <Header />
-            </div>
+            {/* Main header */}
+            <Header />
 
             {/* Promotion banner */}
-            <div style={{ position: 'relative', zIndex: 5 }}>
-                <PromotionBanner />
-            </div>
+            <PromotionBanner />
 
             {/* Main content */}
             <main className="flex-1">
@@ -515,7 +373,7 @@ const MainLayout = () => {
 
                         {/* Shop Links */}
                         <div className="md:col-span-1">
-                            <h3 className="text-lg font-semibold mb-4">Shop</h3>
+                            <h3 className="text-lg text-white font-semibold mb-4">Shop</h3>
                             <ul className="space-y-2">
                                 <li><Link to="/products" className="text-gray-400 hover:text-white transition-colors">All Products</Link></li>
                                 <li><Link to="/designs" className="text-gray-400 hover:text-white transition-colors">Design Gallery</Link></li>
@@ -526,7 +384,7 @@ const MainLayout = () => {
 
                         {/* Customer Service */}
                         <div className="md:col-span-1">
-                            <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
+                            <h3 className="text-lg text-white font-semibold mb-4">Customer Service</h3>
                             <ul className="space-y-2">
                                 <li><Link to="/contact-us" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
                                 <li><Link to="/faq" className="text-gray-400 hover:text-white transition-colors">FAQ</Link></li>
@@ -537,7 +395,7 @@ const MainLayout = () => {
 
                         {/* Company Links */}
                         <div className="md:col-span-1">
-                            <h3 className="text-lg font-semibold mb-4">Company</h3>
+                            <h3 className="text-lg text-white font-semibold mb-4">Company</h3>
                             <ul className="space-y-2">
                                 <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
                                 <li><Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
