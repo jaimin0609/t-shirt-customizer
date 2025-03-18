@@ -175,7 +175,8 @@ button[aria-expanded],
 header button,
 header .relative,
 nav button,
-nav .relative {
+nav .relative,
+.group {
     position: relative !important;
     visibility: visible !important;
 }
@@ -190,7 +191,9 @@ button[data-headlessui-state="open"]+div,
 [id^="headlessui-menu-items"],
 [id^="headlessui-listbox-options"],
 [data-headlessui-state] ul,
-[data-headlessui-state] div {
+[data-headlessui-state] div,
+.group div,
+.absolute {
     position: absolute !important;
     top: 100% !important;
     right: 0 !important;
@@ -225,7 +228,10 @@ button[data-headlessui-state="open"]+div,
 button[data-headlessui-state="open"]+div,
 .dropdown:hover .dropdown-menu,
 .dropdown.show .dropdown-menu,
-[role="menu"].open {
+[role="menu"].open,
+.group:hover .group-hover\:opacity-100,
+.group:hover .group-hover\:visible,
+.group:hover .absolute {
     opacity: 1 !important;
     visibility: visible !important;
     transform: translateY(0) !important;
@@ -263,7 +269,11 @@ nav>div:last-child [data-headlessui-state] div {
 .menu-item,
 [data-headlessui-state] div a,
 [data-headlessui-state] ul li,
-[data-headlessui-state] div button {
+[data-headlessui-state] div button,
+.group div a,
+.group div button,
+.absolute a,
+.absolute button {
     display: block !important;
     padding: 0.5rem 1rem !important;
     color: #374151 !important;
@@ -280,7 +290,12 @@ nav>div:last-child [data-headlessui-state] div {
 .menu-item:hover,
 [data-headlessui-state] div a:hover,
 [data-headlessui-state] ul li:hover,
-[data-headlessui-state] div button:hover {
+[data-headlessui-state] div button:hover,
+.group div a:hover,
+.group div button:hover,
+.absolute a:hover,
+.absolute button:hover,
+.hover\:bg-gray-100:hover {
     background-color: #f3f4f6 !important;
     color: #111827 !important;
 }
@@ -435,7 +450,9 @@ aside,
     [role="menu"],
     [data-headlessui-state="open"]>div,
     [id^="headlessui-menu-items"],
-    [id^="headlessui-listbox-options"] {
+    [id^="headlessui-listbox-options"],
+    .group div,
+    .absolute {
         position: static !important;
         width: 100% !important;
         box-shadow: none !important;
@@ -466,5 +483,18 @@ aside,
     .mobile-menu.open {
         opacity: 1;
         visibility: visible;
+    }
+
+    /* Ensure Tailwind group hover works on mobile */
+    .group:active .group-hover\:opacity-100,
+    .group:active .group-hover\:visible,
+    .group:active .absolute,
+    .group.show .group-hover\:opacity-100,
+    .group.show .group-hover\:visible,
+    .group.show .absolute {
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative !important;
+        display: block !important;
     }
 }
