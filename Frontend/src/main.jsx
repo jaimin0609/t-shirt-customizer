@@ -9,6 +9,7 @@ import './styles/reset.css';
 import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
+import './styles/dropdown.css'; // Specific dropdown styling that overrides Tailwind defaults
 import './styles/main.css'; // Consolidated stylesheet that replaces all fix files
 
 // Ensure React is globally available in case any modules are looking for it

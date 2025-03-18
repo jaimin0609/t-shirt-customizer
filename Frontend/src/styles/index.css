@@ -13,6 +13,8 @@
 @import './responsive.css';
 @import './accessibility.css';
 @import './animations.css';
+@import './dropdown.css';
+/* Specific dropdown styling */
 
 /* Custom global styles */
 :root {
