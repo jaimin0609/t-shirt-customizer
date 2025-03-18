@@ -434,6 +434,45 @@ aside,
         padding-right: 0.5rem;
     }
 
+    /* Modern navigation mobile styles */
+    .main-header,
+    header nav,
+    .site-header {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .nav-center,
+    .center-nav,
+    nav>div:nth-child(2),
+    header>div:nth-child(2) {
+        gap: 1rem !important;
+    }
+
+    .nav-right,
+    .icon-nav,
+    nav>div:last-child,
+    header>div:last-child {
+        gap: 0.75rem !important;
+    }
+
+    /* Product grid mobile adjustments */
+    .products-container,
+    .product-grid,
+    .catalog-container {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+
+    /* Page title mobile styles */
+    .page-title,
+    .section-title,
+    h1.title {
+        font-size: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-top: 1rem !important;
+    }
+
     /* Ensure no blue sidebar on mobile */
     body::before {
         display: none !important;
@@ -523,4 +562,249 @@ aside,
         position: relative !important;
         display: block !important;
     }
+
+    /* Account dropdown for mobile */
+    .account-dropdown,
+    .user-dropdown,
+    .profile-menu {
+        position: relative !important;
+    }
+
+    .account-dropdown .dropdown-menu,
+    .user-dropdown .dropdown-menu,
+    .profile-menu .dropdown-menu,
+    .group.profile-menu div {
+        position: absolute !important;
+        top: 100% !important;
+        right: 0 !important;
+        left: auto !important;
+        width: 200px !important;
+        background: white !important;
+        border-radius: 0.375rem !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+        z-index: 1060 !important;
+        padding: 0.5rem 0 !important;
+    }
+
+    /* Mobile dropdown items */
+    .account-dropdown .dropdown-menu a,
+    .user-dropdown .dropdown-menu a,
+    .profile-menu .dropdown-menu a,
+    .group.profile-menu div a,
+    .group.profile-menu div button {
+        padding: 0.75rem 1rem !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        text-align: left !important;
+    }
+
+    /* Ensure dropdowns appear on click for mobile */
+    .group:active .group-hover\:opacity-100,
+    .group:active .group-hover\:visible,
+    .group:active .absolute,
+    .group.show .group-hover\:opacity-100,
+    .group.show .group-hover\:visible,
+    .group.show .absolute {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+    }
+}
+
+/* ==================== CUSTOM LAYOUT FOR NEW DESIGN ==================== */
+/* Specific styling for the new navigation layout in screenshot 2 */
+.root-wrapper,
+#root>div {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Modern clean navigation */
+.main-header,
+header nav,
+.site-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1rem 2rem !important;
+    border-bottom: 1px solid #eaeaea !important;
+    background-color: white !important;
+}
+
+/* Center navigation links */
+.nav-center,
+.center-nav,
+nav>div:nth-child(2),
+header>div:nth-child(2) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2.5rem !important;
+}
+
+.nav-center a,
+.center-nav a,
+nav>div:nth-child(2) a,
+header>div:nth-child(2) a {
+    font-weight: 500 !important;
+    color: #4b5563 !important;
+    text-decoration: none !important;
+    font-size: 1rem !important;
+    padding: 0.5rem 0 !important;
+    position: relative !important;
+}
+
+/* Right-side icons for cart, favorites, account */
+.nav-right,
+.icon-nav,
+nav>div:last-child,
+header>div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
+}
+
+.nav-icon,
+.icon-button,
+.nav-right a,
+.icon-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #4b5563 !important;
+    font-size: 1.25rem !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 0.5rem !important;
+    transition: color 0.2s, transform 0.2s !important;
+}
+
+.nav-icon:hover,
+.icon-button:hover,
+.nav-right a:hover,
+.icon-nav a:hover {
+    color: #000 !important;
+    transform: scale(1.05) !important;
+}
+
+/* Product page layout */
+.products-container,
+.product-grid,
+.catalog-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+    gap: 2rem !important;
+    padding: 2rem !important;
+}
+
+.product-card,
+.item-card {
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 0.5rem !important;
+    overflow: hidden !important;
+    background-color: white !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.product-card:hover,
+.item-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Ensure the page title styling matches */
+.page-title,
+.section-title,
+h1.title {
+    font-size: 1.875rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin-bottom: 1.5rem !important;
+    padding-left: 2rem !important;
+    padding-top: 1.5rem !important;
+}
+
+/* Fix for account dropdown specifically */
+.account-icon+div,
+.profile-icon+div,
+.group:last-child div,
+nav>div:last-child>a:last-child+div,
+nav>div:last-child>div:last-child>div {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    min-width: 180px !important;
+    background-color: white !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    padding: 0.5rem 0 !important;
+    z-index: 1060 !important;
+    margin-top: 0.5rem !important;
+}
+
+/* Direct fix for the Tailwind dropdown in Navbar.jsx */
+.group {
+    position: relative !important;
+    display: inline-block !important;
+}
+
+.group:hover .absolute.opacity-0.invisible.group-hover\:opacity-100.group-hover\:visible,
+.group:hover .absolute,
+.group:focus-within .absolute.opacity-0.invisible.group-hover\:opacity-100.group-hover\:visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    z-index: 9999 !important;
+}
+
+.absolute.right-0.mt-2.w-48.bg-white.rounded-md.shadow-lg.py-1 {
+    position: absolute !important;
+    right: 0 !important;
+    top: 100% !important;
+    margin-top: 0.5rem !important;
+    width: 12rem !important;
+    background-color: white !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    z-index: 9999 !important;
+}
+
+.absolute.right-0.mt-2.w-48.bg-white.rounded-md.shadow-lg.py-1 a,
+.absolute.right-0.mt-2.w-48.bg-white.rounded-md.shadow-lg.py-1 button {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+    color: #4b5563 !important;
+    text-align: left !important;
+    transition: background-color 0.2s !important;
+}
+
+.absolute.right-0.mt-2.w-48.bg-white.rounded-md.shadow-lg.py-1 a:hover,
+.absolute.right-0.mt-2.w-48.bg-white.rounded-md.shadow-lg.py-1 button:hover,
+.hover\:bg-gray-100:hover {
+    background-color: #f3f4f6 !important;
+}
+
+/* Override for any hidden elements */
+.opacity-0.invisible.group-hover\:opacity-100.group-hover\:visible {
+    transition: opacity 0.2s, visibility 0.2s !important;
+}
+
+.group:hover .opacity-0.invisible.group-hover\:opacity-100.group-hover\:visible {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
