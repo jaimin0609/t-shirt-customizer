@@ -6,6 +6,7 @@ import { Transition } from '@headlessui/react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from '../components/Header/Header';
+import HeaderFix from '../components/Header/Header-fix';
 import LogoFooter from '../components/Header/LogoFooter';
 import Logo from '../components/Header/Logo';
 import TShirtBrowser from '../components/MainContent/TShirtBrowser';
@@ -109,8 +110,15 @@ const MainLayout = () => {
             {/* Skip to main content target */}
             <div id="main-content" tabIndex="-1"></div>
 
-            {/* Main header */}
-            <Header />
+            {/* Emergency Header Fix - Will always be visible as a fallback */}
+            <div id="emergency-header" style={{ position: 'relative', zIndex: 9999 }}>
+                <HeaderFix />
+            </div>
+
+            {/* Original Header - We'll keep this but it may be hidden */}
+            <div style={{ display: 'none' }}>
+                <Header />
+            </div>
 
             {/* Promotion banner */}
             <PromotionBanner />

@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './styles/tailwind.css'; // Import Tailwind first
+import './styles/navbar-fix.css'; // EMERGENCY FIX for missing navbar
 import './styles/tailwind-extensions.css'; // Override and extend Tailwind classes
 import './index.css';
 import './App.css';

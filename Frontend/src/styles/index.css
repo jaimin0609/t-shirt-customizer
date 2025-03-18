@@ -8,6 +8,8 @@
 
 /* Tailwind CSS */
 @import './tailwind.css';
+@import './navbar-fix.css';
+/* EMERGENCY FIX for missing navbar */
 @import './tailwind-extensions.css';
 /* Override and extend Tailwind classes */
 
