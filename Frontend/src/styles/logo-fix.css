@@ -77,6 +77,76 @@ nav img,
     z-index: 10;
 }
 
+/* ENHANCED: Super aggressive targeting of the yellow line */
+[class*="uv"]+div,
+[class*="uv"]~div,
+[class*="uv"]~span,
+[class*="uv"]>span,
+[class*="uv"]>div,
+header a>span,
+header a>div,
+header a::after,
+header a div,
+header a span,
+.UniQVerse~span,
+.UniQVerse~div,
+.UniQVerse>span,
+.UniQVerse+span,
+.UniQVerse+div,
+a[href="/"]>div,
+a[href="/"]>span,
+a[href="/"]::after,
+a[href="/"] div,
+a[href="/"] span,
+a:has(img)+div,
+a:has(img)~div,
+a:has(img)>div:not(img),
+a:has(img)::after,
+a:has(.uv)::after,
+a:has(.UniQVerse)::after,
+.logo+div,
+.logo~div,
+.logo::after,
+.logo>div:not(img):not(svg) {
+    display: none !important;
+    background: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    content: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* ENHANCED: Target specific yellow bar shown in screenshot */
+[class*="uv"]+.bg-yellow-400,
+[class*="uv"]~.bg-yellow-400,
+[class*="uv"]+.bg-yellow-500,
+[class*="uv"]~.bg-yellow-500,
+a[href="/"]+.bg-yellow-400,
+a[href="/"]~.bg-yellow-400,
+a[href="/"]+.bg-yellow-500,
+a[href="/"]~.bg-yellow-500,
+.UniQVerse+.bg-yellow-400,
+.UniQVerse~.bg-yellow-400,
+.logo+.bg-yellow-400,
+.logo~.bg-yellow-400,
+header div.bg-yellow-400,
+header div.bg-yellow-500,
+nav div.bg-yellow-400,
+nav div.bg-yellow-500,
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-500,
+a[href="/"] div.bg-yellow-400,
+a[href="/"] div.bg-yellow-500,
+[style*="yellow"],
+[style*="rgb(250, 204, 21)"],
+[style*="rgb(234, 179, 8)"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}
+
 /* Ensure no pseudo-elements are creating the yellow line */
 #uv::after,
 #uv-logo::after,
@@ -141,11 +211,28 @@ svg [style*="fill: gold"] {
 .bg-amber-200,
 .bg-amber-100 {
     background-color: transparent !important;
+    display: none !important;
 }
 
 /* Override any inline styles */
 [style*="background"] {
     background: transparent !important;
+}
+
+/* ENHANCED: Target any absolute positioned elements near the logo */
+a[href="/"] .absolute,
+.logo .absolute,
+.uv .absolute,
+[class*="uv"] .absolute,
+.UniQVerse .absolute,
+a:has(img) .absolute,
+header .absolute.bottom-0,
+header .absolute.h-[3px],
+header a .absolute,
+nav a .absolute {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
 }
 
 /* Target parent elements that might have the yellow styling */
@@ -156,10 +243,41 @@ header>div>a,
     background: none !important;
 }
 
+/* ENHANCED: Target the specific yellow line in Home menu item */
+.navbar__link::after,
+.nav-link::after,
+.main-nav-link::after,
+nav a::after,
+a[href="/home"]::after,
+a[href="/"]::after,
+header li a::after {
+    display: none !important;
+    background: none !important;
+    content: none !important;
+}
+
 /* Ensure the navbar has a white background */
 header,
 .header,
 .navbar,
 nav {
     background-color: white !important;
+}
+
+/* ENHANCED: Apply styles to specific element seen in screenshot */
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+.absolute.inset-x-0.bottom-0.h-[3px].bg-yellow-400,
+div[class*="bottom-0"][class*="left-0"][class*="right-0"][class*="h-[3px]"][class*="bg-yellow"],
+div[class*="bottom-0"][class*="left-0"][class*="right-0"][class*="h-1"][class*="bg-yellow"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Last resort !important selector - universally remove yellow backgrounds */
+*[class*="yellow"],
+*[style*="yellow"],
+*[style*="rgb(250, 204, 21)"],
+*[style*="rgb(234, 179, 8)"] {
+    background-color: transparent !important;
 }
