@@ -1,0 +1,106 @@
+/* Dropdown Component */
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown__menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: var(--z-dropdown);
+    min-width: 220px;
+    background-color: var(--color-white);
+    border-radius: 0.375rem;
+    box-shadow: var(--shadow-lg);
+    padding: var(--spacing-sm) 0;
+    margin-top: var(--spacing-sm);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity var(--transition-default),
+        transform var(--transition-default),
+        visibility var(--transition-default);
+}
+
+/* Menu positioned to the left */
+.dropdown__menu--left {
+    right: auto;
+    left: 0;
+}
+
+/* Show dropdown when hovered/focused */
+.dropdown:hover .dropdown__menu,
+.dropdown:focus-within .dropdown__menu,
+.dropdown--active .dropdown__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Animation for dropdown menus */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown__menu--visible {
+    animation: dropdownFadeIn 0.2s ease forwards;
+}
+
+.dropdown__item {
+    display: block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--color-text-medium);
+    text-decoration: none;
+    transition: background-color var(--transition-default);
+    white-space: nowrap;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.dropdown__item:hover {
+    background-color: var(--color-hover);
+    color: var(--color-text-dark);
+}
+
+/* Profile dropdown specific styles */
+.dropdown--profile .dropdown__menu {
+    right: 0;
+    left: auto;
+    width: 200px;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .dropdown__menu {
+        position: relative;
+        width: 100%;
+        box-shadow: none;
+        margin-top: 0;
+        min-width: 100%;
+    }
+
+    /* Special handling for profile dropdown on mobile */
+    .dropdown--profile .dropdown__menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: auto;
+        width: 200px;
+        box-shadow: var(--shadow-lg);
+        z-index: calc(var(--z-dropdown) + 60);
+    }
+}

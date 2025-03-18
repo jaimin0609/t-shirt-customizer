@@ -1,6 +1,6 @@
 /* 
   T-Shirt Customizer Main Stylesheet
-  Refactored for improved maintainability, performance, and compatibility
+  Refactored to use BEM methodology and improve maintainability
 */
 
 /* ==================== CSS VARIABLES ==================== */
@@ -35,20 +35,6 @@
     --z-dropdown: 100;
     --z-header: 1000;
     --z-modal: 2000;
-
-    /* Fonts */
-    --font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --font-size-sm: 0.875rem;
-    --font-size-base: 1rem;
-    --font-size-lg: 1.125rem;
-    --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
-    --font-size-3xl: 1.875rem;
-
-    /* Border Radius */
-    --radius-sm: 0.25rem;
-    --radius-md: 0.375rem;
-    --radius-lg: 0.5rem;
 }
 
 /* ==================== BASE STYLES ==================== */
@@ -66,7 +52,7 @@ html {
 
 body {
     background-color: var(--color-background);
-    font-family: var(--font-family);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--color-text-medium);
     overflow-x: hidden;
     min-height: 100vh;
@@ -136,7 +122,7 @@ textarea:focus {
 /* ==================== TYPOGRAPHY ==================== */
 h1,
 .h1 {
-    font-size: var(--font-size-3xl);
+    font-size: 1.875rem;
     font-weight: 700;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-lg);
@@ -144,7 +130,7 @@ h1,
 
 h2,
 .h2 {
-    font-size: var(--font-size-2xl);
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-md);
@@ -152,7 +138,7 @@ h2,
 
 h3,
 .h3 {
-    font-size: var(--font-size-xl);
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-md);
@@ -174,9 +160,7 @@ a:hover {
 }
 
 /* ==================== HEADER & NAVIGATION ==================== */
-.header,
-.navbar,
-nav {
+.header {
     display: flex;
     position: relative;
     z-index: var(--z-header);
@@ -187,75 +171,56 @@ nav {
     width: 100%;
 }
 
-.header__container,
-.navbar__container,
-nav>div {
+.header__container {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
 }
 
-.header__logo,
-.navbar__logo,
-.site-logo,
-header img,
-nav img {
+.header__logo {
     display: inline-block;
     height: auto;
     max-height: 40px;
 }
 
-.nav__center,
-.navbar__center,
-.center-nav,
-nav>div:nth-child(2) {
+.header__nav {
+    display: flex;
+    align-items: center;
+}
+
+.nav__center {
     display: flex;
     align-items: center;
     gap: var(--spacing-2xl);
 }
 
-.nav__center-link,
-.navbar__link,
-.nav__center a,
-.center-nav a,
-nav>div:nth-child(2) a {
+.nav__center-link {
     font-weight: 500;
     color: var(--color-text-light);
     text-decoration: none;
-    font-size: var(--font-size-base);
+    font-size: 1rem;
     padding: var(--spacing-sm) 0;
     position: relative;
     transition: color var(--transition-default);
 }
 
-.nav__center-link:hover,
-.navbar__link:hover,
-.nav__center a:hover,
-.center-nav a:hover,
-nav>div:nth-child(2) a:hover {
+.nav__center-link:hover {
     color: var(--color-text-dark);
 }
 
-.nav__right,
-.navbar__actions,
-.icon-nav,
-nav>div:last-child {
+.nav__right {
     display: flex;
     align-items: center;
     gap: var(--spacing-lg);
 }
 
-.nav__icon,
-.navbar__icon,
-.icon-button,
-.nav__right a,
-.icon-nav a {
+.nav__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--color-text-light);
-    font-size: var(--font-size-xl);
+    font-size: 1.25rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -263,15 +228,12 @@ nav>div:last-child {
     transition: color var(--transition-default), transform var(--transition-default);
 }
 
-.nav__icon:hover,
-.navbar__icon:hover,
-.icon-button:hover,
-.nav__right a:hover,
-.icon-nav a:hover {
+.nav__icon:hover {
     color: var(--color-text-dark);
     transform: scale(1.05);
 }
 
+/* Mobile menu toggle */
 .mobile-menu-toggle {
     display: none;
     background: transparent;
@@ -281,25 +243,19 @@ nav>div:last-child {
 }
 
 /* ==================== DROPDOWN COMPONENT ==================== */
-.dropdown,
-.relative,
-.group {
+.dropdown {
     position: relative;
     display: inline-block;
 }
 
-.dropdown__menu,
-.dropdown-menu,
-[data-headlessui-state="open"]>div,
-button[data-headlessui-state="open"]+div,
-.group>div.absolute {
+.dropdown__menu {
     position: absolute;
     top: 100%;
     right: 0;
     z-index: var(--z-dropdown);
     min-width: 220px;
     background-color: var(--color-white);
-    border-radius: var(--radius-md);
+    border-radius: 0.375rem;
     box-shadow: var(--shadow-lg);
     padding: var(--spacing-sm) 0;
     margin-top: var(--spacing-sm);
@@ -312,32 +268,18 @@ button[data-headlessui-state="open"]+div,
 }
 
 /* Menu positioned to the left */
-.dropdown__menu--left,
-.dropdown-menu--left,
-#design-menu .dropdown-menu,
-.design-dropdown .dropdown-menu,
-a[href*="design"]+div {
+.dropdown__menu--left {
     right: auto;
     left: 0;
 }
 
 /* Show dropdown when hovered/focused */
 .dropdown:hover .dropdown__menu,
-.dropdown:hover .dropdown-menu,
 .dropdown:focus-within .dropdown__menu,
-.dropdown--active .dropdown__menu,
-.dropdown.show .dropdown-menu,
-.group:hover .absolute,
-.group:hover .dropdown-menu,
-.group:focus-within .absolute,
-[data-headlessui-state="open"]>div,
-.group:hover .group-hover\:opacity-100,
-.group:hover .group-hover\:visible {
+.dropdown--active .dropdown__menu {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
-    pointer-events: auto;
-    z-index: var(--z-dropdown);
 }
 
 /* Animation for dropdown menus */
@@ -353,22 +295,11 @@ a[href*="design"]+div {
     }
 }
 
-.dropdown__menu--visible,
-.dropdown__menu.show,
-.dropdown-menu.show,
-.group:hover .absolute {
+.dropdown__menu--visible {
     animation: dropdownFadeIn 0.2s ease forwards;
 }
 
-.dropdown__item,
-.dropdown-item,
-.dropdown__menu a,
-.dropdown-menu a,
-.submenu a,
-[role="menuitem"],
-.menu-item,
-.absolute a,
-.absolute button {
+.dropdown__item {
     display: block;
     padding: var(--spacing-sm) var(--spacing-md);
     color: var(--color-text-medium);
@@ -377,79 +308,45 @@ a[href*="design"]+div {
     white-space: nowrap;
     width: 100%;
     text-align: left;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: var(--font-size-sm);
 }
 
-.dropdown__item:hover,
-.dropdown-item:hover,
-.dropdown__menu a:hover,
-.dropdown-menu a:hover,
-.submenu a:hover,
-[role="menuitem"]:hover,
-.menu-item:hover,
-.absolute a:hover,
-.absolute button:hover,
-.hover\:bg-gray-100:hover {
+.dropdown__item:hover {
     background-color: var(--color-hover);
     color: var(--color-text-dark);
 }
 
-/* Profile dropdown specific styles */
-.dropdown--profile .dropdown__menu,
-.profile-dropdown .dropdown-menu,
-.user-dropdown .dropdown-menu,
-.account-dropdown .dropdown-menu,
-.group:last-child .absolute,
-nav>div:last-child>div:last-child>div {
-    right: 0;
-    left: auto;
-    width: 200px;
-}
-
 /* ==================== SIDEBAR & FILTERS ==================== */
-.sidebar,
-aside,
-.filter-sidebar {
+.sidebar {
     position: sticky;
     top: 80px;
     height: calc(100vh - 80px);
     overflow-y: auto;
     padding: var(--spacing-md);
     background-color: var(--color-white);
-    border-radius: var(--radius-lg);
+    border-radius: 0.5rem;
     box-shadow: var(--shadow-sm);
 }
 
-.sidebar__section,
-.filter-group,
-.sidebar-section {
+.sidebar__section {
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
     border-bottom: 1px solid var(--color-border);
 }
 
-.sidebar__section:last-child,
-.filter-group:last-child,
-.sidebar-section:last-child {
+.sidebar__section:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
 }
 
-.sidebar__heading,
-.filter-group h3,
-.sidebar-heading {
-    font-size: var(--font-size-base);
+.sidebar__heading {
+    font-size: 1rem;
     font-weight: 600;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-md);
 }
 
-.filter-option,
-.sidebar-filters label {
+.filter-option {
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -457,27 +354,22 @@ aside,
     padding: var(--spacing-sm) 0;
 }
 
-.filter-option__checkbox,
-.sidebar-filters input[type="checkbox"],
-.filter-option input[type="checkbox"] {
+.filter-option__checkbox {
     margin-right: var(--spacing-sm);
 }
 
 /* ==================== PRODUCT CARDS ==================== */
-.product-grid,
-.products-container,
-.catalog-container {
+.product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--spacing-xl);
     padding: var(--spacing-xl);
 }
 
-.product-card,
-.item-card {
+.product-card {
     display: flex;
     flex-direction: column;
-    border-radius: var(--radius-lg);
+    border-radius: 0.5rem;
     overflow: hidden;
     background-color: var(--color-white);
     box-shadow: var(--shadow-sm);
@@ -485,8 +377,7 @@ aside,
         box-shadow var(--transition-default);
 }
 
-.product-card:hover,
-.item-card:hover {
+.product-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
 }
@@ -502,14 +393,14 @@ aside,
 }
 
 .product-card__title {
-    font-size: var(--font-size-lg);
+    font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: var(--spacing-sm);
     color: var(--color-text-dark);
 }
 
 .product-card__price {
-    font-size: var(--font-size-xl);
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-md);
@@ -522,7 +413,7 @@ aside,
     background-color: var(--color-primary);
     color: var(--color-white);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 0.375rem;
     font-weight: 500;
     text-align: center;
     cursor: pointer;
@@ -534,10 +425,8 @@ aside,
 }
 
 /* ==================== PAGE LAYOUT ==================== */
-.page-title,
-.section-title,
-h1.title {
-    font-size: var(--font-size-3xl);
+.page-title {
+    font-size: 1.875rem;
     font-weight: 700;
     color: var(--color-text-dark);
     margin-bottom: var(--spacing-lg);
@@ -547,9 +436,7 @@ h1.title {
 
 /* ==================== RESPONSIVE STYLES ==================== */
 /* Mobile styles (default) */
-.mobile-menu,
-.navigation-menu,
-[data-headlessui-state="open"] .mobile-menu {
+.mobile-menu {
     display: none;
     position: fixed;
     top: 60px;
@@ -565,8 +452,7 @@ h1.title {
     transition: opacity var(--transition-default), visibility var(--transition-default);
 }
 
-.mobile-menu--open,
-.mobile-menu.open {
+.mobile-menu--open {
     opacity: 1;
     visibility: visible;
 }
@@ -583,9 +469,7 @@ h1.title {
         display: none;
     }
 
-    .header__container,
-    .navbar__container,
-    header .container {
+    .header__container {
         height: 60px;
     }
 }
@@ -603,17 +487,12 @@ h1.title {
     }
 
     /* Hide desktop nav on mobile */
-    .nav__center,
-    .navbar__center,
-    .center-nav,
-    nav>div:nth-child(2) {
+    .nav__center {
         display: none;
     }
 
     /* Adjust mobile header */
-    .header,
-    .navbar,
-    nav {
+    .header {
         padding: var(--spacing-sm) 0;
         position: sticky;
         top: 0;
@@ -625,27 +504,21 @@ h1.title {
     }
 
     /* Product grid for mobile */
-    .product-grid,
-    .products-container,
-    .catalog-container {
+    .product-grid {
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: var(--spacing-md);
         padding: var(--spacing-md);
     }
 
     /* Page title for mobile */
-    .page-title,
-    .section-title,
-    h1.title {
-        font-size: var(--font-size-2xl);
+    .page-title {
+        font-size: 1.5rem;
         padding-left: var(--spacing-md);
         padding-top: var(--spacing-md);
     }
 
     /* Mobile sidebar styles */
-    .sidebar,
-    aside,
-    .filter-sidebar {
+    .sidebar {
         position: fixed;
         top: 0;
         left: 0;
@@ -657,18 +530,12 @@ h1.title {
         transition: transform 0.3s ease;
     }
 
-    .sidebar--open,
-    .sidebar.open,
-    aside.open,
-    .filter-sidebar.open {
+    .sidebar--open {
         transform: translateX(0);
     }
 
-    /* Mobile dropdown styles - careful here */
-    /* Most dropdowns should be full width on mobile */
-    .dropdown__menu:not(.profile-dropdown .dropdown__menu),
-    .dropdown-menu:not(.profile-dropdown .dropdown-menu),
-    [role="menu"]:not(.profile-dropdown [role="menu"]) {
+    /* Mobile dropdown styles */
+    .dropdown__menu {
         position: relative;
         width: 100%;
         box-shadow: none;
@@ -677,10 +544,7 @@ h1.title {
     }
 
     /* Special handling for profile dropdown on mobile */
-    .profile-dropdown .dropdown__menu,
-    .profile-dropdown .dropdown-menu,
-    .account-dropdown .dropdown-menu,
-    .user-dropdown .dropdown-menu {
+    .profile-dropdown .dropdown__menu {
         position: absolute;
         top: 100%;
         right: 0;
@@ -688,15 +552,6 @@ h1.title {
         width: 200px;
         box-shadow: var(--shadow-lg);
         z-index: calc(var(--z-dropdown) + 60);
-    }
-
-    /* Fix for Tailwind group hover on mobile with touch */
-    .group:active .absolute,
-    .group:active .group-hover\:opacity-100,
-    .group:active .group-hover\:visible {
-        opacity: 1;
-        visibility: visible;
-        display: block;
     }
 }
 
@@ -799,7 +654,7 @@ h1.title {
 }
 
 .rounded-md {
-    border-radius: var(--radius-md);
+    border-radius: 0.375rem;
 }
 
 .shadow-lg {
