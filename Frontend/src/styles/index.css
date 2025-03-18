@@ -6,10 +6,8 @@
 /* Base styles and reset */
 @import './reset.css';
 
-/* Tailwind CSS imports */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS */
+@import './tailwind.css';
 
 /* Core utility styles */
 @import './responsive.css';

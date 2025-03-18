@@ -2,9 +2,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import './styles/tailwind.css'; // Import Tailwind first
 import './index.css';
 import './App.css';
-// Import CSS files
 import './styles/reset.css';
 import './styles/accessibility.css';
 import './styles/responsive.css';
