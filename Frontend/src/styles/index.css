@@ -13,6 +13,10 @@
 @import './responsive.css';
 @import './accessibility.css';
 @import './animations.css';
+@import './logo-fix.css';
+/* Fix for logo styling */
+@import './navbar.css';
+/* Professional navbar styling */
 @import './dropdown.css';
 /* Specific dropdown styling */
 

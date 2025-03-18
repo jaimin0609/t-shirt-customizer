@@ -9,6 +9,8 @@ import './styles/reset.css';
 import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
+import './styles/logo-fix.css'; // Fix for logo styling issues
+import './styles/navbar.css'; // Professional navbar styling
 import './styles/dropdown.css'; // Specific dropdown styling that overrides Tailwind defaults
 import './styles/main.css'; // Consolidated stylesheet that replaces all fix files
 

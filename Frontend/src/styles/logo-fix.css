@@ -1,0 +1,165 @@
+/* Specific fixes for the UniQVerse logo */
+
+/* Target the logo component and its container */
+.uv,
+.uv-logo,
+.UniQVerse,
+[id*="uv-logo"],
+[id*="uniqverse-logo"],
+[class*="uv-logo"],
+[class*="uniqverse-logo"],
+img[src*="logo"],
+img[alt*="logo"],
+.logo-container,
+.navbar__logo-container,
+.site-logo-wrapper,
+header a:first-child {
+    background: none !important;
+    position: relative;
+}
+
+/* Remove yellow underlines/backgrounds */
+.uv::after,
+.uv-logo::after,
+.UniQVerse::after,
+[id*="uv-logo"]::after,
+[id*="uniqverse-logo"]::after,
+[class*="uv-logo"]::after,
+[class*="uniqverse-logo"]::after,
+img[src*="logo"]::after,
+img[alt*="logo"]::after,
+.logo-container::after,
+.navbar__logo-container::after,
+.site-logo-wrapper::after,
+header a:first-child::after,
+.uv::before,
+.uv-logo::before,
+.UniQVerse::before,
+[id*="uv-logo"]::before,
+[id*="uniqverse-logo"]::before,
+[class*="uv-logo"]::before,
+[class*="uniqverse-logo"]::before,
+img[src*="logo"]::before,
+img[alt*="logo"]::before,
+.logo-container::before,
+.navbar__logo-container::before,
+.site-logo-wrapper::before,
+header a:first-child::before {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    border: none !important;
+    height: 0 !important;
+}
+
+/* Remove any background colors or images */
+header,
+.header,
+.navbar,
+nav,
+.logo-container,
+.navbar__logo-container,
+.site-logo-wrapper {
+    background-image: none !important;
+}
+
+/* Specifically target the yellow line under the UniQVerse logo */
+#uv,
+#uv-logo,
+.uv,
+[class*="uniq"],
+a[href="/"] img,
+header img,
+nav img,
+.logo svg,
+.brand svg {
+    position: relative;
+    z-index: 10;
+}
+
+/* Ensure no pseudo-elements are creating the yellow line */
+#uv::after,
+#uv-logo::after,
+.uv::after,
+[class*="uniq"]::after,
+a[href="/"]::after,
+header a::after,
+nav a::after,
+.logo::after,
+.brand::after,
+#uv::before,
+#uv-logo::before,
+.uv::before,
+[class*="uniq"]::before,
+a[href="/"]::before,
+header a::before,
+nav a::before,
+.logo::before,
+.brand::before {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+}
+
+/* Hide any decorative elements that might be causing the issue */
+[class*="decoration"],
+[class*="underline"],
+[class*="highlight"],
+[class*="accent"],
+[class*="brand-color"],
+[class*="brand-bg"] {
+    display: none !important;
+}
+
+/* Remove color backgrounds from UV logo */
+svg [fill="#FFC107"],
+svg [fill="#FFCA28"],
+svg [fill="#FFD54F"],
+svg [fill="#FFE082"],
+svg [fill="#FFECB3"],
+svg [fill="yellow"],
+svg [fill="gold"],
+svg [style*="fill: #FFC107"],
+svg [style*="fill: #FFCA28"],
+svg [style*="fill: #FFD54F"],
+svg [style*="fill: #FFE082"],
+svg [style*="fill: #FFECB3"],
+svg [style*="fill: yellow"],
+svg [style*="fill: gold"] {
+    fill: transparent !important;
+}
+
+/* Target the specific yellow background element if using tailwind */
+.bg-yellow-500,
+.bg-yellow-400,
+.bg-yellow-300,
+.bg-yellow-200,
+.bg-yellow-100,
+.bg-amber-500,
+.bg-amber-400,
+.bg-amber-300,
+.bg-amber-200,
+.bg-amber-100 {
+    background-color: transparent !important;
+}
+
+/* Override any inline styles */
+[style*="background"] {
+    background: transparent !important;
+}
+
+/* Target parent elements that might have the yellow styling */
+nav>div>a,
+header>div>a,
+.logo-wrapper,
+.brand-wrapper {
+    background: none !important;
+}
+
+/* Ensure the navbar has a white background */
+header,
+.header,
+.navbar,
+nav {
+    background-color: white !important;
+}
