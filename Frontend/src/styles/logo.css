@@ -1,0 +1,188 @@
+/*
+  Logo styling
+  Comprehensive styling for the UniQVerse logo with targeted fixes for the yellow line issue
+*/
+
+/* ========= Base Logo Styling ========= */
+
+/* Logo container */
+.navbar__logo-container,
+.logo-container,
+.site-logo-wrapper,
+.flex.items-center.justify-between.relative>a,
+a[href="/"] {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    position: relative;
+    text-decoration: none;
+    background: none !important;
+}
+
+/* Logo image */
+.navbar__logo,
+.site-logo,
+header img[alt*="logo" i],
+nav img[alt*="logo" i],
+.logo img,
+#logo img,
+.brand img,
+.uv-logo img,
+.UniQVerse img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    max-width: 100%;
+}
+
+/* SVG logo specifically */
+#uv-logo svg,
+.uv-logo svg,
+svg.uv-logo,
+.navbar__logo svg,
+.UniQVerse svg {
+    height: 40px;
+    width: auto;
+}
+
+/* Logo text (if part of logo) */
+.logo-text,
+.brand-text,
+.site-title,
+.uv-text,
+.UniQVerse span {
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin-left: 0.5rem;
+    color: #374151;
+}
+
+/* ========= Yellow Line Fix ========= */
+
+/* PRIORITY: Remove yellow line/decoration under logo */
+.uv::after,
+.uv-logo::after,
+.UniQVerse::after,
+[id*="uv-logo"]::after,
+[id*="uniqverse-logo"]::after,
+[class*="uv-logo"]::after,
+[class*="uniqverse-logo"]::after,
+img[src*="logo"]::after,
+img[alt*="logo"]::after,
+a[href="/"]::after,
+header a:first-child::after,
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-400,
+.absolute.inset-x-0.bottom-0.h-[3px].bg-yellow-400,
+div[class*="absolute"][class*="bottom-0"][class*="bg-yellow"],
+header .absolute.bottom-0,
+header a .absolute,
+.flex.items-center a div.absolute,
+div.absolute.bottom-0.bg-yellow-400 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    content: none !important;
+}
+
+/* Remove any background colors or images */
+header a:first-child,
+nav a:first-child,
+.logo-container,
+.navbar__logo-container,
+.site-logo-wrapper {
+    background: none !important;
+    background-image: none !important;
+}
+
+/* Prevent decoration from showing through z-index */
+.navbar__logo,
+.site-logo,
+.uv,
+#uv-logo,
+[class*="uniq"],
+a[href="/"] img,
+header img,
+.logo svg,
+.brand svg {
+    position: relative;
+    z-index: 10;
+}
+
+/* Target any direct children that might be the yellow bar */
+.navbar__logo+div,
+.site-logo+div,
+a[href="/"]>div:not(img):not(svg),
+header a:first-child>div:not(img):not(svg),
+header a>div.absolute,
+.flex.items-center.justify-between.relative>a>div.absolute {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+/* ========= Tailwind-specific overrides ========= */
+
+/* Handle Tailwind yellow bg classes */
+.bg-yellow-500,
+.bg-yellow-400,
+.bg-yellow-300,
+.bg-yellow-200,
+.bg-yellow-100,
+div[class*="bg-yellow"] {
+    background-color: transparent !important;
+    display: none !important;
+}
+
+/* Handle smaller height elements that might be decorative bars */
+.h-[3px],
+.h-1,
+.h-0\.5,
+.h-0,
+div[class*="h-[3px]"],
+div[class*="h-1"],
+div[class*="h-0.5"],
+div[class*="h-0"] {
+    height: 0 !important;
+    display: none !important;
+}
+
+/* Force clean logo area */
+.flex.items-center.justify-between>a>div.absolute.bottom-0,
+.flex.items-center.justify-between>a::after,
+.flex.items-center.justify-between>a::before,
+.flex.items-center.justify-between>a+div.absolute,
+.flex.items-center.justify-between>a>div.absolute {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+
+    .navbar__logo,
+    .site-logo,
+    header img[alt*="logo" i],
+    nav img[alt*="logo" i],
+    .logo img,
+    #logo img,
+    .brand img {
+        height: 32px;
+    }
+
+    #uv-logo svg,
+    .uv-logo svg,
+    svg.uv-logo,
+    .navbar__logo svg {
+        height: 32px;
+    }
+
+    .logo-text,
+    .brand-text,
+    .site-title,
+    .uv-text {
+        font-size: 1.125rem;
+    }
+}

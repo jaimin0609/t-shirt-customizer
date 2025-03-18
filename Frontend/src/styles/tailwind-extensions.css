@@ -1,0 +1,210 @@
+/*
+  Tailwind CSS Extensions & Overrides
+  Contains both overrides for problematic Tailwind classes and custom extensions
+*/
+
+/* ========= Tailwind Overrides ========= */
+
+/* Override problematic background classes */
+.bg-yellow-400,
+.bg-yellow-500,
+.bg-yellow-300,
+div[class*="bg-yellow"] {
+    background-color: transparent !important;
+    display: none !important;
+}
+
+/* Reset problematic height utilities */
+.h-[3px],
+.h-1,
+.h-0\.5,
+.h-0,
+div[class*="h-[3px]"],
+div[class*="h-1"],
+div[class*="h-0.5"],
+div[class*="h-0"] {
+    height: 0 !important;
+    display: none !important;
+}
+
+/* Override absolute elements that are causing styling issues */
+header .flex.items-center a div.absolute,
+nav .flex.items-center a div.absolute,
+.flex.items-center a div.absolute.bottom-0,
+.flex.items-center a div.absolute.inset-x-0,
+.flex.items-center div.absolute.bottom-0,
+.flex.items-center div.absolute.inset-x-0 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Override for active menu items */
+.text-gray-900,
+.text-gray-800,
+a.text-gray-900,
+a.text-gray-800,
+li.text-gray-900 a,
+li.text-gray-800 a,
+a.text-gray-900:hover,
+a.text-gray-800:hover {
+    color: #374151 !important;
+}
+
+a[href="/"],
+a[href="/home"],
+a[aria-current="page"],
+.active {
+    color: #4a6cf7 !important;
+    position: relative;
+}
+
+a[href="/"]::after,
+a[href="/home"]::after,
+a[aria-current="page"]::after,
+.active::after {
+    display: none !important;
+}
+
+/* Custom style to replace yellow line */
+a[href="/"]::before,
+a[href="/home"]::before,
+a[aria-current="page"]::before,
+.active::before {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #4a6cf7 !important;
+    display: block !important;
+}
+
+/* Override default shadow utilities */
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+header.shadow,
+nav.shadow,
+header.shadow-sm,
+nav.shadow-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ========= Custom Extensions ========= */
+
+/* Flexbox utilities extensions */
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Transition utilities */
+.transition-fast {
+    transition: all 0.2s ease;
+}
+
+.transition-normal {
+    transition: all 0.3s ease;
+}
+
+.transition-slow {
+    transition: all 0.5s ease;
+}
+
+/* Hover utilities */
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+.hover-bright {
+    transition: filter 0.2s ease;
+}
+
+.hover-bright:hover {
+    filter: brightness(1.1);
+}
+
+/* Responsive padding/margin utilities */
+.responsive-px {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.responsive-py {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.responsive-mx {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+.responsive-my {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+    .responsive-px {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .responsive-py {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .responsive-mx {
+        margin-left: 1.5rem;
+        margin-right: 1.5rem;
+    }
+
+    .responsive-my {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .responsive-px {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    .responsive-py {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .responsive-mx {
+        margin-left: 2rem;
+        margin-right: 2rem;
+    }
+
+    .responsive-my {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+}

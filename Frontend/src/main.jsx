@@ -3,15 +3,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './styles/tailwind.css'; // Import Tailwind first
-import './styles/tailwind-override.css'; // Override specific Tailwind classes
+import './styles/tailwind-extensions.css'; // Override and extend Tailwind classes
 import './index.css';
 import './App.css';
 import './styles/reset.css';
 import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
-import './styles/logo-fix.css'; // Fix for logo styling issues
-import './styles/logo-yellow-fix.css'; // Emergency fix for yellow line under logo
+import './styles/logo.css'; // Consolidated logo styling with yellow line fix
 import './styles/navbar.css'; // Professional navbar styling
 import './styles/navbar-menu.css'; // Enhanced menu styling - removes yellow underline
 import './styles/dropdown.css'; // Specific dropdown styling that overrides Tailwind defaults
