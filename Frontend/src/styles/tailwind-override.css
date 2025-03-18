@@ -1,0 +1,137 @@
+/*
+  Tailwind-specific overrides
+  Handles conflicts between our custom styling and Tailwind classes
+*/
+
+/* Override Tailwind classes that might be causing the yellow line */
+.bg-yellow-400,
+.bg-yellow-500,
+.bg-yellow-300,
+div[class*="bg-yellow"] {
+    background-color: transparent !important;
+    display: none !important;
+}
+
+/* Target the specific structure from the screenshot */
+header .flex.items-center a div.absolute,
+nav .flex.items-center a div.absolute,
+.flex.items-center a div.absolute.bottom-0,
+.flex.items-center a div.absolute.inset-x-0,
+.flex.items-center div.absolute.bottom-0,
+.flex.items-center div.absolute.inset-x-0 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Override for active menu items */
+.text-gray-900,
+.text-gray-800,
+a.text-gray-900,
+a.text-gray-800,
+li.text-gray-900 a,
+li.text-gray-800 a,
+a.text-gray-900:hover,
+a.text-gray-800:hover {
+    color: #374151 !important;
+}
+
+a[href="/"],
+a[href="/home"],
+a[aria-current="page"],
+.active {
+    color: #4a6cf7 !important;
+    position: relative;
+}
+
+a[href="/"]::after,
+a[href="/home"]::after,
+a[aria-current="page"]::after,
+.active::after {
+    display: none !important;
+}
+
+/* Custom style to replace yellow line */
+a[href="/"]::before,
+a[href="/home"]::before,
+a[aria-current="page"]::before,
+.active::before {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #4a6cf7 !important;
+    display: block !important;
+}
+
+/* Reset height for any small decorative elements */
+.h-[3px],
+.h-1,
+.h-0\.5,
+.h-0,
+div[class*="h-[3px]"],
+div[class*="h-1"],
+div[class*="h-0.5"],
+div[class*="h-0"] {
+    height: 0 !important;
+    display: none !important;
+}
+
+/* Very specific selectors based on the screenshot structure */
+.flex.items-center.justify-between>a>div.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+.flex.items-center.justify-between>a>div.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-400,
+.flex.items-center.justify-between>a>div.absolute.bottom-0.inset-x-0.h-[3px].bg-yellow-400,
+.flex.items-center.justify-between>a>div.absolute.bottom-0.inset-x-0.h-1.bg-yellow-400 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}
+
+/* Force white background on navbar */
+.bg-white,
+header,
+nav,
+.navbar,
+div.bg-white {
+    background-color: white !important;
+}
+
+/* Override any Tailwind shadow classes */
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+header.shadow,
+nav.shadow,
+header.shadow-sm,
+nav.shadow-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Target parent container with flex and items-center */
+.flex.items-center {
+    position: relative;
+}
+
+/* Handle any absolute positioned elements within flex containers */
+.flex.items-center .absolute {
+    position: absolute;
+}
+
+/* Target yellow background specifically in the header area */
+header [class*="bg-yellow"],
+nav [class*="bg-yellow"],
+header [style*="background-color: rgb(250, 204, 21)"],
+nav [style*="background-color: rgb(250, 204, 21)"],
+header [style*="background-color: rgb(234, 179, 8)"],
+nav [style*="background-color: rgb(234, 179, 8)"] {
+    background-color: transparent !important;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+}

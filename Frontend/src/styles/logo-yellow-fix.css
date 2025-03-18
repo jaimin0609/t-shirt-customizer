@@ -1,0 +1,109 @@
+/* 
+  Emergency fix for yellow line under logo
+  This file contains highly specific overrides to remove the yellow underline
+*/
+
+/* Target the exact structure from the screenshot */
+.flex.items-center.justify-between.relative>a,
+.flex.items-center.justify-between.relative>a+div,
+.flex.items-center.justify-between.relative>a>div,
+.flex.items-center.justify-between.relative>a::after,
+.flex.items-center.justify-between.relative>a::before {
+    position: relative !important;
+    background: none !important;
+}
+
+/* Target the specific yellow line/element */
+.flex.items-center.justify-between.relative>a+.absolute,
+.flex.items-center.justify-between.relative>a>.absolute,
+.flex.items-center.justify-between.relative>a::after,
+.flex.items-center.justify-between.relative>a>div.absolute,
+.flex.items-center.justify-between.relative>a>div[class*="absolute"],
+.flex.items-center.justify-between.relative>div.absolute,
+.flex.items-center.justify-between.relative a div.absolute.bottom-0,
+.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-400,
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-500,
+.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-500,
+div[class*="absolute"][class*="bottom-0"][class*="bg-yellow"],
+header div.absolute.bottom-0.bg-yellow-400,
+nav div.absolute.bottom-0.bg-yellow-400 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    content: none !important;
+}
+
+/* Super specific targeting based on the UniQVerse logo and its yellow underline */
+.flex.items-center a:has(span.text-purple-600, span[class*="text-purple"])+div.absolute,
+.flex.items-center a:has(span.text-purple-600, span[class*="text-purple"])>div.absolute,
+a:has(img[alt*="UniQ"])+div.absolute,
+a:has(img[alt*="UniQ"])>div.absolute,
+a:has(span.text-blue-600, span[class*="text-blue"])+div.absolute,
+a:has(span.text-blue-600, span[class*="text-blue"])>div.absolute,
+nav a:first-child+div.absolute,
+nav a:first-child>div.absolute,
+header a:first-child+div.absolute,
+header a:first-child>div.absolute {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Direct child selector for the yellow line */
+header>div>a>div.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-400,
+header>div>a>div.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+header>div>a>div.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-500,
+header>div>a>div.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-500,
+nav>div>a>div.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-400,
+nav>div>a>div.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-400,
+nav>div>a>div.absolute.bottom-0.left-0.right-0.h-1.bg-yellow-500,
+nav>div>a>div.absolute.bottom-0.left-0.right-0.h-[3px].bg-yellow-500 {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Force override of link active styles */
+a[href="/"] div[class*="bg-yellow"],
+a[href="/home"] div[class*="bg-yellow"],
+header a div[class*="bg-yellow"],
+nav a div[class*="bg-yellow"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+}
+
+/* Override default active link styling */
+.active-link::before,
+.active-link::after,
+a.active::before,
+a.active::after,
+a[aria-current="page"]::before,
+a[aria-current="page"]::after {
+    background-color: #4a6cf7 !important;
+}
+
+/* Target specific path structure seen in developer tools */
+header div div a div[class*="absolute"][class*="bottom-0"],
+nav div div a div[class*="absolute"][class*="bottom-0"],
+header>div>div>a>div.absolute,
+nav>div>div>a>div.absolute {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+}
+
+/* Nuclear option for yellow bars */
+[class*="bg-yellow-400"],
+[class*="bg-yellow-500"],
+[style*="background-color: rgb(250, 204, 21)"],
+[style*="background-color: rgb(234, 179, 8)"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+}

@@ -1,0 +1,171 @@
+/* 
+  Navbar Menu Styling
+  Professional styling for navigation menu items
+*/
+
+/* Base styling for all navigation items */
+.navbar__links,
+.nav-links,
+nav ul,
+.main-navigation,
+.nav-menu,
+[role="navigation"] ul {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Individual nav items and links */
+.navbar__links li,
+.nav-links li,
+nav ul li,
+.main-navigation li,
+.nav-menu li,
+[role="navigation"] ul li {
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+/* Link styling */
+.navbar__link,
+.nav-link,
+.menu-item a,
+nav ul li a,
+.main-navigation a,
+.nav-menu a,
+[role="navigation"] a {
+    position: relative;
+    display: inline-block;
+    padding: 0.5rem 0;
+    color: #374151;
+    font-weight: 500;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+/* Hover state */
+.navbar__link:hover,
+.nav-link:hover,
+.menu-item a:hover,
+nav ul li a:hover,
+.main-navigation a:hover,
+.nav-menu a:hover,
+[role="navigation"] a:hover {
+    color: #111827;
+}
+
+/* REMOVE THE YELLOW LINE for active states */
+.navbar__link--active::after,
+.active::after,
+.current::after,
+.selected::after,
+.menu-item-active::after,
+[aria-current="page"]::after,
+a.active::after,
+a.current::after,
+.nav-link.active::after,
+li.active>a::after,
+a[href="/"]::after,
+a[href="/home"]::after,
+a[aria-current="page"]::after,
+.bg-yellow-400,
+.bg-yellow-500,
+[class*="bg-yellow"] {
+    display: none !important;
+    content: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    background: none !important;
+}
+
+/* REPLACE with modern, professional active state styling */
+.navbar__link--active,
+.active,
+.current,
+.selected,
+.menu-item-active,
+[aria-current="page"],
+a.active,
+a.current,
+.nav-link.active,
+li.active>a,
+a[href="/"]:first-of-type,
+a[href="/home"]:first-of-type,
+li:first-child a[href="/"] {
+    color: #4a6cf7 !important;
+    font-weight: 500;
+    position: relative;
+}
+
+/* Professional bottom border for active state */
+.navbar__link--active::before,
+.active::before,
+.current::before,
+.selected::before,
+.menu-item-active::before,
+[aria-current="page"]::before,
+a.active::before,
+a.current::before,
+.nav-link.active::before,
+li.active>a::before,
+a[href="/"]:first-of-type::before,
+a[href="/home"]:first-of-type::before,
+li:first-child a[href="/"]::before {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #4a6cf7;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Dropdown menu indicator (for items with submenus) */
+.has-dropdown::after,
+.has-submenu::after,
+.dropdown-toggle::after,
+[aria-haspopup="true"]::after {
+    content: "▾";
+    display: inline-block;
+    margin-left: 0.25rem;
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.has-dropdown:hover::after,
+.has-submenu:hover::after,
+.dropdown-toggle:hover::after,
+[aria-haspopup="true"]:hover::after {
+    transform: rotate(180deg);
+}
+
+/* Mobile styling */
+@media (max-width: 768px) {
+
+    .navbar__links,
+    .nav-links,
+    nav ul,
+    .main-navigation,
+    .nav-menu,
+    [role="navigation"] ul {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .navbar__link,
+    .nav-link,
+    .menu-item a,
+    nav ul li a,
+    .main-navigation a,
+    .nav-menu a,
+    [role="navigation"] a {
+        padding: 0.75rem 0;
+        font-size: 1.125rem;
+    }
+}

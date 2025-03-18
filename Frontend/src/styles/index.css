@@ -8,6 +8,8 @@
 
 /* Tailwind CSS */
 @import './tailwind.css';
+@import './tailwind-override.css';
+/* Override specific Tailwind classes */
 
 /* Core utility styles */
 @import './responsive.css';
@@ -15,8 +17,12 @@
 @import './animations.css';
 @import './logo-fix.css';
 /* Fix for logo styling */
+@import './logo-yellow-fix.css';
+/* Emergency fix for yellow line under logo */
 @import './navbar.css';
 /* Professional navbar styling */
+@import './navbar-menu.css';
+/* Enhanced menu styling - removes yellow underline */
 @import './dropdown.css';
 /* Specific dropdown styling */
 
