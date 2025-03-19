@@ -56,8 +56,11 @@ const productDescriptionStyles = `
 
 const ProductDetailPage = () => {
     const params = useParams();
-    // Get productId from either of the route parameter formats
+    // Get productId from all possible route parameter formats and log it for debugging
     const productId = params.productId || params.id;
+
+    console.log('[ProductDetailPage] Rendered with params:', params);
+    console.log('[ProductDetailPage] Using productId:', productId, typeof productId);
 
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -88,39 +91,63 @@ const ProductDetailPage = () => {
 
     useEffect(() => {
         const fetchProductDetails = async () => {
+            if (!productId) {
+                console.error('[ProductDetailPage] No productId provided');
+                setError('Product ID is missing. Please go back and try again.');
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             try {
-                if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
-                    promotionLogger.logProductView(productId, user?.id);
-                } else {
-                    console.warn('promotionLogger.logProductView not available');
+                // Log product view if available
+                try {
+                    if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
+                        promotionLogger.logProductView(productId, user?.id);
+                    } else {
+                        console.warn('[ProductDetailPage] promotionLogger.logProductView not available');
+                    }
+                } catch (logError) {
+                    console.error('[ProductDetailPage] Error logging product view:', logError);
                 }
 
+                console.log('[ProductDetailPage] Fetching product details for ID:', productId);
                 const data = await productService.getProductById(productId);
+
+                if (!data) {
+                    console.error('[ProductDetailPage] No product data returned for ID:', productId);
+                    setError('Product not found. It may have been removed or is temporarily unavailable.');
+                    setLoading(false);
+                    return;
+                }
+
+                console.log('[ProductDetailPage] Successfully fetched product data:', data);
                 setProduct(data);
 
                 // Fetch similar products
                 if (data && data.category) {
                     try {
+                        console.log('[ProductDetailPage] Fetching similar products for category:', data.category);
                         const similarData = await productService.getSimilarProducts(productId, data.category);
                         setSimilarProducts(similarData);
                     } catch (err) {
-                        console.error('Error fetching similar products:', err);
+                        console.error('[ProductDetailPage] Error fetching similar products:', err);
                         setSimilarProducts([]);
                     }
                 }
 
                 // Fetch reviews
                 try {
+                    console.log('[ProductDetailPage] Fetching reviews for product ID:', productId);
                     const reviewsData = await productService.getProductReviews(productId);
                     setReviews(reviewsData || []);
                 } catch (err) {
-                    console.error('Error fetching product reviews:', err);
+                    console.error('[ProductDetailPage] Error fetching product reviews:', err);
                     setReviews([]);
                 }
 
             } catch (err) {
-                console.error('Error fetching product:', err);
+                console.error('[ProductDetailPage] Error fetching product:', err);
                 setError('Failed to load product. Please try again.');
             } finally {
                 setLoading(false);
@@ -128,7 +155,7 @@ const ProductDetailPage = () => {
         };
 
         fetchProductDetails();
-    }, [productId, user]);
+    }, [productId, user?.id]);
 
     // Fetch price info when product data changes
     useEffect(() => {

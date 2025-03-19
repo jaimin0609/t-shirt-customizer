@@ -95,7 +95,7 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => {
                 <div>
                     <div className="flex justify-between">
                         <h3 className="text-base font-medium text-gray-900">
-                            <Link to={`/products/${product.id}`} className="hover:text-blue-600">
+                            <Link to={`/products/${product._id || product.id}`} className="hover:text-blue-600">
                                 {product.name}
                             </Link>
                         </h3>

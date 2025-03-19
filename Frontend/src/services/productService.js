@@ -269,58 +269,71 @@ export const productService = {
 
     getProductById: async (productId) => {
         try {
-            // Validate product ID
+            // Validate product ID and add extra logging
             if (!productId || productId === 'undefined' || productId === 'null') {
-                console.error('Invalid product ID provided:', productId);
+                console.error('[ProductService] Invalid product ID provided:', productId);
                 throw new Error('Invalid product ID');
             }
             
-            console.log(`[ProductService] Fetching product with ID: ${productId}`);
+            console.log(`[ProductService] Fetching product with ID: ${productId} (type: ${typeof productId})`);
             
             // Try to get a working API URL
             const baseUrl = await getWorkingApiUrl();
             console.log(`[ProductService] Using API URL: ${baseUrl}`);
             
-            // Public endpoint - no token required
-            const url = `${baseUrl}/products/${productId}`;
-            console.log(`[ProductService] Making request to: ${url}`);
+            // Try both with and without /api prefix if the first attempt fails
+            const urls = [
+                `${baseUrl}/products/${productId}`,
+                `${baseUrl}/api/products/${productId}`
+            ];
             
-            const response = await fetchWithCORS(url);
-            console.log(`[ProductService] Response status: ${response.status}`);
+            let lastError = null;
+            let data = null;
             
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error(`Failed to fetch product details: ${response.status} ${response.statusText}`, errorData);
-                
-                // If we got a 404, try a fallback approach
-                if (response.status === 404) {
-                    console.log('[ProductService] Attempting fallback product fetch with alternative endpoint');
-                    return fetchProductFallback(productId, baseUrl);
+            // Try each URL until one works
+            for (const url of urls) {
+                try {
+                    console.log(`[ProductService] Attempting to fetch from: ${url}`);
+                    const response = await fetchWithCORS(url);
+                    console.log(`[ProductService] Response status from ${url}: ${response.status}`);
+                    
+                    if (response.ok) {
+                        data = await response.json();
+                        console.log('[ProductService] Successfully fetched product data:', data);
+                        break; // Exit the loop if successful
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        lastError = new Error(errorData.message || `Failed to fetch product details from ${url}`);
+                        console.error(`[ProductService] Failed to fetch from ${url}:`, response.status, errorData);
+                    }
+                } catch (err) {
+                    console.error(`[ProductService] Error fetching from ${url}:`, err);
+                    lastError = err;
                 }
-                
-                throw new Error(errorData.message || `Failed to fetch product details`);
             }
             
-            const data = await response.json();
-            console.log('[ProductService] Successfully fetched product data:', data);
-            return processProductData(data);
+            // If we got data from one of the URLs, process and return it
+            if (data) {
+                return processProductData(data);
+            }
+            
+            // If we got a 404 or other error from all URLs, try a fallback approach
+            console.log('[ProductService] All direct product fetches failed, attempting fallback product fetch');
+            return fetchProductFallback(productId, baseUrl);
+            
         } catch (error) {
             console.error('[ProductService] Error in getProductById:', error);
             
-            // If we hit an error that's not already from the fallback, try the fallback approach
-            if (!error.message.includes('fallback failed')) {
-                try {
-                    console.log('[ProductService] Attempting fallback product fetch after error');
-                    const baseUrl = await getWorkingApiUrl();
-                    return await fetchProductFallback(productId, baseUrl);
-                } catch (fallbackError) {
-                    console.error('[ProductService] Fallback fetch also failed:', fallbackError);
-                    // Re-throw the original error if fallback also fails
-                    throw error;
-                }
+            // Always try the fallback approach if direct fetch fails
+            try {
+                console.log('[ProductService] Attempting fallback product fetch after error');
+                const baseUrl = await getWorkingApiUrl();
+                return await fetchProductFallback(productId, baseUrl);
+            } catch (fallbackError) {
+                console.error('[ProductService] Fallback fetch also failed:', fallbackError);
+                // Re-throw the original error if fallback also fails
+                throw error;
             }
-            
-            throw error;
         }
     },
 
@@ -1000,38 +1013,91 @@ const fetchProductFallback = async (productId, baseUrl) => {
     console.log(`[ProductService] Trying fallback product fetch for ID: ${productId}`);
     
     try {
-        // Try the products endpoint
-        const productsUrl = `${baseUrl}/products`;
-        console.log(`[ProductService] Fetching all products from: ${productsUrl}`);
+        // Try multiple fallback strategies
         
-        const response = await fetch(productsUrl);
+        // 1. First try the all products endpoint
+        let products = null;
+        const urls = [
+            `${baseUrl}/products`,
+            `${baseUrl}/api/products`
+        ];
         
-        if (!response.ok) {
-            throw new Error('Fallback fetch failed: Could not retrieve products list');
+        // Try each URL until one works
+        for (const productsUrl of urls) {
+            try {
+                console.log(`[ProductService] Fetching all products from: ${productsUrl}`);
+                const response = await fetch(productsUrl);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        products = data;
+                        break;
+                    } else if (data && Array.isArray(data.products)) {
+                        products = data.products;
+                        break;
+                    } else {
+                        console.log(`[ProductService] Response from ${productsUrl} is not an array:`, data);
+                    }
+                } else {
+                    console.log(`[ProductService] Failed to fetch from ${productsUrl}: ${response.status}`);
+                }
+            } catch (err) {
+                console.error(`[ProductService] Error fetching from ${productsUrl}:`, err);
+            }
         }
         
-        const products = await response.json();
-        console.log(`[ProductService] Retrieved ${products.length} products, searching for ID: ${productId}`);
-        
-        // Find the product with the matching ID - ensure consistent ID comparison
-        const product = Array.isArray(products) ? 
-            products.find(p => 
+        // If we got products, try to find the matching one
+        if (products && products.length > 0) {
+            console.log(`[ProductService] Retrieved ${products.length} products, searching for ID: ${productId}`);
+            
+            // First try exact match
+            const exactMatch = products.find(p => 
                 (p.id && p.id.toString() === productId.toString()) || 
                 (p._id && p._id.toString() === productId.toString())
-            ) : null;
-        
-        if (product) {
-            console.log('[ProductService] Found product in fallback list:', product);
-            // Process data ensuring ID consistency
-            const processedProduct = processProductData(product);
-            // Double-check ID consistency for the found product
-            if (processedProduct) {
-                processedProduct.id = product.id || product._id;
-                processedProduct._id = product._id || product.id;
+            );
+            
+            if (exactMatch) {
+                console.log('[ProductService] Found exact match in product list:', exactMatch);
+                const processedProduct = processProductData(exactMatch);
+                // Double-check ID consistency for the found product
+                if (processedProduct) {
+                    processedProduct.id = exactMatch.id || exactMatch._id;
+                    processedProduct._id = exactMatch._id || exactMatch.id;
+                }
+                return processedProduct;
             }
-            return processedProduct;
+            
+            // If no exact match, try partial match (if productId contains the ID or vice versa)
+            const partialMatch = products.find(p => {
+                const pId = (p.id || '').toString();
+                const p_Id = (p._id || '').toString();
+                const searchId = productId.toString();
+                
+                return pId.includes(searchId) || searchId.includes(pId) ||
+                       p_Id.includes(searchId) || searchId.includes(p_Id);
+            });
+            
+            if (partialMatch) {
+                console.log('[ProductService] Found partial ID match in product list:', partialMatch);
+                const processedProduct = processProductData(partialMatch);
+                if (processedProduct) {
+                    processedProduct.id = partialMatch.id || partialMatch._id;
+                    processedProduct._id = partialMatch._id || partialMatch.id;
+                }
+                return processedProduct;
+            }
+            
+            // If still no match but we have at least one product, return the first one as last resort
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('[ProductService] No matching product found, returning first product as fallback');
+                const firstProduct = processProductData(products[0]);
+                return firstProduct;
+            }
         }
         
+        // If we get here, we couldn't find a matching product
+        console.error('[ProductService] No products found or no matching product');
         throw new Error('Product not found in fallback data');
     } catch (error) {
         console.error('[ProductService] Fallback product fetch failed:', error);

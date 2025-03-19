@@ -320,9 +320,17 @@ const ProductCard = ({ product }) => {
         }
     };
 
+    // Check if we have a product ID - either id or _id
+    const ensureProductLink = (product) => {
+        if (!product) return '/products';
+        const productId = product._id || product.id;
+        if (!productId) return '/products';
+        return `/products/${productId}`;
+    };
+
     return (
         <div className="product-card">
-            <Link to={`/products/${safeProduct._id || safeProduct.id}`} className="block">
+            <Link to={ensureProductLink(safeProduct)} className="block">
                 {/* Product Image */}
                 <div className="product-image-container">
                     <img
