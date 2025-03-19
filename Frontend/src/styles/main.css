@@ -1819,23 +1819,114 @@ nav,
     }
 }
 
-/* Fix for Headless UI dropdowns in filter panels */
-[data-headlessui-state="open"] {
-    margin-bottom: 12px !important;
-    z-index: 1;
-    position: relative;
-}
-
-/* Ensure dropdowns don't overflow their container */
-[data-headlessui-state="open"]>div:last-child {
-    max-height: 240px;
+/* Fix for Headless UI dropdowns in filter panels - increase panel size */
+[data-headlessui-state="open"]>div:last-child,
+.Disclosure-panel,
+.disclosure-panel {
+    max-height: 300px;
     overflow-y: auto;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--color-border);
     border-radius: 0 0 var(--radius-md) var(--radius-md);
     background-color: white;
     margin-top: -1px;
     z-index: 5;
+    padding: 16px;
+    min-height: 150px;
+    width: 100% !important;
+}
+
+/* Improve checkbox styling inside filter dropdowns */
+[data-headlessui-state] .space-y-2>div,
+.filter-option,
+.sidebar-filters label,
+[class*="filter"] label,
+div[class*="flex items-center"] {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 0;
+    height: auto;
+    min-height: 30px;
+}
+
+/* Create better spacing for filter lists */
+[data-headlessui-state] .space-y-2,
+.space-y-2 {
+    margin: 0;
+    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Fix for filter dropdowns in Product panels */
+.ProductSearchPage [data-headlessui-state="open"]>div:last-child,
+.ProductsPage [data-headlessui-state="open"]>div:last-child,
+.filter-accordion [data-headlessui-state="open"]>div:last-child {
+    position: absolute !important;
+    width: 100% !important;
+    left: 0;
+    right: 0;
+    border-top: none;
+    background-color: white;
+    z-index: 20;
+    padding: 16px;
+    min-width: 220px;
+}
+
+/* Ensure text is visible in dropdowns */
+[data-headlessui-state] label,
+.filter-option__label,
+.sidebar-filters label,
+[class*="filter"] label {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1.5;
+    margin-left: 10px !important;
+    font-size: 14px !important;
+    color: var(--color-text-dark);
+    cursor: pointer;
+    font-weight: normal;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+/* Mobile-specific fixes for filters */
+@media (max-width: 768px) {
+
+    /* Make dropdowns more visible on mobile */
+    [data-headlessui-state="open"]>div:last-child {
+        max-height: 300px;
+        padding: 16px;
+        min-height: 200px;
+    }
+
+    /* More touch-friendly spacing for mobile */
+    [data-headlessui-state] button {
+        padding: 14px;
+        font-size: 16px;
+    }
+
+    [data-headlessui-state] .space-y-2>div {
+        padding: 8px 0;
+        min-height: 40px;
+    }
+
+    /* Ensure text is visible on mobile */
+    [data-headlessui-state] label,
+    .filter-option__label,
+    .sidebar-filters label {
+        font-size: 16px !important;
+    }
+}
+
+/* Fix for Headless UI dropdowns in filter panels - increase panel size */
+[data-headlessui-state="open"] {
+    margin-bottom: 12px !important;
+    z-index: 5;
+    position: relative;
 }
 
 /* Properly style the filter dropdown headers */
@@ -1866,36 +1957,6 @@ nav,
     position: relative;
 }
 
-/* Fix the padding inside panels */
-[data-headlessui-state="open"]>div:last-child {
-    padding: 10px;
-}
-
-/* Improve checkbox styling inside filter dropdowns */
-[data-headlessui-state] .space-y-2>div {
-    display: flex;
-    align-items: center;
-    margin-bottom: 6px;
-    padding: 3px 0;
-}
-
-/* Create more compact filter lists */
-[data-headlessui-state] .space-y-2 {
-    margin: 0;
-    padding: 0;
-}
-
-/* Fix for headless UI panels that should be compact */
-.Disclosure-panel,
-.disclosure-panel,
-[data-headlessui-state="open"]>div:last-child {
-    position: absolute !important;
-    width: 100% !important;
-    left: 0;
-    right: 0;
-    border-top: none;
-}
-
 /* Specifically target any components that might contain the filters */
 .ProductSearchPage [data-headlessui-state],
 .ProductsPage [data-headlessui-state] {
@@ -1909,24 +1970,6 @@ nav,
     z-index: 1;
 }
 
-/* Mobile-specific fixes for filters */
-@media (max-width: 768px) {
-
-    /* Make dropdowns more compact on mobile */
-    [data-headlessui-state="open"]>div:last-child {
-        max-height: 200px;
-    }
-
-    /* More touch-friendly spacing for mobile */
-    [data-headlessui-state] button {
-        padding: 12px;
-    }
-
-    [data-headlessui-state] .space-y-2>div {
-        padding: 6px 0;
-    }
-}
-
 /* Fix for filter section positioning */
 .filters-section,
 .sidebar-filters,
@@ -1934,4 +1977,82 @@ nav,
     position: relative;
     display: flex;
     flex-direction: column;
+}
+
+/* Specific styles for FilterAccordion component */
+.filter-dropdown-panel {
+    padding: 16px !important;
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: -1px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-height: 200px;
+    position: absolute !important;
+    width: 100% !important;
+    z-index: 30;
+}
+
+.filter-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.filter-accordion {
+    position: relative;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.filter-accordion-group {
+    position: relative;
+    z-index: 20;
+}
+
+/* Style for filter checkboxes */
+.filter-accordion input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 10px;
+    border: 1.5px solid var(--color-gray-400);
+    border-radius: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: white;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.filter-accordion input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    background-size: 85%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Style for filter labels */
+.filter-accordion label {
+    font-size: 14px !important;
+    color: var(--color-text-dark);
+    font-weight: normal;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+/* Style for filter option containers */
+.filter-accordion .flex.items-center {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 4px 0;
+    min-height: 30px;
 }

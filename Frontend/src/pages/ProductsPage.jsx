@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { productService } from '../services/productService';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
+import { FilterAccordion, FilterAccordionGroup } from '../components/UI/FilterAccordion';
 
 const ProductsPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -120,50 +121,52 @@ const ProductsPage = () => {
                     <div className="bg-white p-4 rounded-lg shadow-md">
                         <h2 className="text-lg font-semibold mb-4">Filters</h2>
 
-                        {/* Categories */}
-                        <div className="mb-6">
-                            <h3 className="font-medium mb-2">Categories</h3>
-                            <div className="space-y-2 sidebar-filters">
-                                {categories.map(category => (
-                                    <div key={category} className="flex items-center filter-option">
-                                        <input
-                                            type="checkbox"
-                                            id={`category-${category}`}
-                                            checked={selectedCategories.includes(category)}
-                                            onChange={() => toggleCategory(category)}
-                                            className="filter-option__checkbox"
-                                        />
-                                        <label htmlFor={`category-${category}`} className="filter-option__label">
-                                            {category}
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <FilterAccordionGroup>
+                            {/* Categories */}
+                            <FilterAccordion id="categories" title="Categories">
+                                <div className="space-y-2 sidebar-filters">
+                                    {categories.map(category => (
+                                        <div key={category} className="flex items-center filter-option">
+                                            <input
+                                                type="checkbox"
+                                                id={`category-${category}`}
+                                                checked={selectedCategories.includes(category)}
+                                                onChange={() => toggleCategory(category)}
+                                                className="filter-option__checkbox"
+                                            />
+                                            <label htmlFor={`category-${category}`} className="filter-option__label">
+                                                {category}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </FilterAccordion>
 
-                        {/* Price Range */}
-                        <div className="mb-6">
-                            <h3 className="font-medium mb-2">Price Range</h3>
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={priceRange.max}
-                                    onChange={(e) => setPriceRange({ ...priceRange, max: parseInt(e.target.value) })}
-                                    className="w-full"
-                                />
-                            </div>
-                            <div className="flex justify-between mt-2">
-                                <span>${priceRange.min}</span>
-                                <span>${priceRange.max}</span>
-                            </div>
-                        </div>
+                            {/* Price Range */}
+                            <FilterAccordion id="price" title="Price Range">
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={priceRange.max}
+                                            onChange={(e) => setPriceRange({ ...priceRange, max: parseInt(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between mt-2">
+                                        <span>${priceRange.min}</span>
+                                        <span>${priceRange.max}</span>
+                                    </div>
+                                </div>
+                            </FilterAccordion>
+                        </FilterAccordionGroup>
 
                         {/* Clear Filters */}
                         <button
                             onClick={() => updateFilters([], 'newest')}
-                            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded"
+                            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded mt-4"
                         >
                             Clear Filters
                         </button>

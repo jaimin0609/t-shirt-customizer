@@ -40,16 +40,18 @@ export const FilterAccordion = ({ id, title, children }) => {
             {({ open }) => (
                 <>
                     <Disclosure.Button
-                        className="flex w-full justify-between items-center px-4 py-2 text-left text-sm font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        className="flex w-full justify-between items-center px-4 py-3 text-left text-sm font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200"
                         onClick={() => handleToggle(!open)}
                     >
-                        <span>{title}</span>
+                        <span className="text-base">{title}</span>
                         <ChevronUpIcon
                             className={`${open ? 'transform rotate-180' : ''} h-5 w-5 text-gray-500 transition-transform`}
                         />
                     </Disclosure.Button>
-                    <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">
-                        {children}
+                    <Disclosure.Panel className="filter-dropdown-panel px-4 pt-4 pb-2 text-sm text-gray-900">
+                        <div className="filter-content">
+                            {children}
+                        </div>
                     </Disclosure.Panel>
                 </>
             )}
