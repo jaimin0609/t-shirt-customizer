@@ -21,7 +21,10 @@ const processProductData = (product) => {
         image: product.image || 
                (product.images && Array.isArray(product.images) && product.images.length > 0 
                   ? product.images[0] 
-                  : '/assets/placeholder-product.jpg')
+                  : '/assets/placeholder-product.jpg'),
+        // Ensure stockCount is available (using stock from backend)
+        stockCount: product.stockCount !== undefined ? product.stockCount : 
+                  (product.stock !== undefined ? product.stock : 0)
     };
     
     // Ensure price is a valid number

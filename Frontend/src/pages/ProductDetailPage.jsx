@@ -484,7 +484,7 @@ const ProductDetailPage = () => {
         <div className="container mx-auto py-8 px-4">
             {/* Breadcrumbs for navigation */}
             <nav className="mb-4" aria-label="Breadcrumb">
-                <ol className="flex text-sm text-gray-500">
+                <ol className="flex flex-wrap text-sm text-gray-500">
                     <li>
                         <Link to="/" className="hover:text-primary-600">Home</Link>
                         <span className="mx-2">/</span>
@@ -493,15 +493,17 @@ const ProductDetailPage = () => {
                         <Link to="/products" className="hover:text-primary-600">Products</Link>
                         <span className="mx-2">/</span>
                     </li>
-                    <li>
-                        <Link
-                            to={`/products/category/${product.category}`}
-                            className="hover:text-primary-600"
-                        >
-                            {product.category}
-                        </Link>
-                        <span className="mx-2">/</span>
-                    </li>
+                    {product.category && (
+                        <li>
+                            <Link
+                                to={`/products?category=${encodeURIComponent(product.category)}`}
+                                className="hover:text-primary-600"
+                            >
+                                {product.category}
+                            </Link>
+                            <span className="mx-2">/</span>
+                        </li>
+                    )}
                     <li className="text-gray-700 font-medium" aria-current="page">
                         {product.name}
                     </li>
@@ -561,14 +563,32 @@ const ProductDetailPage = () => {
                             </p>
                         )}
 
-                        {/* Show stock status */}
-                        <p className={`mt-1 ${product.stockCount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {product.stockCount > 10
-                                ? 'In Stock'
-                                : product.stockCount > 0
-                                    ? `Only ${product.stockCount} left in stock - order soon`
-                                    : 'Out of Stock'}
-                        </p>
+                        {/* Enhanced stock status with restock information */}
+                        {product.stockCount > 0 ? (
+                            <p className="mt-1 text-green-600 font-medium">
+                                {product.stockCount > 10
+                                    ? 'In Stock'
+                                    : `Only ${product.stockCount} left in stock - order soon`}
+                            </p>
+                        ) : (
+                            <div className="mt-2">
+                                <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-2">
+                                    <p className="text-red-700 font-medium">Currently Out of Stock</p>
+                                    {product.restockDate && (
+                                        <p className="text-sm text-gray-700">Expected restock: {new Date(product.restockDate).toLocaleDateString()}</p>
+                                    )}
+                                </div>
+                                <button
+                                    className="flex items-center text-primary-600 hover:text-primary-800 mt-2"
+                                    onClick={() => window.alert('You will be notified when this product is back in stock!')}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                                    </svg>
+                                    Notify Me When Available
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Color selector */}
@@ -579,28 +599,34 @@ const ProductDetailPage = () => {
                                 {product.availableColors.map((color) => (
                                     <button
                                         key={color}
-                                        onClick={() => setSelectedColor(color)}
+                                        onClick={() => product.stockCount > 0 && setSelectedColor(color)}
                                         className={`
-                                            w-10 h-10 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
+                                            w-10 h-10 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2
+                                            ${product.stockCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}
                                             ${selectedColor === color ? 'ring-2 ring-offset-2 ring-primary-500' : ''}
                                         `}
                                         style={{ backgroundColor: color.toLowerCase() }}
                                         aria-label={`Color: ${color}`}
                                         aria-pressed={selectedColor === color}
+                                        disabled={product.stockCount === 0}
                                         type="button"
                                     />
                                 ))}
                             </div>
+                            {product.stockCount === 0 && (
+                                <p className="text-sm text-gray-500 mt-1">Color selection unavailable — item currently out of stock</p>
+                            )}
                         </div>
                     )}
 
-                    {/* Size selector */}
+                    {/* Size selector with improved out-of-stock handling */}
                     {product.availableSizes && product.availableSizes.length > 0 && (
                         <div className="size-section mb-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-sm font-medium text-gray-900">Size</h2>
                                 <button
                                     className="text-sm text-primary-600 hover:text-primary-500"
+                                    onClick={() => window.alert('Size guide will be displayed here')}
                                     aria-label="View size guide"
                                 >
                                     Size guide
@@ -611,38 +637,47 @@ const ProductDetailPage = () => {
                                 role="radiogroup"
                                 aria-label="Select a size"
                             >
-                                {product.availableSizes.map((size) => (
-                                    <button
-                                        key={size}
-                                        onClick={() => setSelectedSize(size)}
-                                        className={`
-                                            border rounded-md py-2 px-3 flex items-center justify-center text-sm
-                                            font-medium uppercase focus:outline-none focus:ring-2 focus:ring-primary-500
-                                            ${selectedSize === size
-                                                ? 'bg-primary-500 text-white border-transparent'
-                                                : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
-                                            }
-                                        `}
-                                        aria-label={`Size: ${size}`}
-                                        aria-pressed={selectedSize === size}
-                                        type="button"
-                                    >
-                                        {size}
-                                    </button>
-                                ))}
+                                {product.availableSizes.map((size) => {
+                                    const outOfStock = product.stockCount === 0;
+                                    return (
+                                        <button
+                                            key={size}
+                                            onClick={() => !outOfStock && setSelectedSize(size)}
+                                            className={`
+                                                border rounded-md py-2 px-3 flex items-center justify-center text-sm
+                                                font-medium uppercase focus:outline-none 
+                                                ${outOfStock
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                                    : selectedSize === size
+                                                        ? 'bg-primary-500 text-white border-transparent focus:ring-2 focus:ring-primary-500'
+                                                        : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 focus:ring-2 focus:ring-primary-500'
+                                                }
+                                            `}
+                                            aria-label={outOfStock ? `Size ${size} - Out of stock` : `Size: ${size}`}
+                                            aria-pressed={selectedSize === size}
+                                            disabled={outOfStock}
+                                            type="button"
+                                        >
+                                            {size}
+                                        </button>
+                                    );
+                                })}
                             </div>
+                            {product.stockCount === 0 && (
+                                <p className="text-sm text-gray-500 mt-1">Size selection unavailable — item currently out of stock</p>
+                            )}
                         </div>
                     )}
 
-                    {/* Quantity selector */}
+                    {/* Quantity selector - disabled when out of stock */}
                     <div className="quantity-section mb-6">
                         <h2 className="text-sm font-medium text-gray-900 mb-2">Quantity</h2>
-                        <div className="flex items-center border border-gray-300 rounded-md w-32">
+                        <div className={`flex items-center border rounded-md w-32 ${product.stockCount === 0 ? 'border-gray-200 bg-gray-100' : 'border-gray-300'}`}>
                             <button
                                 type="button"
-                                className="px-3 py-1 text-gray-600 hover:text-gray-700 focus:outline-none"
+                                className={`px-3 py-1 focus:outline-none ${product.stockCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-700'}`}
                                 onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                                disabled={quantity <= 1}
+                                disabled={quantity <= 1 || product.stockCount === 0}
                                 aria-label="Decrease quantity"
                             >
                                 -
@@ -650,17 +685,18 @@ const ProductDetailPage = () => {
                             <input
                                 type="number"
                                 min="1"
-                                max={product.stockCount}
-                                value={quantity}
-                                onChange={(e) => setQuantity(Math.min(Math.max(1, parseInt(e.target.value) || 1), product.stockCount))}
-                                className="w-full text-center border-0 focus:outline-none focus:ring-0"
+                                max={product.stockCount || 1}
+                                value={product.stockCount === 0 ? 0 : quantity}
+                                onChange={(e) => product.stockCount > 0 && setQuantity(Math.min(Math.max(1, parseInt(e.target.value) || 1), product.stockCount))}
+                                className={`w-full text-center border-0 focus:outline-none focus:ring-0 ${product.stockCount === 0 ? 'bg-gray-100 text-gray-400' : ''}`}
                                 aria-label="Quantity"
+                                disabled={product.stockCount === 0}
                             />
                             <button
                                 type="button"
-                                className="px-3 py-1 text-gray-600 hover:text-gray-700 focus:outline-none"
+                                className={`px-3 py-1 focus:outline-none ${product.stockCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-700'}`}
                                 onClick={() => quantity < product.stockCount && setQuantity(quantity + 1)}
-                                disabled={quantity >= product.stockCount}
+                                disabled={quantity >= product.stockCount || product.stockCount === 0}
                                 aria-label="Increase quantity"
                             >
                                 +
@@ -668,15 +704,22 @@ const ProductDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* Action buttons */}
+                    {/* Action buttons with improved disabled states */}
                     <div className="action-buttons-section flex flex-wrap gap-4 mb-6">
                         <button
-                            onClick={() => addToCart(product, selectedSize, selectedColor, quantity)}
-                            className="flex-1 bg-primary-500 text-white py-3 px-6 rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            onClick={() => {
+                                if (product.stockCount > 0) {
+                                    addToCart(product, selectedSize, selectedColor, quantity);
+                                }
+                            }}
+                            className={`flex-1 py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${product.stockCount === 0
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500'
+                                }`}
                             disabled={product.stockCount === 0}
                             aria-label={product.stockCount === 0 ? "Out of stock" : "Add to cart"}
                         >
-                            Add to Cart
+                            {product.stockCount === 0 ? 'Out of Stock' : 'Add to Cart'}
                         </button>
                         <button
                             onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
@@ -698,7 +741,7 @@ const ProductDetailPage = () => {
                         <style dangerouslySetInnerHTML={{ __html: productDescriptionStyles }} />
                         <div
                             className="product-description prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ __html: product.description }}
+                            dangerouslySetInnerHTML={{ __html: product.description || '<p>No detailed description available for this product.</p>' }}
                         />
                     </div>
 
@@ -716,28 +759,80 @@ const ProductDetailPage = () => {
                 </div>
             </div>
 
-            {/* Similar Products Section */}
+            {/* Reviews Section with improved empty state */}
+            <div className="reviews-section mt-12 mb-10">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+
+                {reviews.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {reviews.map((review, index) => (
+                            <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <div className="flex items-center mb-2">
+                                    <div className="flex text-yellow-400">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                            <StarIcon
+                                                key={i}
+                                                className={`h-5 w-5 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                aria-hidden="true"
+                                            />
+                                        ))}
+                                    </div>
+                                    <span className="ml-2 text-sm text-gray-600">{review.rating} out of 5</span>
+                                </div>
+                                <p className="text-gray-800 mb-1">{review.comment}</p>
+                                <p className="text-sm text-gray-500">
+                                    By {review.userName || 'Anonymous'} • {new Date(review.createdAt).toLocaleDateString()}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-6 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
+                        <p className="text-gray-600 mb-4">Be the first to share your experience with this product!</p>
+                        <button
+                            onClick={() => window.alert('Review submission form will appear here')}
+                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm ${product.stockCount === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'text-white bg-primary-600 hover:bg-primary-700'}`}
+                            disabled={product.stockCount === 0}
+                        >
+                            Write a Review
+                        </button>
+                        {product.stockCount === 0 && (
+                            <p className="text-sm text-gray-500 mt-2">You'll be able to review this product once it's back in stock</p>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Similar Products Section with improved styling */}
             {similarProducts.length > 0 && (
-                <div className="similar-products-section mt-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">You May Also Like</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <div className="similar-products-section mt-12 mb-16 bg-gray-50 py-8 px-4 sm:px-6 rounded-lg">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">You May Also Like</h2>
+                    <p className="text-gray-600 mb-6">Discover more products that match your style</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                         {similarProducts.map((similarProduct) => (
                             <Link
                                 key={similarProduct.id}
-                                to={`/products/${similarProduct.id}`}
-                                className="group"
+                                to={`/product/${similarProduct.id}`}
+                                className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                             >
-                                <div className="aspect-w-1 aspect-h-1 bg-gray-200 rounded-md overflow-hidden">
+                                <div className="aspect-w-1 aspect-h-1 bg-gray-200 overflow-hidden">
                                     <img
-                                        src={similarProduct.images?.[0] || '/placeholder-image.jpg'}
+                                        src={similarProduct.images?.[0] || '/assets/placeholder-product.jpg'}
                                         alt={similarProduct.name}
                                         className="w-full h-full object-center object-cover group-hover:opacity-90 transition-opacity"
                                         loading="lazy" // Lazy load similar products images
                                     />
                                 </div>
-                                <div className="mt-2">
-                                    <h3 className="text-gray-900 font-medium">{similarProduct.name}</h3>
+                                <div className="p-4">
+                                    <h3 className="text-gray-900 font-medium group-hover:text-primary-600 transition-colors">{similarProduct.name}</h3>
                                     <p className="text-gray-600 mt-1">{formatPrice(similarProduct.price)}</p>
+                                    {similarProduct.stockCount === 0 && (
+                                        <span className="inline-block mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">Out of Stock</span>
+                                    )}
                                 </div>
                             </Link>
                         ))}
