@@ -1991,7 +1991,20 @@ div[class*="flex items-center"] {
     min-height: 200px;
     position: absolute !important;
     width: 100% !important;
-    z-index: 30;
+    z-index: 100;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.filter-dropdown-panel.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+.filter-dropdown-panel.block {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .filter-content {
@@ -1999,6 +2012,8 @@ div[class*="flex items-center"] {
     flex-direction: column;
     gap: 8px;
     padding: 8px 0;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .filter-accordion {
@@ -2012,10 +2027,25 @@ div[class*="flex items-center"] {
     z-index: 20;
 }
 
+/* Ensure filter groups don't conflict with each other */
+.filter-accordion-group .filter-accordion:not(:first-child) {
+    z-index: 19;
+}
+
+.filter-accordion-group .filter-accordion:nth-child(2) {
+    z-index: 18;
+}
+
+.filter-accordion-group .filter-accordion:nth-child(3) {
+    z-index: 17;
+}
+
 /* Style for filter checkboxes */
 .filter-accordion input[type="checkbox"] {
     width: 18px !important;
     height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     margin-right: 10px;
     border: 1.5px solid var(--color-gray-400);
     border-radius: 4px;
@@ -2028,15 +2058,6 @@ div[class*="flex items-center"] {
     flex-shrink: 0;
 }
 
-.filter-accordion input[type="checkbox"]:checked {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
-    background-size: 85%;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
 /* Style for filter labels */
 .filter-accordion label {
     font-size: 14px !important;
@@ -2046,6 +2067,21 @@ div[class*="flex items-center"] {
     align-items: center;
     line-height: 1.4;
     cursor: pointer;
+    padding-left: 2px;
+}
+
+/* Fix for safari visibility issues */
+[data-headlessui-state] {
+    will-change: transform;
+}
+
+.filter-accordion input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    background-size: 85%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 /* Style for filter option containers */
