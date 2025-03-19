@@ -88,64 +88,41 @@ const ProductDetailPage = () => {
 
     useEffect(() => {
         const fetchProductDetails = async () => {
+            setLoading(true);
             try {
-                // Validate product ID and add more debugging
-                console.log('ProductDetailPage - Fetching product with ID:', productId, 'from URL params:', params);
-
-                if (!productId || productId === 'undefined' || productId === 'null') {
-                    console.error('Invalid product ID from URL parameters:', params);
-                    setError('Invalid product ID. Please try a different product.');
-                    setLoading(false);
-                    return;
+                if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
+                    promotionLogger.logProductView(productId, user?.id);
+                } else {
+                    console.warn('promotionLogger.logProductView not available');
                 }
 
-                setLoading(true);
-                setError(null);
-
-                // Fetch product details
-                const productData = await productService.getProductById(productId);
-                console.log('ProductDetailPage - Fetched product data:', productData);
-                setProduct(productData);
-
-                // Calculate price information
-                const priceData = await calculateProductPrice(productId, productData.price);
-                setPriceInfo(priceData);
-
-                // Set default selected color and size if available
-                if (productData.availableColors && productData.availableColors.length > 0) {
-                    setSelectedColor(productData.availableColors[0]);
-                }
-                if (productData.availableSizes && productData.availableSizes.length > 0) {
-                    setSelectedSize(productData.availableSizes[0]);
-                }
+                const data = await productService.getProductById(productId);
+                setProduct(data);
 
                 // Fetch similar products
-                const similar = await productService.getSimilarProducts(productId);
-                setSimilarProducts(similar);
-
-                // Fetch reviews
-                const reviewData = await productService.getProductReviews(productId);
-                setReviews(reviewData);
-
-                setLoading(false);
-
-                // Log product view for analytics
-                if (productData) {
+                if (data && data.category) {
                     try {
-                        // Check if the logger exists and has the correct function
-                        if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
-                            promotionLogger.logProductView(productData.id, user?.id);
-                        } else {
-                            console.log('Product view tracked (analytics logger not available):', productData.id);
-                        }
-                    } catch (logError) {
-                        console.error('Error logging product view (non-critical):', logError);
-                        // Don't rethrow - this is a non-critical analytics function
+                        const similarData = await productService.getSimilarProducts(productId, data.category);
+                        setSimilarProducts(similarData);
+                    } catch (err) {
+                        console.error('Error fetching similar products:', err);
+                        setSimilarProducts([]);
                     }
                 }
+
+                // Fetch reviews
+                try {
+                    const reviewsData = await productService.getProductReviews(productId);
+                    setReviews(reviewsData || []);
+                } catch (err) {
+                    console.error('Error fetching product reviews:', err);
+                    setReviews([]);
+                }
+
             } catch (err) {
-                console.error('Error fetching product details:', err);
-                setError('Failed to load product details. Please try again later.');
+                console.error('Error fetching product:', err);
+                setError('Failed to load product. Please try again.');
+            } finally {
                 setLoading(false);
             }
         };

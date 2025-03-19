@@ -376,14 +376,17 @@ export const productService = {
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Failed to fetch reviews: ${response.status} ${response.statusText}`);
+                console.error(`Failed to fetch product reviews: ${response.status} ${response.statusText}`, errorData);
+                // Return empty array instead of throwing error to avoid breaking the UI
+                return [];
             }
             
             const data = await response.json();
             return data;
         } catch (error) {
             console.error('Error in getProductReviews:', error);
-            throw error;
+            // Return empty array instead of throwing error to avoid breaking the UI
+            return [];
         }
     },
 
