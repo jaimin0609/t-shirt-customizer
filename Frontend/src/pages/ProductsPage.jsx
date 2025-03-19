@@ -123,17 +123,17 @@ const ProductsPage = () => {
                         {/* Categories */}
                         <div className="mb-6">
                             <h3 className="font-medium mb-2">Categories</h3>
-                            <div className="space-y-2">
+                            <div className="space-y-2 sidebar-filters">
                                 {categories.map(category => (
-                                    <div key={category} className="flex items-center">
+                                    <div key={category} className="flex items-center filter-option">
                                         <input
                                             type="checkbox"
                                             id={`category-${category}`}
                                             checked={selectedCategories.includes(category)}
                                             onChange={() => toggleCategory(category)}
-                                            className="h-4 w-4 text-blue-600 rounded"
+                                            className="filter-option__checkbox"
                                         />
-                                        <label htmlFor={`category-${category}`} className="ml-2 text-gray-700">
+                                        <label htmlFor={`category-${category}`} className="filter-option__label">
                                             {category}
                                         </label>
                                     </div>
