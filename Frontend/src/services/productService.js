@@ -707,7 +707,30 @@ export const productService = {
             }
             
             const data = await response.json();
-            return data;
+            console.log('Search API raw response:', {
+                type: typeof data,
+                isArray: Array.isArray(data),
+                data
+            });
+            
+            // Handle different response formats and ensure we always return an array
+            if (Array.isArray(data)) {
+                return data;
+            } else if (data && Array.isArray(data.products)) {
+                return data.products;
+            } else if (data && data.results && Array.isArray(data.results)) {
+                return data.results;
+            } else if (data && typeof data === 'object') {
+                // If it's an object but not in expected format, try to extract anything that might be products
+                const possibleArrayProps = Object.values(data).find(val => Array.isArray(val));
+                if (possibleArrayProps) {
+                    return possibleArrayProps;
+                }
+            }
+            
+            // If we can't determine the format or it's invalid, return empty array
+            console.warn('Received unexpected format from search API, returning empty array:', data);
+            return [];
         } catch (error) {
             console.error('Error searching products:', error);
             // Fallback to returning an empty array
@@ -743,7 +766,32 @@ export const productService = {
             }
             
             const data = await response.json();
-            return data;
+            console.log('Similar products API response:', {
+                type: typeof data,
+                isArray: Array.isArray(data),
+                data
+            });
+            
+            // Handle different response formats and ensure we always return an array
+            if (Array.isArray(data)) {
+                return data;
+            } else if (data && Array.isArray(data.products)) {
+                return data.products;
+            } else if (data && data.results && Array.isArray(data.results)) {
+                return data.results;
+            } else if (data && data.recommendations && Array.isArray(data.recommendations)) {
+                return data.recommendations;
+            } else if (data && typeof data === 'object') {
+                // If it's an object but not in expected format, try to extract anything that might be products
+                const possibleArrayProps = Object.values(data).find(val => Array.isArray(val));
+                if (possibleArrayProps) {
+                    return possibleArrayProps;
+                }
+            }
+            
+            // If we can't determine the format or it's invalid, return empty array
+            console.warn('Received unexpected format from similar products API, returning empty array:', data);
+            return [];
         } catch (error) {
             console.error('Error getting similar products:', error);
             return productService.getPopularProducts(limit);

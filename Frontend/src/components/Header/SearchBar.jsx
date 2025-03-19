@@ -86,17 +86,24 @@ const SearchBar = ({
 
             console.log('Search suggestion results:', {
                 count: results ? results.length : 0,
-                isEmpty: !results || results.length === 0
+                isEmpty: !results || results.length === 0,
+                isArray: Array.isArray(results),
+                type: typeof results,
+                rawData: results
             });
 
-            if (!results || results.length === 0) {
+            // Ensure results is always an array
+            const safeResults = Array.isArray(results) ? results : [];
+
+            if (safeResults.length === 0) {
                 // If no results, try getting recommendations or similar products
                 console.log('No suggestion results, fetching similar products');
                 const similarProducts = await productService.getSimilarOrRecommendedProducts(query, 5);
-                setSuggestions(similarProducts || []);
+                const safeSimilarProducts = Array.isArray(similarProducts) ? similarProducts : [];
+                setSuggestions(safeSimilarProducts);
                 setNoExactMatches(true);
             } else {
-                setSuggestions(results);
+                setSuggestions(safeResults);
                 setNoExactMatches(false);
             }
 

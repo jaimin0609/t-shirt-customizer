@@ -82,21 +82,28 @@ const ProductSearchPage = () => {
                 // Search with fuzzy matching
                 const results = await productService.searchProducts(searchQuery, searchOptions);
 
-                // Log results for debugging
+                // Log results for debugging - add more detailed type information
                 console.log('Search results:', {
                     count: results ? results.length : 0,
                     isEmpty: !results || results.length === 0,
-                    firstItem: results && results.length > 0 ? results[0] : null
+                    firstItem: results && results.length > 0 ? results[0] : null,
+                    isArray: Array.isArray(results),
+                    type: results ? typeof results : 'undefined',
+                    rawData: results
                 });
 
+                // Ensure results is always an array
+                const safeResults = Array.isArray(results) ? results : [];
+
                 // If no results found or very few results, get alternative suggestions
-                if (!results || results.length === 0) {
+                if (!safeResults.length) {
                     setHasExactMatches(false);
 
                     // Get similar products as recommendations
                     console.log('No exact matches, fetching similar products');
                     const similarProducts = await productService.getSimilarOrRecommendedProducts(searchQuery, 12);
-                    setSuggestedProducts(similarProducts || []);
+                    const safeSimilarProducts = Array.isArray(similarProducts) ? similarProducts : [];
+                    setSuggestedProducts(safeSimilarProducts);
 
                     // Suggest an alternative search term - this would normally come from the backend
                     // Here we're just simulating it with a basic correction
@@ -109,17 +116,17 @@ const ProductSearchPage = () => {
                 } else {
                     // Extract additional available filters from results if we have results
                     // This keeps category-specific filters while still showing something when no results are found
-                    const resultCategories = [...new Set(results.map(p => p.category).filter(Boolean))].map(category => ({
+                    const resultCategories = [...new Set(safeResults.map(p => p.category).filter(Boolean))].map(category => ({
                         id: category,
                         name: category.charAt(0).toUpperCase() + category.slice(1)
                     }));
 
-                    const resultGenders = [...new Set(results.map(p => p.gender).filter(Boolean))].map(gender => ({
+                    const resultGenders = [...new Set(safeResults.map(p => p.gender).filter(Boolean))].map(gender => ({
                         id: gender,
                         name: gender.charAt(0).toUpperCase() + gender.slice(1)
                     }));
 
-                    const resultAgeGroups = [...new Set(results.map(p => p.ageGroup).filter(Boolean))].map(ageGroup => ({
+                    const resultAgeGroups = [...new Set(safeResults.map(p => p.ageGroup).filter(Boolean))].map(ageGroup => ({
                         id: ageGroup,
                         name: ageGroup.charAt(0).toUpperCase() + ageGroup.slice(1)
                     }));
@@ -145,9 +152,10 @@ const ProductSearchPage = () => {
                     });
                 }
 
-                setProducts(results);
+                setProducts(safeResults);
             } catch (error) {
                 console.error('Error fetching search results:', error);
+                setProducts([]);
             } finally {
                 setLoading(false);
             }
