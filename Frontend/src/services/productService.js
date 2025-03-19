@@ -209,7 +209,10 @@ export const productService = {
             
             // Add any other filters as needed
             const queryString = queryParams.toString();
-            const url = `${API_URL}/products${queryString ? `?${queryString}` : ''}`;
+            
+            // Get a working API URL instead of using the default one directly
+            const baseUrl = await getWorkingApiUrl();
+            const url = `${baseUrl}/products${queryString ? `?${queryString}` : ''}`;
             
             console.log('Fetching products from:', url);
             const token = localStorage.getItem('token'); 
@@ -689,8 +692,11 @@ export const productService = {
                 });
             }
             
-            // Use the standard products endpoint with search parameter
-            const url = `${API_URL}/products?${queryParams.toString()}`;
+            // Get a working API URL instead of using the default one directly
+            const baseUrl = await getWorkingApiUrl();
+            const url = `${baseUrl}/products?${queryParams.toString()}`;
+            
+            console.log('Searching products at:', url);
             
             const response = await fetch(url);
             
@@ -723,7 +729,11 @@ export const productService = {
             queryParams.append('limit', limit);
             queryParams.append('recommended', 'true');
             
-            const url = `${API_URL}/products?${queryParams.toString()}`;
+            // Get a working API URL instead of using the default one directly
+            const baseUrl = await getWorkingApiUrl();
+            const url = `${baseUrl}/products?${queryParams.toString()}`;
+            
+            console.log('Fetching similar products at:', url);
             
             const response = await fetch(url);
             
@@ -747,7 +757,11 @@ export const productService = {
             queryParams.append('sort', 'popularity');
             queryParams.append('limit', limit);
             
-            const url = `${API_URL}/products?${queryParams.toString()}`;
+            // Get a working API URL instead of using the default one directly
+            const baseUrl = await getWorkingApiUrl();
+            const url = `${baseUrl}/products?${queryParams.toString()}`;
+            
+            console.log('Fetching popular products at:', url);
             
             const response = await fetch(url);
             

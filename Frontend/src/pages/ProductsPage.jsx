@@ -34,15 +34,24 @@ const ProductsPage = () => {
                 setLoading(true);
                 // Fetch categories
                 const categoriesData = await productService.getCategories();
-                setCategories(categoriesData);
+                setCategories(categoriesData || []);
 
                 // Fetch products with filters
                 const filters = {
                     categories: selectedCategories,
                     sortBy: sortBy
                 };
+                console.log('Fetching products with filters:', filters);
                 const productsData = await productService.getFilteredProducts(filters);
-                setProducts(productsData);
+
+                // Add better logging to help debug empty results
+                console.log('Products data received:', {
+                    count: productsData ? productsData.length : 0,
+                    isEmpty: !productsData || productsData.length === 0,
+                    firstItem: productsData && productsData.length > 0 ? productsData[0] : null
+                });
+
+                setProducts(productsData || []);
                 setError(null);
             } catch (err) {
                 console.error('Error fetching products:', err);

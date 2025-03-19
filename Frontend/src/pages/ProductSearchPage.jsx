@@ -63,6 +63,8 @@ const ProductSearchPage = () => {
                     ageGroups,
                 };
 
+                console.log('Searching with query:', searchQuery, 'and options:', searchOptions);
+
                 // Fetch available filters regardless of search results
                 const [allCategories, allGenders, allAgeGroups] = await Promise.all([
                     productService.getCategories(),
@@ -80,13 +82,21 @@ const ProductSearchPage = () => {
                 // Search with fuzzy matching
                 const results = await productService.searchProducts(searchQuery, searchOptions);
 
+                // Log results for debugging
+                console.log('Search results:', {
+                    count: results ? results.length : 0,
+                    isEmpty: !results || results.length === 0,
+                    firstItem: results && results.length > 0 ? results[0] : null
+                });
+
                 // If no results found or very few results, get alternative suggestions
-                if (results.length === 0) {
+                if (!results || results.length === 0) {
                     setHasExactMatches(false);
 
                     // Get similar products as recommendations
+                    console.log('No exact matches, fetching similar products');
                     const similarProducts = await productService.getSimilarOrRecommendedProducts(searchQuery, 12);
-                    setSuggestedProducts(similarProducts);
+                    setSuggestedProducts(similarProducts || []);
 
                     // Suggest an alternative search term - this would normally come from the backend
                     // Here we're just simulating it with a basic correction

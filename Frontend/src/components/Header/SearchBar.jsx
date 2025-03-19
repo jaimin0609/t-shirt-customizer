@@ -79,13 +79,21 @@ const SearchBar = ({
         setNoExactMatches(false);
 
         try {
+            console.log('Fetching search suggestions for:', query);
+
             // First try with fuzzy search
             const results = await productService.searchProducts(query, { limit: 5 });
 
-            if (results.length === 0) {
+            console.log('Search suggestion results:', {
+                count: results ? results.length : 0,
+                isEmpty: !results || results.length === 0
+            });
+
+            if (!results || results.length === 0) {
                 // If no results, try getting recommendations or similar products
+                console.log('No suggestion results, fetching similar products');
                 const similarProducts = await productService.getSimilarOrRecommendedProducts(query, 5);
-                setSuggestions(similarProducts);
+                setSuggestions(similarProducts || []);
                 setNoExactMatches(true);
             } else {
                 setSuggestions(results);
