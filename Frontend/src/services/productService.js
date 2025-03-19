@@ -17,6 +17,9 @@ const processProductData = (product) => {
     // Ensure we have a valid image path
     const processedProduct = {
         ...product,
+        // Ensure both ID formats are available
+        id: product.id || product._id,
+        _id: product._id || product.id,
         // Normalize image property
         image: product.image || 
                (product.images && Array.isArray(product.images) && product.images.length > 0 
@@ -82,6 +85,7 @@ const getFeaturedProducts = async () => {
         });
         
         if (response.data && Array.isArray(response.data)) {
+            // Process products to ensure ID consistency
             return processProductsArray(response.data);
         }
         
@@ -100,9 +104,10 @@ const getFeaturedProducts = async () => {
 
 // Fallback function to get mocked featured products when API is unavailable
 const getMockedFeaturedProducts = () => {
-    return [
+    const mockedProducts = [
         {
             id: 'featured-1',
+            _id: 'featured-1', // Added _id to ensure consistency
             name: 'Classic Crew Neck T-shirt',
             description: 'Premium cotton t-shirt with comfortable fit',
             price: 24.99,
@@ -116,6 +121,7 @@ const getMockedFeaturedProducts = () => {
         },
         {
             id: 'featured-2',
+            _id: 'featured-2', // Added _id to ensure consistency
             name: 'Vintage Logo T-shirt',
             description: 'Retro-inspired design with our classic logo',
             price: 29.99,
@@ -129,6 +135,7 @@ const getMockedFeaturedProducts = () => {
         },
         {
             id: 'featured-3',
+            _id: 'featured-3', // Added _id to ensure consistency
             name: 'V-Neck Slim Fit',
             description: 'Modern slim fit v-neck in soft cotton blend',
             price: 26.99,
@@ -142,6 +149,7 @@ const getMockedFeaturedProducts = () => {
         },
         {
             id: 'featured-4',
+            _id: 'featured-4', // Added _id to ensure consistency
             name: 'Eco-Friendly Organic Tee',
             description: 'Made from 100% organic cotton, sustainable and eco-friendly',
             price: 34.99,
@@ -154,6 +162,9 @@ const getMockedFeaturedProducts = () => {
             sizes: ['S', 'M', 'L', 'XL']
         }
     ];
+    
+    // Process the mocked products to ensure they follow the same format
+    return mockedProducts.map(processProductData);
 };
 
 export const productService = {
@@ -313,9 +324,9 @@ export const productService = {
         }
     },
 
-    getSimilarProducts: async (productId) => {
+    getSimilarProducts: async (productId, category) => {
         try {
-            log(`[ProductService] Fetching similar products for: ${productId}`);
+            log(`[ProductService] Fetching similar products for: ${productId}, category: ${category}`);
             
             // Validate product ID
             if (!productId || productId === 'undefined' || productId === 'null') {
@@ -328,45 +339,67 @@ export const productService = {
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
             
             // Try the dedicated similar products endpoint first
-            try {
-                const response = await fetch(`${API_URL}/products/${productId}/similar`, {
-                    headers
-                });
-                
-                if (response.ok) {
-                    // Get similar products
-                    const data = await response.json();
-                    console.log(`[ProductService] Retrieved ${data.length} similar products from dedicated endpoint`);
-                    return Array.isArray(data) ? data : [];
-                }
-                
-                // If endpoint returns 404, the backend might not have implemented this endpoint
-                console.log(`[ProductService] Similar products endpoint failed, status: ${response.status}`);
-            } catch (error) {
-                console.error('[ProductService] Error using similar products endpoint:', error);
+            const baseUrl = await getWorkingApiUrl();
+            let url = `${baseUrl}/products/${productId}/similar`;
+            
+            if (category) {
+                // If we have category, use that as a fallback
+                url = `${baseUrl}/products?category=${encodeURIComponent(category)}&limit=4`;
             }
             
-            // Fallback to using the recommended products endpoint
-            console.log('[ProductService] Falling back to recommended products endpoint');
-            
-            // Get recommended products as fallback
-            const fallbackResponse = await fetch(`${API_URL}/products?recommended=true&limit=8`, {
-                headers
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    ...headers,
+                    'Content-Type': 'application/json'
+                }
             });
             
-            if (!fallbackResponse.ok) {
-                console.error(`[ProductService] Failed to fetch recommended products as fallback: ${fallbackResponse.status}`);
+            if (!response.ok) {
+                // If the similar products endpoint fails and we didn't try category yet, fall back to category
+                if (!url.includes('category') && category) {
+                    log('[ProductService] Similar products endpoint failed, trying category-based similar products');
+                    const categoryUrl = `${baseUrl}/products?category=${encodeURIComponent(category)}&limit=4`;
+                    const categoryResponse = await fetch(categoryUrl, {
+                        method: 'GET',
+                        headers: {
+                            ...headers,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (categoryResponse.ok) {
+                        const data = await categoryResponse.json();
+                        // Process and filter out the current product
+                        const processedProducts = processProductsArray(data)
+                            .filter(p => 
+                                (p.id && p.id.toString() !== productId.toString()) && 
+                                (p._id && p._id.toString() !== productId.toString())
+                            )
+                            .slice(0, 4);
+                        return processedProducts;
+                    }
+                }
+                
+                // If all else fails, return empty array
+                log('[ProductService] Failed to get similar products, returning empty array');
                 return [];
             }
             
-            const fallbackData = await fallbackResponse.json();
-            console.log(`[ProductService] Retrieved ${fallbackData.length} recommended products as fallback`);
+            const data = await response.json();
             
-            return Array.isArray(fallbackData) ? fallbackData : [];
+            // Process and filter out the current product
+            const processedProducts = processProductsArray(data)
+                .filter(p => 
+                    (p.id && p.id.toString() !== productId.toString()) && 
+                    (p._id && p._id.toString() !== productId.toString())
+                )
+                .slice(0, 4);
+            
+            return processedProducts;
         } catch (error) {
-            console.error('[ProductService] Error in getSimilarProducts:', error);
-            // Return empty array instead of throwing error
-            return [];
+            log('[ProductService] Error fetching similar products:', error);
+            return []; // Return empty array instead of throwing
         }
     },
 
@@ -980,7 +1013,7 @@ const fetchProductFallback = async (productId, baseUrl) => {
         const products = await response.json();
         console.log(`[ProductService] Retrieved ${products.length} products, searching for ID: ${productId}`);
         
-        // Find the product with the matching ID
+        // Find the product with the matching ID - ensure consistent ID comparison
         const product = Array.isArray(products) ? 
             products.find(p => 
                 (p.id && p.id.toString() === productId.toString()) || 
@@ -989,7 +1022,14 @@ const fetchProductFallback = async (productId, baseUrl) => {
         
         if (product) {
             console.log('[ProductService] Found product in fallback list:', product);
-            return processProductData(product);
+            // Process data ensuring ID consistency
+            const processedProduct = processProductData(product);
+            // Double-check ID consistency for the found product
+            if (processedProduct) {
+                processedProduct.id = product.id || product._id;
+                processedProduct._id = product._id || product.id;
+            }
+            return processedProduct;
         }
         
         throw new Error('Product not found in fallback data');

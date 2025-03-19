@@ -105,8 +105,8 @@ const HomePage = () => {
                     {featuredProducts.length > 0 ? (
                         featuredProducts.map((product) => (
                             <Link
-                                to={`/products/${product.id}`}
-                                key={product.id}
+                                to={`/products/${product._id || product.id}`}
+                                key={product._id || product.id}
                                 className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
                             >
                                 <div className="relative pb-[100%] overflow-hidden">
