@@ -6,7 +6,6 @@ import { Transition } from '@headlessui/react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from '../components/Header/Header';
-import HeaderFix from '../components/Header/Header-fix';
 import LogoFooter from '../components/Header/LogoFooter';
 import Logo from '../components/Header/Logo';
 import TShirtBrowser from '../components/MainContent/TShirtBrowser';
@@ -37,7 +36,7 @@ import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
 import TermsOfServicePage from '../pages/TermsOfServicePage';
 import SitemapPage from '../pages/SitemapPage';
 import AiChatWidget from '../components/AiAssistant/AiChatWidget';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -76,8 +75,6 @@ const MainLayout = () => {
     const { user, isAuthenticated } = useAuth();
     const { cart, cartCount } = useCart();
     const { wishlistCount } = useWishlist ? useWishlist() : { wishlistCount: 0 };
-    const [mainHeaderVisible, setMainHeaderVisible] = useState(false);
-    const [headerError, setHeaderError] = useState(false);
 
     // Add debugging for contexts
     useEffect(() => {
@@ -92,48 +89,6 @@ const MainLayout = () => {
             cartExists: Array.isArray(cart)
         });
     }, [user, isAuthenticated, cart, cartCount]);
-
-    // Check if the main header is visible after render
-    useEffect(() => {
-        const checkHeaderVisibility = () => {
-            try {
-                const header = document.querySelector('.main-header-container');
-                if (header) {
-                    // Get computed style to check if header is actually visible
-                    const headerStyle = window.getComputedStyle(header);
-                    const isVisible = headerStyle.display !== 'none' &&
-                        headerStyle.visibility !== 'hidden' &&
-                        headerStyle.opacity !== '0';
-
-                    console.log('Main header visibility check:', {
-                        exists: !!header,
-                        display: headerStyle.display,
-                        visibility: headerStyle.visibility,
-                        opacity: headerStyle.opacity,
-                        isVisible
-                    });
-
-                    setMainHeaderVisible(isVisible);
-
-                    if (!isVisible) {
-                        setHeaderError(true);
-                        console.error('Main header exists but is not visible');
-                    }
-                } else {
-                    console.error('Main header element not found in DOM');
-                    setMainHeaderVisible(false);
-                    setHeaderError(true);
-                }
-            } catch (error) {
-                console.error('Error checking header visibility:', error);
-                setHeaderError(true);
-            }
-        };
-
-        // Check after render and a short delay to allow CSS to apply
-        const timeoutId = setTimeout(checkHeaderVisibility, 500);
-        return () => clearTimeout(timeoutId);
-    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
@@ -154,36 +109,10 @@ const MainLayout = () => {
             {/* Skip to main content target */}
             <div id="main-content" tabIndex="-1"></div>
 
-            {/* Main Header - Attempt to render normally with high priority classes */}
-            <div className="main-header-container" style={{
-                position: 'relative',
-                zIndex: 1000,
-                display: 'block',
-                visibility: 'visible',
-                opacity: 1
-            }}>
+            {/* Main Header - Using unified styling approach */}
+            <div className="main-header-container">
                 <Header />
             </div>
-
-            {/* Fallback Header - Only displays if main header doesn't render */}
-            {headerError && (
-                <div id="fallback-header" style={{
-                    position: 'relative',
-                    zIndex: 999,
-                    display: headerError ? 'block' : 'none'
-                }}>
-                    <div className="fallback-header-notice" style={{
-                        padding: '4px',
-                        fontSize: '12px',
-                        background: '#f9f9f9',
-                        color: '#666',
-                        textAlign: 'center'
-                    }}>
-                        Fallback navigation is active - Main header encountered an issue
-                    </div>
-                    <HeaderFix />
-                </div>
-            )}
 
             {/* Promotion banner */}
             <PromotionBanner />
