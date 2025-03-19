@@ -8,15 +8,16 @@
 
 /* Tailwind CSS */
 @import './tailwind.css';
-@import './navbar-fix.css';
-/* EMERGENCY FIX for missing navbar */
-@import './tailwind-extensions.css';
+
 /* Override and extend Tailwind classes */
+@import './tailwind-extensions.css';
 
 /* Core utility styles */
 @import './responsive.css';
 @import './accessibility.css';
 @import './animations.css';
+
+/* Component specific styles */
 @import './logo.css';
 /* Consolidated logo styling with yellow line fix */
 @import './navbar.css';

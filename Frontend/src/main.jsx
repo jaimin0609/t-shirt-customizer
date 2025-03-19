@@ -2,15 +2,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import './styles/tailwind.css'; // Import Tailwind first
-import './styles/navbar-fix.css'; // EMERGENCY FIX for missing navbar
+
+// CSS Imports - Order matters for proper cascading
+// 1. Base styles first
+import './styles/reset.css';
+import './styles/tailwind.css'; // Tailwind base styles
+// 2. Extensions to base frameworks
 import './styles/tailwind-extensions.css'; // Override and extend Tailwind classes
+// 3. Core application styles
 import './index.css';
 import './App.css';
-import './styles/reset.css';
+// 4. Feature-specific styling
 import './styles/accessibility.css';
 import './styles/responsive.css';
 import './styles/animations.css';
+// 5. Component-specific styling (most specific styling should be last)
 import './styles/logo.css'; // Consolidated logo styling with yellow line fix
 import './styles/navbar.css'; // Professional navbar styling
 import './styles/navbar-menu.css'; // Enhanced menu styling - removes yellow underline
