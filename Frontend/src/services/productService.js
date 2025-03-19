@@ -372,30 +372,18 @@ export const productService = {
 
     getProductReviews: async (productId) => {
         try {
-            // Get token if available, but don't require it for public reviews
-            const token = localStorage.getItem('token');
-            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-            
-            console.log(`[ProductService] Fetching reviews for product: ${productId}`);
-            
-            const response = await fetch(`${API_URL}/products/${productId}/reviews`, {
-                headers
-            });
+            const response = await fetch(`${API_URL}/products/${productId}/reviews`);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error(`[ProductService] Failed to fetch product reviews: ${response.status} ${response.statusText}`, errorData);
-                // Return empty array instead of throwing error to avoid breaking the UI
-                return [];
+                throw new Error(errorData.message || `Failed to fetch reviews: ${response.status} ${response.statusText}`);
             }
             
             const data = await response.json();
-            console.log(`[ProductService] Retrieved ${data.length} reviews for product: ${productId}`);
             return data;
         } catch (error) {
-            console.error('[ProductService] Error in getProductReviews:', error);
-            // Return empty array instead of throwing error to avoid breaking the UI
-            return [];
+            console.error('Error in getProductReviews:', error);
+            throw error;
         }
     },
 

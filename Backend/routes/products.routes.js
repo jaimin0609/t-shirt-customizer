@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { Product, User, ProductVariant } from '../models/index.js';
+import { Product, User, ProductVariant, ProductReview } from '../models/index.js';
 import { optimizeProductImage } from '../middleware/imageOptimization.js';
 import { sequelize } from '../models/index.js';
 import { Sequelize } from 'sequelize';
@@ -626,12 +626,25 @@ router.get('/:id/reviews', async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
         
-        // For now, return an empty array since we don't have a Review model yet
-        // In the future, this would query the database for reviews related to this product
-        console.log(`Fetching reviews for product ID: ${req.params.id}`);
+        // Query the ProductReview model for reviews related to this product
+        const reviews = await ProductReview.findAll({
+            where: { 
+                productId: req.params.id,
+                isApproved: true 
+            },
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'username', 'firstName', 'lastName']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
         
-        // Return empty array for now
-        res.json([]);
+        console.log(`Fetched ${reviews.length} reviews for product ID: ${req.params.id}`);
+        
+        res.json(reviews);
     } catch (error) {
         console.error('Error fetching product reviews:', error);
         res.status(500).json({ 
@@ -653,21 +666,43 @@ router.post('/:id/reviews', auth, async (req, res) => {
         // Get user from request (set by auth middleware)
         const userId = req.user.id;
         
+        const { rating, comment, title } = req.body;
+        
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ message: 'Invalid rating. Must be between 1 and 5.' });
+        }
+        
+        // Check if user has already reviewed this product
+        const existingReview = await ProductReview.findOne({
+            where: { 
+                productId: req.params.id,
+                userId: userId
+            }
+        });
+        
+        if (existingReview) {
+            return res.status(400).json({ message: 'You have already reviewed this product.' });
+        }
+        
+        // Create the review
+        const newReview = await ProductReview.create({
+            productId: req.params.id,
+            userId: userId,
+            rating,
+            title: title || null,
+            comment: comment || null,
+            isVerifiedPurchase: false, // This would be set based on order history
+            isApproved: true // Auto-approve for now
+        });
+        
         // Log the review submission
         console.log(`New review submitted for product ${req.params.id} by user ${userId}`);
-        console.log('Review data:', req.body);
+        console.log('Review data:', newReview);
         
-        // Since we don't have a Review model yet, just acknowledge the submission
+        // Return the created review
         res.status(201).json({ 
             message: 'Review submitted successfully',
-            review: {
-                id: 'temp-' + Date.now(),
-                productId: req.params.id,
-                userId: userId,
-                rating: req.body.rating || 5,
-                comment: req.body.comment || '',
-                createdAt: new Date().toISOString()
-            }
+            review: newReview
         });
     } catch (error) {
         console.error('Error adding product review:', error);

@@ -80,6 +80,9 @@ const ProductDetailPage = () => {
     });
     const [showSizeGuide, setShowSizeGuide] = useState(false);
     const [showReviewForm, setShowReviewForm] = useState(false);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewSuccess, setReviewSuccess] = useState(false);
+    const [reviewError, setReviewError] = useState(null);
     const sizeGuideRef = useRef(null);
     const reviewFormRef = useRef(null);
 
@@ -246,6 +249,55 @@ const ProductDetailPage = () => {
         }));
     };
 
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!user) {
+            navigate('/login', { state: { from: `/products/${productId}` } });
+            return;
+        }
+
+        if (!reviewForm.rating || reviewForm.rating < 1 || reviewForm.rating > 5) {
+            setReviewError('Please select a rating between 1 and 5 stars');
+            return;
+        }
+
+        try {
+            setSubmittingReview(true);
+            setReviewError(null);
+
+            const response = await productService.addProductReview(productId, {
+                userId: user._id,
+                userName: user.name,
+                rating: reviewForm.rating,
+                comment: reviewForm.comment
+            });
+
+            // Add the new review to the reviews array
+            setReviews(prevReviews => [response.review, ...prevReviews]);
+
+            // Reset form
+            setReviewForm({
+                rating: 5,
+                comment: ''
+            });
+
+            setReviewSuccess(true);
+            setShowReviewForm(false);
+
+            // Clear success message after 3 seconds
+            setTimeout(() => {
+                setReviewSuccess(false);
+            }, 3000);
+
+        } catch (err) {
+            console.error('Error submitting review:', err);
+            setReviewError(err.message || 'Failed to submit review. Please try again.');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
     const handleAddToCart = () => {
         if (!selectedSize) {
             alert('Please select a size');
@@ -288,39 +340,6 @@ const ProductDetailPage = () => {
                 image: getImageUrl(product)
             };
             addToWishlist(productToAdd);
-        }
-    };
-
-    const handleReviewSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!user) {
-            alert('Please log in to submit a review');
-            return;
-        }
-
-        try {
-            await productService.addProductReview(productId, {
-                userId: user._id,
-                userName: user.name,
-                rating: reviewForm.rating,
-                comment: reviewForm.comment
-            });
-
-            // Refresh reviews
-            const updatedReviews = await productService.getProductReviews(productId);
-            setReviews(updatedReviews);
-
-            // Reset form
-            setReviewForm({
-                rating: 5,
-                comment: ''
-            });
-
-            alert('Review submitted successfully!');
-        } catch (err) {
-            console.error('Failed to submit review:', err);
-            alert('Failed to submit review. Please try again later.');
         }
     };
 
@@ -659,6 +678,18 @@ const ProductDetailPage = () => {
 
     return (
         <div className="container mx-auto py-8 px-4">
+            {/* Review success message */}
+            {reviewSuccess && (
+                <div className="fixed top-6 right-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50 shadow-md">
+                    <div className="flex items-center">
+                        <svg className="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <p>Your review has been submitted successfully!</p>
+                    </div>
+                </div>
+            )}
+
             {/* Size Guide Modal */}
             {showSizeGuide && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -699,6 +730,21 @@ const ProductDetailPage = () => {
                                 <XMarkIcon className="h-6 w-6" />
                             </button>
                         </div>
+
+                        {reviewError && (
+                            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <p className="text-sm text-red-700">{reviewError}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <form onSubmit={handleReviewSubmit} className="space-y-4">
                             <div>
@@ -747,9 +793,10 @@ const ProductDetailPage = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-primary-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                    disabled={submittingReview}
+                                    className={`px-4 py-2 bg-primary-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${submittingReview ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    Submit Review
+                                    {submittingReview ? 'Submitting...' : 'Submit Review'}
                                 </button>
                             </div>
                         </form>
@@ -1036,28 +1083,51 @@ const ProductDetailPage = () => {
 
             {/* Reviews Section with improved empty state */}
             <div className="reviews-section mt-12 mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
+                    <span>Customer Reviews {reviews.length > 0 && `(${reviews.length})`}</span>
+                    {user && product?.stockCount > 0 && (
+                        <button
+                            onClick={() => setShowReviewForm(true)}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-500"
+                        >
+                            Write a review
+                        </button>
+                    )}
+                </h2>
 
                 {reviews.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2">
                         {reviews.map((review, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                                <div className="flex items-center mb-2">
-                                    <div className="flex text-yellow-400">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <StarIcon
-                                                key={i}
-                                                className={`h-5 w-5 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                aria-hidden="true"
-                                            />
-                                        ))}
+                            <div key={review.id || index} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div className="flex items-center">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <StarIcon
+                                                    key={star}
+                                                    className={`h-5 w-5 ${star <= review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                />
+                                            ))}
+                                            {review.isVerifiedPurchase && (
+                                                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                                    Verified Purchase
+                                                </span>
+                                            )}
+                                        </div>
+                                        {review.title && (
+                                            <h3 className="font-semibold text-gray-900 mt-1">{review.title}</h3>
+                                        )}
                                     </div>
-                                    <span className="ml-2 text-sm text-gray-600">{review.rating} out of 5</span>
+                                    <span className="text-sm text-gray-500">
+                                        {new Date(review.createdAt).toLocaleDateString()}
+                                    </span>
                                 </div>
-                                <p className="text-gray-800 mb-1">{review.comment}</p>
-                                <p className="text-sm text-gray-500">
-                                    By {review.userName || 'Anonymous'} • {new Date(review.createdAt).toLocaleDateString()}
-                                </p>
+                                <p className="text-gray-600">{review.comment}</p>
+                                {review.user && (
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        By {review.user.firstName || review.user.username || 'Anonymous'}
+                                    </p>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -1069,9 +1139,15 @@ const ProductDetailPage = () => {
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
                         <p className="text-gray-600 mb-4">Be the first to share your experience with this product!</p>
                         <button
-                            onClick={() => product.stockCount > 0 && setShowReviewForm(true)}
-                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm ${product.stockCount === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'text-white bg-primary-600 hover:bg-primary-700'}`}
-                            disabled={product.stockCount === 0}
+                            onClick={() => {
+                                if (!user) {
+                                    navigate('/login', { state: { from: `/products/${productId}` } });
+                                } else if (product && product.stockCount > 0) {
+                                    setShowReviewForm(true);
+                                }
+                            }}
+                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm ${product && product.stockCount === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'text-white bg-primary-600 hover:bg-primary-700'}`}
+                            disabled={product && product.stockCount === 0}
                         >
                             Write a Review
                         </button>
