@@ -59,6 +59,9 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     box-sizing: border-box;
+    height: 100%;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
 }
 
 *,
@@ -72,22 +75,23 @@ body {
     font-family: var(--font-family);
     color: var(--color-text-medium);
     overflow-x: hidden;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    height: 100%;
     margin: 0;
     padding: 0;
+    /* Remove flex display from body to prevent scroll issues */
+    position: relative;
 }
 
 #root {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100%;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
     margin: 0;
     padding: 0;
+    position: relative;
 }
 
 /* Container styling */
@@ -106,6 +110,30 @@ main {
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    /* Prevent horizontal overflow */
+}
+
+/* Ensure footer stays at the bottom */
+footer {
+    flex-shrink: 0;
+    width: 100%;
+}
+
+/* Fix sidebar scrolling issues */
+.sidebar,
+aside,
+.filter-sidebar {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    background-color: var(--color-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    /* Prevent sidebar from causing page-level scrolling */
+    overscroll-behavior: contain;
 }
 
 /* ==================== HEADER & NAVIGATION ==================== */
@@ -722,19 +750,6 @@ a:hover {
 }
 
 /* ==================== SIDEBAR & FILTERS ==================== */
-.sidebar,
-aside,
-.filter-sidebar {
-    position: sticky;
-    top: 80px;
-    height: calc(100vh - 80px);
-    overflow-y: auto;
-    padding: var(--spacing-md);
-    background-color: var(--color-white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-}
-
 .sidebar__section,
 .filter-group,
 .sidebar-section {
@@ -1873,6 +1888,65 @@ div[class*="flex items-center"] {
     z-index: 20;
     padding: 16px;
     min-width: 220px;
+    /* Prevent filter dropdowns from causing double scrolling */
+    max-height: 300px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Fix for scrollable containers within the main document */
+.filter-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+    max-height: 250px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Improve scrollbar appearance */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-400) transparent;
+}
+
+.filter-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.filter-content::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-400);
+    border-radius: 20px;
+}
+
+/* Fix dropdown panel to prevent scroll issues */
+.filter-dropdown-panel {
+    padding: 16px !important;
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: -1px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-height: auto;
+    max-height: 300px;
+    position: absolute !important;
+    width: 100% !important;
+    z-index: 100;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    /* Prevent scroll propagation */
+    overscroll-behavior: contain;
+}
+
+/* Global fix for any scrollable containers that might cause double scrolling */
+[role="region"],
+.filter-dropdown-content,
+.Disclosure-panel,
+.disclosure-panel,
+[data-headlessui-state="open"] {
+    overscroll-behavior: contain;
 }
 
 /* Ensure text is visible in dropdowns */
@@ -1898,9 +1972,8 @@ div[class*="flex items-center"] {
 
     /* Make dropdowns more visible on mobile */
     [data-headlessui-state="open"]>div:last-child {
-        max-height: 300px;
         padding: 16px;
-        min-height: 200px;
+        min-height: auto;
     }
 
     /* More touch-friendly spacing for mobile */
@@ -1979,22 +2052,6 @@ div[class*="flex items-center"] {
     flex-direction: column;
 }
 
-/* Specific styles for FilterAccordion component */
-.filter-dropdown-panel {
-    padding: 16px !important;
-    background-color: white;
-    border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    margin-top: -1px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    min-height: 200px;
-    position: absolute !important;
-    width: 100% !important;
-    z-index: 100;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
 .filter-dropdown-panel.hidden {
     display: none !important;
     visibility: hidden !important;
@@ -2005,15 +2062,6 @@ div[class*="flex items-center"] {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-}
-
-.filter-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 0;
-    max-height: 300px;
-    overflow-y: auto;
 }
 
 .filter-accordion {
@@ -2091,4 +2139,36 @@ div[class*="flex items-center"] {
     margin-bottom: 10px;
     padding: 4px 0;
     min-height: 30px;
+}
+
+/* App container to prevent double scrolling */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    width: 100%;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Main content container */
+.main-content-container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+@media (min-width: 768px) {
+    .main-content-container {
+        padding: 0 var(--spacing-lg);
+    }
+}
+
+/* Fix for the footer to stay at the bottom */
+footer {
+    margin-top: auto;
 }

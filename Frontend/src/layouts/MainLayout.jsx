@@ -91,7 +91,7 @@ const MainLayout = () => {
     }, [user, isAuthenticated, cart, cartCount]);
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-50">
+        <div className="app-container">
             {/* Toast notifications */}
             <ToastContainer
                 position="top-right"
@@ -129,7 +129,7 @@ const MainLayout = () => {
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="container mx-auto px-4 py-8">
+                    <div className="main-content-container">
                         <Routes location={location}>
                             {/* Public Routes */}
                             <Route path="/" element={<TShirtBrowser />} />
