@@ -3,25 +3,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
-// CSS Imports - Order matters for proper cascading
-// 1. Base styles first
+// CSS Imports - Simplified to avoid conflicts
+// 1. Reset and Base styles first
 import './styles/reset.css';
-import './styles/tailwind.css'; // Tailwind base styles
-// 2. Extensions to base frameworks
-import './styles/tailwind-extensions.css'; // Override and extend Tailwind classes
-// 3. Core application styles
+// 2. Tailwind CSS base 
+import './styles/tailwind.css';
+// 3. Main application styles - contains all component styling
+import './styles/main.css';
+// 4. App-specific styles
 import './index.css';
 import './App.css';
-// 4. Feature-specific styling
-import './styles/accessibility.css';
-import './styles/responsive.css';
-import './styles/animations.css';
-// 5. Component-specific styling (most specific styling should be last)
-import './styles/logo.css'; // Consolidated logo styling with yellow line fix
-import './styles/navbar.css'; // Professional navbar styling
-import './styles/navbar-menu.css'; // Enhanced menu styling - removes yellow underline
-import './styles/dropdown.css'; // Specific dropdown styling that overrides Tailwind defaults
-import './styles/main.css'; // Consolidated stylesheet that replaces all fix files
 
 // Ensure React is globally available in case any modules are looking for it
 // This needs to happen before importing any components that might use createContext

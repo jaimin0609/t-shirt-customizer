@@ -1,31 +1,16 @@
 /* 
   Main CSS entry point
-  This file imports all CSS files in the proper order to avoid conflicts.
+  Simplified to avoid conflicts with multiple CSS imports
 */
 
-/* Base styles and reset */
+/* Base styles */
 @import './reset.css';
 
-/* Tailwind CSS */
+/* Tailwind CSS base */
 @import './tailwind.css';
 
-/* Override and extend Tailwind classes */
-@import './tailwind-extensions.css';
-
-/* Core utility styles */
-@import './responsive.css';
-@import './accessibility.css';
-@import './animations.css';
-
-/* Component specific styles */
-@import './logo.css';
-/* Consolidated logo styling with yellow line fix */
-@import './navbar.css';
-/* Professional navbar styling */
-@import './navbar-menu.css';
-/* Enhanced menu styling - removes yellow underline */
-@import './dropdown.css';
-/* Specific dropdown styling */
+/* Main application styles - all component styling is here */
+@import './main.css';
 
 /* Custom global styles */
 :root {
