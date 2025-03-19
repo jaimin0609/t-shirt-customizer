@@ -8,7 +8,14 @@ import DesignMenu from './DesignMenu';
 import UserDropdown from './UserDropdown';
 import SearchBar from './SearchBar';
 import MobileMenu from './MobileMenu';
-import { HiOutlineHeart, HiOutlineShoppingCart, HiOutlineUser, HiMenu, HiSearch } from 'react-icons/hi';
+import {
+    HeartIcon,
+    ShoppingCartIcon,
+    UserIcon,
+    Bars3Icon,
+    MagnifyingGlassIcon,
+    ChevronDownIcon
+} from '@heroicons/react/24/outline';
 
 const Header = () => {
     const [showDesignMenu, setShowDesignMenu] = useState(false);
@@ -78,131 +85,142 @@ const Header = () => {
     return (
         <header
             ref={headerRef}
-            className={`site-header ${scrolled ? 'scrolled' : ''}`}
+            className={`header ${scrolled ? 'scrolled' : ''}`}
             data-testid="main-header"
         >
-            <div className="header-container">
+            <div className="container mx-auto px-4 flex items-center justify-between h-16">
                 {/* Logo */}
-                <div className="header-logo">
-                    <Link to="/" aria-label="Home page">
-                        <Logo />
-                    </Link>
-                </div>
+                <Link to="/" className="logo" aria-label="Home page">
+                    <Logo />
+                </Link>
 
-                {/* Desktop Navigation */}
-                <nav className="desktop-nav">
+                {/* Navigation */}
+                <nav className="hidden md:block">
                     <ul className="nav-links">
                         <li>
-                            <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
+                            <Link
+                                to="/"
+                                className={location.pathname === '/' ? 'text-primary' : ''}
+                            >
                                 Home
                             </Link>
                         </li>
                         <li ref={designMenuRef}>
                             <button
                                 onClick={() => setShowDesignMenu(!showDesignMenu)}
-                                className={`nav-dropdown-trigger ${showDesignMenu ? 'active' : ''} ${location.pathname.includes('/design') ? 'active' : ''}`}
+                                className={`nav-dropdown-trigger ${showDesignMenu ? 'text-primary' : ''} ${location.pathname.includes('/design') ? 'text-primary' : ''}`}
                                 aria-expanded={showDesignMenu}
                                 aria-haspopup="true"
                             >
                                 Designs
-                                <span className="dropdown-arrow">▼</span>
+                                <ChevronDownIcon className="h-4 w-4 ml-1" aria-hidden="true" />
                             </button>
-                            {showDesignMenu && <DesignMenu />}
+                            <div className={`design-dropdown ${showDesignMenu ? 'active' : ''}`}>
+                                <DesignMenu />
+                            </div>
                         </li>
                         <li>
-                            <Link to="/products" className={location.pathname === '/products' ? 'active' : ''}>
+                            <Link
+                                to="/products"
+                                className={location.pathname === '/products' ? 'text-primary' : ''}
+                            >
                                 Products
                             </Link>
                         </li>
                         <li>
-                            <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>
+                            <Link
+                                to="/about"
+                                className={location.pathname === '/about' ? 'text-primary' : ''}
+                            >
                                 About
                             </Link>
                         </li>
                         <li>
-                            <Link to="/contact-us" className={location.pathname === '/contact-us' ? 'active' : ''}>
+                            <Link
+                                to="/contact-us"
+                                className={location.pathname === '/contact-us' ? 'text-primary' : ''}
+                            >
                                 Contact
                             </Link>
                         </li>
                     </ul>
                 </nav>
 
-                {/* Desktop Search */}
-                <div className="desktop-search">
+                {/* Search Bar */}
+                <div className="hidden md:block search-container">
                     <SearchBar />
                 </div>
 
                 {/* Right Side Icons */}
-                <div className="header-icons">
+                <div className="right-nav">
                     {isAuthenticated && (
-                        <Link to="/wishlist" className="icon-button" aria-label="Wishlist">
-                            <HiOutlineHeart className="icon" />
+                        <Link to="/wishlist" className="icon-btn" aria-label="Wishlist">
+                            <HeartIcon className="h-6 w-6" />
                             {wishlistCount > 0 && (
-                                <span className="count-badge">{wishlistCount}</span>
+                                <span className="icon-btn-badge">{wishlistCount}</span>
                             )}
                         </Link>
                     )}
 
-                    <Link to="/cart" className="icon-button" aria-label="Shopping Cart">
-                        <HiOutlineShoppingCart className="icon" />
+                    <Link to="/cart" className="icon-btn" aria-label="Shopping Cart">
+                        <ShoppingCartIcon className="h-6 w-6" />
                         {cartCount > 0 && (
-                            <span className="count-badge">{cartCount}</span>
+                            <span className="icon-btn-badge">{cartCount}</span>
                         )}
                     </Link>
 
                     {isAuthenticated ? (
                         <UserDropdown user={user} />
                     ) : (
-                        <Link to="/login" className="icon-button" aria-label="Login">
-                            <HiOutlineUser className="icon" />
+                        <Link to="/login" className="icon-btn" aria-label="Login">
+                            <UserIcon className="h-6 w-6" />
                         </Link>
                     )}
-                </div>
 
-                {/* Mobile Menu Button */}
-                <div className="mobile-controls">
+                    {/* Mobile Search Toggle */}
                     <button
-                        className="mobile-search-trigger icon-button"
+                        className="icon-btn md:hidden"
                         onClick={() => setShowMobileSearch(!showMobileSearch)}
                         aria-label="Search"
                     >
-                        <HiSearch className="icon" />
+                        <MagnifyingGlassIcon className="h-6 w-6" />
                     </button>
 
+                    {/* Mobile Menu Toggle */}
                     <button
                         ref={mobileMenuRef}
-                        className="mobile-menu-trigger icon-button"
+                        className="mobile-menu-button md:hidden"
                         onClick={() => setShowMobileMenu(!showMobileMenu)}
                         aria-label="Menu"
                         aria-expanded={showMobileMenu}
                         aria-controls="mobile-menu"
                     >
-                        <HiMenu className="icon" />
+                        <Bars3Icon className="h-6 w-6" />
                     </button>
                 </div>
-
-                {/* Mobile Search Panel */}
-                {showMobileSearch && (
-                    <div className="mobile-search-panel">
-                        <SearchBar
-                            onSearch={() => setShowMobileSearch(false)}
-                            placeholder="Search products..."
-                            fullWidth
-                        />
-                    </div>
-                )}
-
-                {/* Mobile Menu Panel */}
-                {showMobileMenu && (
-                    <MobileMenu
-                        isAuthenticated={isAuthenticated}
-                        user={user}
-                        cartCount={cartCount}
-                        wishlistCount={wishlistCount}
-                        onClose={() => setShowMobileMenu(false)}
-                    />
-                )}
             </div>
+
+            {/* Mobile Search Panel */}
+            {showMobileSearch && (
+                <div className="md:hidden p-4 bg-gray-50 border-t border-gray-200">
+                    <SearchBar
+                        onSearch={() => setShowMobileSearch(false)}
+                        placeholder="Search products..."
+                        fullWidth
+                    />
+                </div>
+            )}
+
+            {/* Mobile Menu Panel */}
+            {showMobileMenu && (
+                <MobileMenu
+                    isAuthenticated={isAuthenticated}
+                    user={user}
+                    cartCount={cartCount}
+                    wishlistCount={wishlistCount}
+                    onClose={() => setShowMobileMenu(false)}
+                />
+            )}
         </header>
     );
 };

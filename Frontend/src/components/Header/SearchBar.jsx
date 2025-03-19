@@ -6,7 +6,7 @@ import {
     XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const SearchBar = () => {
+const SearchBar = ({ onSearch, placeholder = "Search products...", fullWidth = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -117,13 +117,15 @@ const SearchBar = () => {
         if (searchTerm.trim()) {
             navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
             setShowSuggestions(false);
+            if (onSearch) onSearch(searchTerm);
         }
     };
 
     const handleSuggestionClick = (productId, productName) => {
-        navigate(`/products/${productId}`);
+        navigate(`/product/${productId}`);
         setSearchTerm(productName);
         setShowSuggestions(false);
+        if (onSearch) onSearch(productName);
     };
 
     // Function to highlight matching text in suggestions
@@ -145,29 +147,29 @@ const SearchBar = () => {
     };
 
     return (
-        <div className="relative flex-1 max-w-xs md:max-w-sm" ref={searchRef}>
-            <form onSubmit={handleSubmit} className="relative">
-                <div className="relative">
+        <div className={`search-container ${fullWidth ? 'w-full' : ''}`} ref={searchRef}>
+            <form onSubmit={handleSubmit} className="search-form">
+                <div className="search-input-wrapper">
                     <input
-                        type="text"
+                        type="search"
                         value={searchTerm}
                         onChange={handleInputChange}
-                        placeholder="Search products..."
-                        className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder={placeholder}
+                        className="search-input"
                         onFocus={() => searchTerm.trim().length >= 2 && setShowSuggestions(true)}
                         aria-label="Search for products"
                     />
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                    </div>
+
+                    <MagnifyingGlassIcon className="search-icon" aria-hidden="true" />
+
                     {searchTerm && (
                         <button
                             type="button"
-                            className="absolute inset-y-0 right-0 flex items-center pr-3"
+                            className="clear-search-button"
                             onClick={clearSearch}
                             aria-label="Clear search"
                         >
-                            <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                            <XMarkIcon className="h-5 w-5" />
                         </button>
                     )}
                 </div>
@@ -175,49 +177,48 @@ const SearchBar = () => {
 
             {/* Loading indicator */}
             {isLoading && showSuggestions && (
-                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
-                    <div className="px-4 py-3 text-sm text-gray-500">Loading suggestions...</div>
+                <div className="suggestions-dropdown">
+                    <div className="suggestions-message">Loading suggestions...</div>
                 </div>
             )}
 
             {/* Suggestions dropdown */}
             {!isLoading && showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
+                <div className="suggestions-dropdown">
                     {noExactMatches && (
-                        <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                        <div className="no-exact-matches">
                             No exact matches found. Showing similar products:
                         </div>
                     )}
-                    <ul className="py-1">
+                    <ul className="suggestions-list">
                         {suggestions.map((product) => (
                             <li
                                 key={product._id || product.id}
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                                className="suggestion-item"
                                 onClick={() => handleSuggestionClick(product._id || product.id, product.name)}
                             >
                                 {product.image && (
                                     <img
                                         src={getImageUrl(product)}
                                         alt={product.name}
-                                        className="h-8 w-8 object-cover rounded-sm mr-3"
+                                        className="suggestion-image"
                                         onError={(e) => {
                                             console.log(`Image error for ${product.name} in search. Using placeholder.`);
                                             e.target.src = '/assets/placeholder-product.jpg';
                                         }}
                                     />
                                 )}
-                                <div>
-                                    <div className="text-sm font-medium text-gray-900">
+                                <div className="suggestion-content">
+                                    <div className="suggestion-title">
                                         {highlightMatch(product.name, searchTerm)}
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="suggestion-category">
                                         {product.category && highlightMatch(product.category, searchTerm)}
                                     </div>
                                 </div>
                             </li>
                         ))}
-                        <li className="px-4 py-2 text-xs text-blue-600 hover:bg-gray-100 cursor-pointer border-t border-gray-100"
-                            onClick={handleSubmit}>
+                        <li className="see-all-results" onClick={handleSubmit}>
                             See all results for "{searchTerm}"
                         </li>
                     </ul>
@@ -226,15 +227,15 @@ const SearchBar = () => {
 
             {/* No results with suggestions for alternatives */}
             {!isLoading && showSuggestions && searchTerm.trim().length >= 2 && suggestions.length === 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
-                    <div className="px-4 py-3 text-sm text-gray-700">
-                        <p className="font-medium mb-1">No products found matching "{searchTerm}"</p>
-                        <p className="text-xs text-gray-500">Try checking your spelling or using more general terms</p>
+                <div className="suggestions-dropdown">
+                    <div className="no-results-message">
+                        <p className="no-results-title">No products found matching "{searchTerm}"</p>
+                        <p className="no-results-suggestion">Try checking your spelling or using more general terms</p>
                     </div>
-                    <div className="px-4 py-2 border-t border-gray-100">
+                    <div className="search-anyway">
                         <button
                             onClick={handleSubmit}
-                            className="text-xs text-blue-600 hover:text-blue-800"
+                            className="search-anyway-button"
                         >
                             Search anyway
                         </button>
