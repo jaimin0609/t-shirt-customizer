@@ -175,6 +175,7 @@ const App = ({ isSSR = false, initialState = {} }) => {
               <Route path="/" element={<HomePage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/product/:productId" element={<ProductDetailPage />} />
               <Route path="/custom-design-studio" element={<DesignStudioPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/cart" element={<CartPage />} />

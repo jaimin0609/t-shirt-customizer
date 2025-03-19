@@ -54,7 +54,10 @@ const productDescriptionStyles = `
 `;
 
 const ProductDetailPage = () => {
-    const { productId } = useParams();
+    const params = useParams();
+    // Get productId from either of the route parameter formats
+    const productId = params.productId || params.id;
+
     const navigate = useNavigate();
     const { user } = useAuth();
     const { addToCart } = useCart();
@@ -78,8 +81,11 @@ const ProductDetailPage = () => {
     useEffect(() => {
         const fetchProductDetails = async () => {
             try {
-                // Validate product ID
+                // Validate product ID and add more debugging
+                console.log('ProductDetailPage - Fetching product with ID:', productId, 'from URL params:', params);
+
                 if (!productId || productId === 'undefined' || productId === 'null') {
+                    console.error('Invalid product ID from URL parameters:', params);
                     setError('Invalid product ID. Please try a different product.');
                     setLoading(false);
                     return;
@@ -90,6 +96,7 @@ const ProductDetailPage = () => {
 
                 // Fetch product details
                 const productData = await productService.getProductById(productId);
+                console.log('ProductDetailPage - Fetched product data:', productData);
                 setProduct(productData);
 
                 // Calculate price information
@@ -438,8 +445,8 @@ const ProductDetailPage = () => {
                                 key={index}
                                 onClick={() => setActiveImageIndex(index)}
                                 className={`rounded-md overflow-hidden border-2 ${index === activeImageIndex
-                                        ? 'border-primary-500'
-                                        : 'border-transparent'
+                                    ? 'border-primary-500'
+                                    : 'border-transparent'
                                     }`}
                                 aria-label={`View product image ${index + 1}`}
                                 aria-current={index === activeImageIndex ? 'true' : 'false'}
@@ -511,8 +518,8 @@ const ProductDetailPage = () => {
                                     <StarIcon
                                         key={index}
                                         className={`h-5 w-5 ${index < Math.round(averageRating)
-                                                ? 'text-yellow-400'
-                                                : 'text-gray-300'
+                                            ? 'text-yellow-400'
+                                            : 'text-gray-300'
                                             }`}
                                         aria-hidden="true"
                                     />

@@ -261,22 +261,51 @@ export const productService = {
                 throw new Error('Invalid product ID');
             }
             
+            console.log(`[ProductService] Fetching product with ID: ${productId}`);
+            
             // Try to get a working API URL
             const baseUrl = await getWorkingApiUrl();
+            console.log(`[ProductService] Using API URL: ${baseUrl}`);
             
             // Public endpoint - no token required
-            const response = await fetchWithCORS(`${baseUrl}/products/${productId}`);
+            const url = `${baseUrl}/products/${productId}`;
+            console.log(`[ProductService] Making request to: ${url}`);
+            
+            const response = await fetchWithCORS(url);
+            console.log(`[ProductService] Response status: ${response.status}`);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 console.error(`Failed to fetch product details: ${response.status} ${response.statusText}`, errorData);
+                
+                // If we got a 404, try a fallback approach
+                if (response.status === 404) {
+                    console.log('[ProductService] Attempting fallback product fetch with alternative endpoint');
+                    return fetchProductFallback(productId, baseUrl);
+                }
+                
                 throw new Error(errorData.message || `Failed to fetch product details`);
             }
             
             const data = await response.json();
+            console.log('[ProductService] Successfully fetched product data:', data);
             return processProductData(data);
         } catch (error) {
-            console.error('Error in getProductById:', error);
+            console.error('[ProductService] Error in getProductById:', error);
+            
+            // If we hit an error that's not already from the fallback, try the fallback approach
+            if (!error.message.includes('fallback failed')) {
+                try {
+                    console.log('[ProductService] Attempting fallback product fetch after error');
+                    const baseUrl = await getWorkingApiUrl();
+                    return await fetchProductFallback(productId, baseUrl);
+                } catch (fallbackError) {
+                    console.error('[ProductService] Fallback fetch also failed:', fallbackError);
+                    // Re-throw the original error if fallback also fails
+                    throw error;
+                }
+            }
+            
             throw error;
         }
     },
@@ -922,4 +951,41 @@ export const getImageUrl = (imageSource) => {
     // Handle backend paths (assuming backend URL is available)
     const backendUrl = API_URL.split('/api')[0];
     return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
+};
+
+// Add a fallback method to try alternative endpoints or approaches
+const fetchProductFallback = async (productId, baseUrl) => {
+    console.log(`[ProductService] Trying fallback product fetch for ID: ${productId}`);
+    
+    try {
+        // Try the products endpoint
+        const productsUrl = `${baseUrl}/products`;
+        console.log(`[ProductService] Fetching all products from: ${productsUrl}`);
+        
+        const response = await fetch(productsUrl);
+        
+        if (!response.ok) {
+            throw new Error('Fallback fetch failed: Could not retrieve products list');
+        }
+        
+        const products = await response.json();
+        console.log(`[ProductService] Retrieved ${products.length} products, searching for ID: ${productId}`);
+        
+        // Find the product with the matching ID
+        const product = Array.isArray(products) ? 
+            products.find(p => 
+                (p.id && p.id.toString() === productId.toString()) || 
+                (p._id && p._id.toString() === productId.toString())
+            ) : null;
+        
+        if (product) {
+            console.log('[ProductService] Found product in fallback list:', product);
+            return processProductData(product);
+        }
+        
+        throw new Error('Product not found in fallback data');
+    } catch (error) {
+        console.error('[ProductService] Fallback product fetch failed:', error);
+        throw new Error(`Fallback fetch failed: ${error.message}`);
+    }
 }; 
