@@ -772,15 +772,16 @@ div[class*="flex items-center"] input[type="checkbox"]+label {
     line-height: 1.2;
 }
 
-/* Fix checkbox alignment */
-.filter-option__checkbox,
+/* Fix checkbox alignment - more specific selector to override other styles */
 .sidebar-filters input[type="checkbox"],
-.filter-option input[type="checkbox"],
-input[type="checkbox"].h-4.w-4 {
+.filter-option__checkbox,
+input[type="checkbox"].h-4.w-4,
+[class*="filter"] input[type="checkbox"],
+.space-y-2 input[type="checkbox"] {
     margin-right: var(--spacing-sm);
     flex-shrink: 0;
-    height: 16px;
-    width: 16px;
+    height: 16px !important;
+    width: 16px !important;
     position: relative;
     top: 0;
     vertical-align: middle;
@@ -795,10 +796,12 @@ input[type="checkbox"].h-4.w-4 {
     transition: border 0.2s, background-color 0.2s;
 }
 
+/* Fix border and active states for checkboxes */
+input[type="checkbox"]:checked,
 .filter-option__checkbox:checked,
 .sidebar-filters input[type="checkbox"]:checked,
-.filter-option input[type="checkbox"]:checked,
-input[type="checkbox"].h-4.w-4:checked {
+[class*="filter"] input[type="checkbox"]:checked,
+.space-y-2 input[type="checkbox"]:checked {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
@@ -807,37 +810,160 @@ input[type="checkbox"].h-4.w-4:checked {
     background-repeat: no-repeat;
 }
 
-/* Fix checkbox label alignment */
+/* Fix checkbox label alignment - more specific selector */
 .filter-option__label,
-label[for^="category-"],
-.ml-2.text-gray-700 {
+.sidebar-filters label,
+[class*="filter"] label,
+.space-y-2 label,
+div[class*="flex items-center"] label {
     display: inline-block;
     vertical-align: middle;
     line-height: 1.4;
     margin-left: 8px !important;
     font-size: var(--font-size-sm);
-    color: var(--color-text);
+    color: var(--color-text-medium);
     cursor: pointer;
+    font-weight: normal;
 }
 
-/* Fix container for checkbox and label */
+/* Fix filter options container alignment */
 .filter-option,
-div[class*="flex items-center"] {
+div[class*="flex items-center"],
+.space-y-2>div,
+[class*="filter"]>div {
     display: flex;
     align-items: center;
     margin-bottom: var(--spacing-xs);
     padding: 4px 0;
+    height: auto;
+    min-height: 26px;
 }
 
-/* Ensure proper spacing in space-y-2 containers */
+/* Fix for dropdown accordion panels not stacking */
+[role="region"],
+.Disclosure-panel,
+.disclosure-panel,
+[data-headlessui-state="open"],
+.filter-dropdown-content {
+    position: relative !important;
+    width: 100%;
+    background-color: white;
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-md);
+    overflow: visible;
+    z-index: 1;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid var(--color-gray-200);
+}
+
+/* Fix for filter headers and buttons */
+.filter-header,
+.filter-title,
+[class*="filter"] h3,
+[class*="filter"] button,
+.disclosure-button,
+[data-headlessui-state] button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    color: var(--color-text-dark);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+/* Prevent overlapping dropdowns by ensuring proper stacking */
+.Disclosure,
+.disclosure,
+[data-headlessui-state],
+[role="region"] {
+    position: relative;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+/* Ensure filter options don't overlap */
+.categories-dropdown,
+.genders-dropdown,
+.age-groups-dropdown {
+    margin-bottom: 16px;
+    position: relative;
+    width: 100%;
+}
+
+/* Ensure the accordion icon rotates properly */
+.filter-icon-rotate,
+[data-headlessui-state="open"] svg {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+
+/* Fix the icon alignment in filter dropdowns */
+[data-headlessui-state] button svg,
+.disclosure-button svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-gray-500);
+    margin-left: 8px;
+}
+
+/* Fix mobile styling for filters */
+@media (max-width: 768px) {
+
+    .filter-option__checkbox,
+    .sidebar-filters input[type="checkbox"],
+    [class*="filter"] input[type="checkbox"],
+    .space-y-2 input[type="checkbox"] {
+        min-width: 20px;
+        min-height: 20px;
+        margin-right: 12px;
+    }
+
+    .filter-option__label,
+    .sidebar-filters label,
+    [class*="filter"] label,
+    .space-y-2 label {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .filter-option,
+    div[class*="flex items-center"],
+    .space-y-2>div {
+        padding: 8px 0;
+        min-height: 36px;
+    }
+
+    /* Improve touch areas for mobile */
+    [data-headlessui-state] button,
+    .disclosure-button {
+        padding: 12px;
+        font-size: 16px;
+    }
+}
+
+/* Fix overlapping dropdowns in Headless UI Disclosure components */
+.disclosure-panel,
+[data-headlessui-state="open"]>div:last-child {
+    margin-bottom: 16px !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+}
+
+/* Fix spacing between filter options */
 .space-y-2>*+* {
-    margin-top: 8px;
-}
-
-/* Fix border and active states */
-input[type="checkbox"]:checked {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
+    margin-top: 8px !important;
 }
 
 /* ==================== PRODUCT CARDS ==================== */
@@ -1690,5 +1816,79 @@ nav,
 
     .right-nav {
         margin-left: 0 !important;
+    }
+}
+
+/* Fix for Headless UI dropdowns in filter panels */
+[data-headlessui-state="open"] {
+    margin-bottom: 24px !important;
+    z-index: 1;
+}
+
+/* Only one panel open at a time - ensure proper display */
+[data-headlessui-state="open"]+[data-headlessui-state="open"] {
+    margin-top: 32px;
+}
+
+/* Ensure dropdowns don't overflow their container */
+[data-headlessui-state="open"]>div:last-child {
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix for filter section positioning */
+.filters-section,
+.sidebar-filters,
+.filter-accordion {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Add a dropdown-specific class for custom panels */
+.filter-dropdown-panel {
+    position: relative !important;
+    margin: 4px 0 16px 0;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+    z-index: 1;
+}
+
+/* Specifically target any components that might contain the filters */
+.ProductSearchPage [data-headlessui-state],
+.ProductsPage [data-headlessui-state] {
+    position: relative;
+    z-index: auto;
+}
+
+/* Override any absolute positioning for filter panels */
+.ProductSearchPage [data-headlessui-state="open"]>div:last-child,
+.ProductsPage [data-headlessui-state="open"]>div:last-child {
+    position: static !important;
+    width: 100% !important;
+}
+
+/* Mobile-specific fixes for filters */
+@media (max-width: 768px) {
+
+    /* Ensure mobile filter panels don't overlap */
+    [data-headlessui-state="open"] {
+        margin-bottom: 32px !important;
+    }
+
+    /* Improve spacing between filter options on mobile */
+    .filter-option,
+    div[class*="flex items-center"],
+    .space-y-2>div {
+        margin-bottom: 8px;
+    }
+
+    /* Make dropdowns more compact on mobile */
+    [data-headlessui-state="open"]>div:last-child {
+        max-height: 250px;
     }
 }
