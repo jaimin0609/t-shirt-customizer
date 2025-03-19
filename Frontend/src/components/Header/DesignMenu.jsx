@@ -26,19 +26,21 @@ const DesignMenu = () => {
     ];
 
     return (
-        <div className="design-dropdown">
-            {designItems.map((item) => (
-                <Link
-                    key={item.name}
-                    to={item.href}
-                    className="dropdown-item"
-                >
-                    {item.icon && (
-                        <item.icon className="dropdown-item-icon" aria-hidden="true" />
-                    )}
-                    <span>{item.name}</span>
-                </Link>
-            ))}
+        <div className="design-dropdown active">
+            <div className="design-dropdown-items">
+                {designItems.map((item) => (
+                    <Link
+                        key={item.name}
+                        to={item.href}
+                        className="dropdown-item"
+                    >
+                        {item.icon && (
+                            <item.icon className="dropdown-item-icon" aria-hidden="true" />
+                        )}
+                        <span>{item.name}</span>
+                    </Link>
+                ))}
+            </div>
         </div>
     );
 };

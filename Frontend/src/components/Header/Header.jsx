@@ -30,6 +30,7 @@ const Header = () => {
     const headerRef = useRef(null);
     const mobileMenuRef = useRef(null);
     const designMenuRef = useRef(null);
+    const searchRef = useRef(null);
 
     // Update scroll state for header appearance
     useEffect(() => {
@@ -46,6 +47,12 @@ const Header = () => {
         };
     }, [scrolled]);
 
+    // Toggle design menu on click
+    const toggleDesignMenu = (e) => {
+        e.stopPropagation();
+        setShowDesignMenu(!showDesignMenu);
+    };
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -55,6 +62,10 @@ const Header = () => {
 
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
                 setShowMobileMenu(false);
+            }
+
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowMobileSearch(false);
             }
         };
 
@@ -107,7 +118,7 @@ const Header = () => {
                         </li>
                         <li ref={designMenuRef}>
                             <button
-                                onClick={() => setShowDesignMenu(!showDesignMenu)}
+                                onClick={toggleDesignMenu}
                                 className={`nav-dropdown-trigger ${showDesignMenu ? 'text-primary' : ''} ${location.pathname.includes('/design') ? 'text-primary' : ''}`}
                                 aria-expanded={showDesignMenu}
                                 aria-haspopup="true"
@@ -115,9 +126,9 @@ const Header = () => {
                                 Designs
                                 <ChevronDownIcon className="h-4 w-4 ml-1" aria-hidden="true" />
                             </button>
-                            <div className={`design-dropdown ${showDesignMenu ? 'active' : ''}`}>
+                            {showDesignMenu && (
                                 <DesignMenu />
-                            </div>
+                            )}
                         </li>
                         <li>
                             <Link
@@ -146,7 +157,7 @@ const Header = () => {
                     </ul>
                 </nav>
 
-                {/* Search Bar */}
+                {/* Search Bar - Desktop Only */}
                 <div className="hidden md:block search-container">
                     <SearchBar />
                 </div>
@@ -177,8 +188,9 @@ const Header = () => {
                         </Link>
                     )}
 
-                    {/* Mobile Search Toggle */}
+                    {/* Mobile Search Toggle - Only on Mobile */}
                     <button
+                        ref={searchRef}
                         className="icon-btn md:hidden"
                         onClick={() => setShowMobileSearch(!showMobileSearch)}
                         aria-label="Search"
@@ -186,7 +198,7 @@ const Header = () => {
                         <MagnifyingGlassIcon className="h-6 w-6" />
                     </button>
 
-                    {/* Mobile Menu Toggle */}
+                    {/* Mobile Menu Toggle - Only on Mobile */}
                     <button
                         ref={mobileMenuRef}
                         className="mobile-menu-button md:hidden"
