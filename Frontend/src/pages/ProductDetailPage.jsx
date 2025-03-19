@@ -243,6 +243,9 @@ const ProductDetailPage = () => {
             setSubmittingReview(true);
             setReviewError(null);
 
+            // Add a small delay before submission to prevent rapid successive attempts
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             const response = await productService.addProductReview(productId, {
                 userId: user._id,
                 userName: user.name,
@@ -269,7 +272,23 @@ const ProductDetailPage = () => {
 
         } catch (err) {
             console.error('Error submitting review:', err);
-            setReviewError(err.message || 'Failed to submit review. Please try again.');
+
+            // Handle rate limiting errors with more user-friendly message
+            if (err.message && (
+                err.message.includes('too quickly') ||
+                err.message.includes('too many') ||
+                err.message.includes('rate limit') ||
+                err.message.includes('authentication attempts')
+            )) {
+                setReviewError('You\'re submitting too quickly. Please wait 30 seconds before trying again.');
+
+                // Disable submit button temporarily
+                setTimeout(() => {
+                    setReviewError(null);
+                }, 5000);
+            } else {
+                setReviewError(err.message || 'Failed to submit review. Please try again.');
+            }
         } finally {
             setSubmittingReview(false);
         }

@@ -398,17 +398,32 @@ export const productService = {
                 throw new Error('Authentication required to submit a review.');
             }
             
+            // Add timestamp to reduce chance of duplicate submissions
+            const reviewWithTimestamp = {
+                ...reviewData,
+                submittedAt: new Date().toISOString()
+            };
+            
             const response = await fetch(`${API_URL}/products/${productId}/reviews`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(reviewData)
+                body: JSON.stringify(reviewWithTimestamp)
             });
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                
+                // Check for rate limiting or authentication errors
+                if (response.status === 429 || (errorData.message && 
+                    (errorData.message.includes('authentication') || 
+                     errorData.message.includes('rate limit') || 
+                     errorData.message.includes('too many')))) {
+                    throw new Error('You\'re submitting too quickly. Please wait a moment before trying again.');
+                }
+                
                 throw new Error(errorData.message || `Failed to submit review: ${response.status} ${response.statusText}`);
             }
             
