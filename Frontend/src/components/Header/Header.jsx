@@ -22,6 +22,7 @@ const Header = () => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const { user, isAuthenticated, authError } = useAuth();
     const { cartCount } = useCart();
     const { wishlistCount } = useWishlist ? useWishlist() : { wishlistCount: 0 };
@@ -31,6 +32,20 @@ const Header = () => {
     const mobileMenuRef = useRef(null);
     const designMenuRef = useRef(null);
     const searchRef = useRef(null);
+
+    // Check if we're on mobile
+    useEffect(() => {
+        const checkIsMobile = () => {
+            setIsMobile(window.innerWidth < 768); // 768px is the md breakpoint in Tailwind
+        };
+
+        checkIsMobile(); // Check on initial load
+        window.addEventListener('resize', checkIsMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkIsMobile);
+        };
+    }, []);
 
     // Update scroll state for header appearance
     useEffect(() => {
@@ -188,15 +203,17 @@ const Header = () => {
                         </Link>
                     )}
 
-                    {/* Mobile Search Toggle - Only on Mobile */}
-                    <button
-                        ref={searchRef}
-                        className="icon-btn md:hidden"
-                        onClick={() => setShowMobileSearch(!showMobileSearch)}
-                        aria-label="Search"
-                    >
-                        <MagnifyingGlassIcon className="h-6 w-6" />
-                    </button>
+                    {/* Mobile Search Toggle Button - ONLY FOR MOBILE */}
+                    {isMobile && (
+                        <button
+                            ref={searchRef}
+                            className="icon-btn"
+                            onClick={() => setShowMobileSearch(!showMobileSearch)}
+                            aria-label="Search"
+                        >
+                            <MagnifyingGlassIcon className="h-6 w-6" />
+                        </button>
+                    )}
 
                     {/* Mobile Menu Toggle - Only on Mobile */}
                     <button
@@ -213,12 +230,13 @@ const Header = () => {
             </div>
 
             {/* Mobile Search Panel */}
-            {showMobileSearch && (
-                <div className="md:hidden p-4 bg-gray-50 border-t border-gray-200">
+            {showMobileSearch && isMobile && (
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
                     <SearchBar
                         onSearch={() => setShowMobileSearch(false)}
                         placeholder="Search products..."
                         fullWidth
+                        hideIcon={true}
                     />
                 </div>
             )}

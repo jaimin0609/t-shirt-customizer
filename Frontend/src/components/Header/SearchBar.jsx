@@ -6,7 +6,12 @@ import {
     XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const SearchBar = ({ onSearch, placeholder = "Search products...", fullWidth = false }) => {
+const SearchBar = ({
+    onSearch,
+    placeholder = "Search products...",
+    fullWidth = false,
+    hideIcon = false
+}) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -155,12 +160,14 @@ const SearchBar = ({ onSearch, placeholder = "Search products...", fullWidth = f
                         value={searchTerm}
                         onChange={handleInputChange}
                         placeholder={placeholder}
-                        className="search-input"
+                        className={`search-input ${hideIcon ? 'pl-3' : 'pl-10'}`}
                         onFocus={() => searchTerm.trim().length >= 2 && setShowSuggestions(true)}
                         aria-label="Search for products"
                     />
 
-                    <MagnifyingGlassIcon className="search-icon" aria-hidden="true" />
+                    {!hideIcon && (
+                        <MagnifyingGlassIcon className="search-icon" aria-hidden="true" />
+                    )}
 
                     {searchTerm && (
                         <button
