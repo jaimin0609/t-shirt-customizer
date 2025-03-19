@@ -142,7 +142,7 @@ const SearchBar = ({
     };
 
     const handleSuggestionClick = (productId, productName) => {
-        navigate(`/product/${productId}`);
+        navigate(`/products/${productId}`);
         setSearchTerm(productName);
         setShowSuggestions(false);
         if (onSearch) onSearch(productName);
