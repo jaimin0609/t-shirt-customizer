@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { productService } from '../services/productService';
-import { Disclosure } from '@headlessui/react';
-import { ChevronUpIcon, XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { FilterAccordion, FilterAccordionGroup } from '../components/UI/FilterAccordion';
 
 const ProductSearchPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -461,116 +461,82 @@ const ProductSearchPage = () => {
                         )}
 
                         <div className="space-y-4">
-                            {/* Categories Filter */}
-                            <Disclosure>
-                                {({ open }) => (
-                                    <>
-                                        <Disclosure.Button className="flex w-full justify-between items-center px-4 py-2 text-left text-sm font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200">
-                                            <span>Categories</span>
-                                            <ChevronUpIcon
-                                                className={`${open ? 'transform rotate-180' : ''} h-5 w-5 text-gray-500`}
-                                            />
-                                        </Disclosure.Button>
-                                        <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">
-                                            {availableFilters.categories.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {availableFilters.categories.map(category => (
-                                                        <div key={category.id} className="flex items-center">
-                                                            <input
-                                                                id={`category-${category.id}`}
-                                                                name={`category-${category.id}`}
-                                                                type="checkbox"
-                                                                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                                                                checked={filters.categories.includes(category.id)}
-                                                                onChange={() => handleFilterChange('categories', category.id)}
-                                                            />
-                                                            <label htmlFor={`category-${category.id}`} className="ml-2 text-sm text-gray-900">
-                                                                {category.name}
-                                                            </label>
-                                                        </div>
-                                                    ))}
+                            <FilterAccordionGroup>
+                                {/* Categories Filter */}
+                                <FilterAccordion id="categories" title="Categories">
+                                    {availableFilters.categories.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {availableFilters.categories.map(category => (
+                                                <div key={category.id} className="flex items-center">
+                                                    <input
+                                                        id={`category-${category.id}`}
+                                                        name={`category-${category.id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                                        checked={filters.categories.includes(category.id)}
+                                                        onChange={() => handleFilterChange('categories', category.id)}
+                                                    />
+                                                    <label htmlFor={`category-${category.id}`} className="ml-2 text-sm text-gray-900">
+                                                        {category.name}
+                                                    </label>
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm text-gray-500">No categories available</p>
-                                            )}
-                                        </Disclosure.Panel>
-                                    </>
-                                )}
-                            </Disclosure>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">No categories available</p>
+                                    )}
+                                </FilterAccordion>
 
-                            {/* Genders Filter */}
-                            <Disclosure>
-                                {({ open }) => (
-                                    <>
-                                        <Disclosure.Button className="flex w-full justify-between items-center px-4 py-2 text-left text-sm font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200">
-                                            <span>Genders</span>
-                                            <ChevronUpIcon
-                                                className={`${open ? 'transform rotate-180' : ''} h-5 w-5 text-gray-500`}
-                                            />
-                                        </Disclosure.Button>
-                                        <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">
-                                            {availableFilters.genders.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {availableFilters.genders.map(gender => (
-                                                        <div key={gender.id} className="flex items-center">
-                                                            <input
-                                                                id={`gender-${gender.id}`}
-                                                                name={`gender-${gender.id}`}
-                                                                type="checkbox"
-                                                                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                                                                checked={filters.genders.includes(gender.id)}
-                                                                onChange={() => handleFilterChange('genders', gender.id)}
-                                                            />
-                                                            <label htmlFor={`gender-${gender.id}`} className="ml-2 text-sm text-gray-900">
-                                                                {gender.name}
-                                                            </label>
-                                                        </div>
-                                                    ))}
+                                {/* Genders Filter */}
+                                <FilterAccordion id="genders" title="Genders">
+                                    {availableFilters.genders.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {availableFilters.genders.map(gender => (
+                                                <div key={gender.id} className="flex items-center">
+                                                    <input
+                                                        id={`gender-${gender.id}`}
+                                                        name={`gender-${gender.id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                                        checked={filters.genders.includes(gender.id)}
+                                                        onChange={() => handleFilterChange('genders', gender.id)}
+                                                    />
+                                                    <label htmlFor={`gender-${gender.id}`} className="ml-2 text-sm text-gray-900">
+                                                        {gender.name}
+                                                    </label>
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm text-gray-500">No genders available</p>
-                                            )}
-                                        </Disclosure.Panel>
-                                    </>
-                                )}
-                            </Disclosure>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">No genders available</p>
+                                    )}
+                                </FilterAccordion>
 
-                            {/* Age Groups Filter */}
-                            <Disclosure>
-                                {({ open }) => (
-                                    <>
-                                        <Disclosure.Button className="flex w-full justify-between items-center px-4 py-2 text-left text-sm font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200">
-                                            <span>Age Groups</span>
-                                            <ChevronUpIcon
-                                                className={`${open ? 'transform rotate-180' : ''} h-5 w-5 text-gray-500`}
-                                            />
-                                        </Disclosure.Button>
-                                        <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">
-                                            {availableFilters.ageGroups.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {availableFilters.ageGroups.map(ageGroup => (
-                                                        <div key={ageGroup.id} className="flex items-center">
-                                                            <input
-                                                                id={`ageGroup-${ageGroup.id}`}
-                                                                name={`ageGroup-${ageGroup.id}`}
-                                                                type="checkbox"
-                                                                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                                                                checked={filters.ageGroups.includes(ageGroup.id)}
-                                                                onChange={() => handleFilterChange('ageGroups', ageGroup.id)}
-                                                            />
-                                                            <label htmlFor={`ageGroup-${ageGroup.id}`} className="ml-2 text-sm text-gray-900">
-                                                                {ageGroup.name}
-                                                            </label>
-                                                        </div>
-                                                    ))}
+                                {/* Age Groups Filter */}
+                                <FilterAccordion id="ageGroups" title="Age Groups">
+                                    {availableFilters.ageGroups.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {availableFilters.ageGroups.map(ageGroup => (
+                                                <div key={ageGroup.id} className="flex items-center">
+                                                    <input
+                                                        id={`ageGroup-${ageGroup.id}`}
+                                                        name={`ageGroup-${ageGroup.id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                                        checked={filters.ageGroups.includes(ageGroup.id)}
+                                                        onChange={() => handleFilterChange('ageGroups', ageGroup.id)}
+                                                    />
+                                                    <label htmlFor={`ageGroup-${ageGroup.id}`} className="ml-2 text-sm text-gray-900">
+                                                        {ageGroup.name}
+                                                    </label>
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm text-gray-500">No age groups available</p>
-                                            )}
-                                        </Disclosure.Panel>
-                                    </>
-                                )}
-                            </Disclosure>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">No age groups available</p>
+                                    )}
+                                </FilterAccordion>
+                            </FilterAccordionGroup>
                         </div>
                     </div>
                 </div>

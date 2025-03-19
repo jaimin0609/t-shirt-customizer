@@ -1821,20 +1821,110 @@ nav,
 
 /* Fix for Headless UI dropdowns in filter panels */
 [data-headlessui-state="open"] {
-    margin-bottom: 24px !important;
+    margin-bottom: 12px !important;
     z-index: 1;
-}
-
-/* Only one panel open at a time - ensure proper display */
-[data-headlessui-state="open"]+[data-headlessui-state="open"] {
-    margin-top: 32px;
+    position: relative;
 }
 
 /* Ensure dropdowns don't overflow their container */
 [data-headlessui-state="open"]>div:last-child {
-    max-height: 300px;
+    max-height: 240px;
     overflow-y: auto;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--color-border);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background-color: white;
+    margin-top: -1px;
+    z-index: 5;
+}
+
+/* Properly style the filter dropdown headers */
+[data-headlessui-state] button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    color: var(--color-text-dark);
+    cursor: pointer;
+    margin-bottom: 0;
+    transition: all 0.2s ease;
+}
+
+/* Active state for filter headers */
+[data-headlessui-state="open"] button {
+    background-color: var(--color-hover);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-color: var(--color-border);
+    z-index: 6;
+    position: relative;
+}
+
+/* Fix the padding inside panels */
+[data-headlessui-state="open"]>div:last-child {
+    padding: 10px;
+}
+
+/* Improve checkbox styling inside filter dropdowns */
+[data-headlessui-state] .space-y-2>div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 3px 0;
+}
+
+/* Create more compact filter lists */
+[data-headlessui-state] .space-y-2 {
+    margin: 0;
+    padding: 0;
+}
+
+/* Fix for headless UI panels that should be compact */
+.Disclosure-panel,
+.disclosure-panel,
+[data-headlessui-state="open"]>div:last-child {
+    position: absolute !important;
+    width: 100% !important;
+    left: 0;
+    right: 0;
+    border-top: none;
+}
+
+/* Specifically target any components that might contain the filters */
+.ProductSearchPage [data-headlessui-state],
+.ProductsPage [data-headlessui-state] {
+    position: relative;
+    z-index: 10;
+}
+
+/* Lower z-index for inactive accordions */
+.ProductSearchPage [data-headlessui-state]:not([data-headlessui-state="open"]),
+.ProductsPage [data-headlessui-state]:not([data-headlessui-state="open"]) {
+    z-index: 1;
+}
+
+/* Mobile-specific fixes for filters */
+@media (max-width: 768px) {
+
+    /* Make dropdowns more compact on mobile */
+    [data-headlessui-state="open"]>div:last-child {
+        max-height: 200px;
+    }
+
+    /* More touch-friendly spacing for mobile */
+    [data-headlessui-state] button {
+        padding: 12px;
+    }
+
+    [data-headlessui-state] .space-y-2>div {
+        padding: 6px 0;
+    }
 }
 
 /* Fix for filter section positioning */
@@ -1844,51 +1934,4 @@ nav,
     position: relative;
     display: flex;
     flex-direction: column;
-}
-
-/* Add a dropdown-specific class for custom panels */
-.filter-dropdown-panel {
-    position: relative !important;
-    margin: 4px 0 16px 0;
-    background-color: var(--color-white);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-sm);
-    z-index: 1;
-}
-
-/* Specifically target any components that might contain the filters */
-.ProductSearchPage [data-headlessui-state],
-.ProductsPage [data-headlessui-state] {
-    position: relative;
-    z-index: auto;
-}
-
-/* Override any absolute positioning for filter panels */
-.ProductSearchPage [data-headlessui-state="open"]>div:last-child,
-.ProductsPage [data-headlessui-state="open"]>div:last-child {
-    position: static !important;
-    width: 100% !important;
-}
-
-/* Mobile-specific fixes for filters */
-@media (max-width: 768px) {
-
-    /* Ensure mobile filter panels don't overlap */
-    [data-headlessui-state="open"] {
-        margin-bottom: 32px !important;
-    }
-
-    /* Improve spacing between filter options on mobile */
-    .filter-option,
-    div[class*="flex items-center"],
-    .space-y-2>div {
-        margin-bottom: 8px;
-    }
-
-    /* Make dropdowns more compact on mobile */
-    [data-headlessui-state="open"]>div:last-child {
-        max-height: 250px;
-    }
 }
