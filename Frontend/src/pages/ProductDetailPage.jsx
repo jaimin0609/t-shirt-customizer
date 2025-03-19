@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
@@ -8,6 +8,7 @@ import { calculateProductPrice, formatPrice } from '../services/discountService'
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import { promotionLogger } from '../services/promotionLogger';
 
@@ -77,6 +78,10 @@ const ProductDetailPage = () => {
         rating: 5,
         comment: ''
     });
+    const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const sizeGuideRef = useRef(null);
+    const reviewFormRef = useRef(null);
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -215,6 +220,31 @@ const ProductDetailPage = () => {
             fetchPriceInfo();
         }
     }, [product]);
+
+    // Handle clicks outside of modals
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (sizeGuideRef.current && !sizeGuideRef.current.contains(event.target)) {
+                setShowSizeGuide(false);
+            }
+            if (reviewFormRef.current && !reviewFormRef.current.contains(event.target)) {
+                setShowReviewForm(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleReviewChange = (e) => {
+        const { name, value } = e.target;
+        setReviewForm(prev => ({
+            ...prev,
+            [name]: name === 'rating' ? parseInt(value) : value
+        }));
+    };
 
     const handleAddToCart = () => {
         if (!selectedSize) {
@@ -385,6 +415,153 @@ const ProductDetailPage = () => {
         setImageError(true);
     };
 
+    // Size Guide Content based on product category
+    const getSizeGuideContent = () => {
+        const category = product.category ? product.category.toLowerCase() : '';
+
+        if (category.includes('shirt') || category.includes('tee')) {
+            return (
+                <div className="size-guide-content">
+                    <h3 className="text-lg font-medium mb-4">T-Shirt Size Guide (inches)</h3>
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-gray-100">
+                                <th className="border p-2 text-left">Size</th>
+                                <th className="border p-2 text-left">Chest</th>
+                                <th className="border p-2 text-left">Length</th>
+                                <th className="border p-2 text-left">Sleeve</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="border p-2">S</td>
+                                <td className="border p-2">36-38</td>
+                                <td className="border p-2">28</td>
+                                <td className="border p-2">8</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">M</td>
+                                <td className="border p-2">38-40</td>
+                                <td className="border p-2">29</td>
+                                <td className="border p-2">8.5</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">L</td>
+                                <td className="border p-2">40-42</td>
+                                <td className="border p-2">30</td>
+                                <td className="border p-2">9</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">XL</td>
+                                <td className="border p-2">42-44</td>
+                                <td className="border p-2">31</td>
+                                <td className="border p-2">9.5</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">XXL</td>
+                                <td className="border p-2">44-46</td>
+                                <td className="border p-2">32</td>
+                                <td className="border p-2">10</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p className="mt-4 text-sm text-gray-600">Measurements may vary slightly between styles and materials.</p>
+                </div>
+            );
+        } else if (category.includes('hoodie') || category.includes('sweatshirt')) {
+            return (
+                <div className="size-guide-content">
+                    <h3 className="text-lg font-medium mb-4">Hoodie Size Guide (inches)</h3>
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-gray-100">
+                                <th className="border p-2 text-left">Size</th>
+                                <th className="border p-2 text-left">Chest</th>
+                                <th className="border p-2 text-left">Length</th>
+                                <th className="border p-2 text-left">Sleeve</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="border p-2">S</td>
+                                <td className="border p-2">38-40</td>
+                                <td className="border p-2">26</td>
+                                <td className="border p-2">24</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">M</td>
+                                <td className="border p-2">40-42</td>
+                                <td className="border p-2">27</td>
+                                <td className="border p-2">24.5</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">L</td>
+                                <td className="border p-2">42-44</td>
+                                <td className="border p-2">28</td>
+                                <td className="border p-2">25</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">XL</td>
+                                <td className="border p-2">44-46</td>
+                                <td className="border p-2">29</td>
+                                <td className="border p-2">25.5</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2">XXL</td>
+                                <td className="border p-2">46-48</td>
+                                <td className="border p-2">30</td>
+                                <td className="border p-2">26</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p className="mt-4 text-sm text-gray-600">Measurements may vary slightly between styles and materials.</p>
+                </div>
+            );
+        } else {
+            // Default size guide
+            return (
+                <div className="size-guide-content">
+                    <h3 className="text-lg font-medium mb-4">Standard Size Guide</h3>
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-gray-100">
+                                <th className="border p-2 text-left">Size</th>
+                                <th className="border p-2 text-left">S</th>
+                                <th className="border p-2 text-left">M</th>
+                                <th className="border p-2 text-left">L</th>
+                                <th className="border p-2 text-left">XL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="border p-2 font-medium">US Size</td>
+                                <td className="border p-2">4-6</td>
+                                <td className="border p-2">8-10</td>
+                                <td className="border p-2">12-14</td>
+                                <td className="border p-2">16-18</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2 font-medium">EU Size</td>
+                                <td className="border p-2">34-36</td>
+                                <td className="border p-2">38-40</td>
+                                <td className="border p-2">42-44</td>
+                                <td className="border p-2">46-48</td>
+                            </tr>
+                            <tr>
+                                <td className="border p-2 font-medium">UK Size</td>
+                                <td className="border p-2">8-10</td>
+                                <td className="border p-2">12-14</td>
+                                <td className="border p-2">16-18</td>
+                                <td className="border p-2">20-22</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p className="mt-4 text-sm text-gray-600">Please refer to product details for specific sizing information for this item.</p>
+                </div>
+            );
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -482,6 +659,104 @@ const ProductDetailPage = () => {
 
     return (
         <div className="container mx-auto py-8 px-4">
+            {/* Size Guide Modal */}
+            {showSizeGuide && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div
+                        ref={sizeGuideRef}
+                        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">Size Guide</h2>
+                            <button
+                                onClick={() => setShowSizeGuide(false)}
+                                className="text-gray-400 hover:text-gray-500"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
+                        {getSizeGuideContent()}
+                        <div className="mt-6 flex justify-center">
+                            <p className="text-sm text-gray-500">For any specific sizing questions, feel free to contact our customer support.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Review Form Modal */}
+            {showReviewForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div
+                        ref={reviewFormRef}
+                        className="bg-white rounded-lg max-w-lg w-full p-6"
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">Write a Review</h2>
+                            <button
+                                onClick={() => setShowReviewForm(false)}
+                                className="text-gray-400 hover:text-gray-500"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleReviewSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Rating
+                                </label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                                            className="focus:outline-none"
+                                        >
+                                            <StarIcon
+                                                className={`h-8 w-8 ${star <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="review-comment" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Your Review
+                                </label>
+                                <textarea
+                                    id="review-comment"
+                                    name="comment"
+                                    rows="4"
+                                    value={reviewForm.comment}
+                                    onChange={handleReviewChange}
+                                    placeholder="Share your experience with this product..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowReviewForm(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-primary-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                >
+                                    Submit Review
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Breadcrumbs for navigation */}
             <nav className="mb-4" aria-label="Breadcrumb">
                 <ol className="flex flex-wrap text-sm text-gray-500">
@@ -626,7 +901,7 @@ const ProductDetailPage = () => {
                                 <h2 className="text-sm font-medium text-gray-900">Size</h2>
                                 <button
                                     className="text-sm text-primary-600 hover:text-primary-500"
-                                    onClick={() => window.alert('Size guide will be displayed here')}
+                                    onClick={() => setShowSizeGuide(true)}
                                     aria-label="View size guide"
                                 >
                                     Size guide
@@ -794,7 +1069,7 @@ const ProductDetailPage = () => {
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
                         <p className="text-gray-600 mb-4">Be the first to share your experience with this product!</p>
                         <button
-                            onClick={() => window.alert('Review submission form will appear here')}
+                            onClick={() => product.stockCount > 0 && setShowReviewForm(true)}
                             className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm ${product.stockCount === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'text-white bg-primary-600 hover:bg-primary-700'}`}
                             disabled={product.stockCount === 0}
                         >
