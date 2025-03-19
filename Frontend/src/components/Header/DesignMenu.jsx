@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
     PaintBrushIcon,
     CursorArrowRippleIcon,
-    Cube3dIcon
+    CubeIcon
 } from '@heroicons/react/24/outline';
 
 const DesignMenu = () => {
@@ -11,20 +11,17 @@ const DesignMenu = () => {
         {
             name: 'Design Gallery',
             href: '/designs',
-            description: 'Browse our collection of pre-made designs',
             icon: PaintBrushIcon
         },
         {
             name: 'Custom Design',
             href: '/custom-design',
-            description: 'Create your own custom t-shirt design',
             icon: CursorArrowRippleIcon
         },
         {
             name: '3D Designer',
             href: '/3d-designer',
-            description: 'Use our 3D design tool for perfect visualization',
-            icon: Cube3dIcon
+            icon: CubeIcon
         }
     ];
 
