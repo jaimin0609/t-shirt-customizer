@@ -18,7 +18,6 @@ const DesignMenu = () => {
                         className="design-dropdown-item"
                     >
                         <div className="design-dropdown-item-name">{item.name}</div>
-                        <div className="design-dropdown-item-description">{item.description}</div>
                     </Link>
                 ))}
             </div>

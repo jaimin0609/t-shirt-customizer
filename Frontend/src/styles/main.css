@@ -227,25 +227,22 @@ main {
 }
 
 .design-dropdown-item {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     color: var(--color-text-medium);
     text-decoration: none;
     transition: background-color var(--transition-default);
+    display: flex;
+    align-items: center;
 }
 
 .design-dropdown-item:hover {
     background-color: var(--color-hover);
+    color: var(--color-text-dark);
 }
 
 .design-dropdown-item-name {
     font-weight: 500;
     color: var(--color-text-dark);
-    margin-bottom: var(--spacing-xs);
-}
-
-.design-dropdown-item-description {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-light);
 }
 
 /* Search */
