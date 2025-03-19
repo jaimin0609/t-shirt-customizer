@@ -108,8 +108,8 @@ const WishlistPage = () => {
                                             </div>
                                             <div className="ml-4">
                                                 <Link
-                                                    to={`/product/${item.productId}`}
-                                                    className="text-lg font-medium text-gray-900 hover:text-blue-600"
+                                                    to={`/products/${item.productId}`}
+                                                    className="hover:underline text-gray-900 font-medium"
                                                 >
                                                     {item.name}
                                                 </Link>
@@ -159,16 +159,15 @@ const WishlistPage = () => {
                             <div className="flex space-x-6">
                                 {similarProducts.map(product => (
                                     <div key={product._id || product.id} className="bg-white rounded-lg shadow-md overflow-hidden min-w-[200px] md:min-w-[250px] flex-shrink-0">
-                                        <Link to={`/product/${product._id || product.id}`} className="block">
-                                            <div className="aspect-square bg-gray-200">
+                                        <Link to={`/products/${product._id || product.id}`} className="block">
+                                            <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-w-1 aspect-h-1">
                                                 <img
                                                     src={product.image || '/assets/placeholder-product.jpg'}
                                                     alt={product.name}
-                                                    className="w-full h-full object-cover"
+                                                    className="w-full h-full object-cover object-center"
                                                     onError={(e) => {
-                                                        console.error('Failed to load product image, using placeholder');
+                                                        console.log('Image error. Using placeholder.');
                                                         e.target.src = '/assets/placeholder-product.jpg';
-                                                        e.target.onerror = null; // Prevent infinite error loops
                                                     }}
                                                 />
                                             </div>
