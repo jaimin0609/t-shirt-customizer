@@ -123,7 +123,17 @@ const ProductDetailPage = () => {
 
                 // Log product view for analytics
                 if (productData) {
-                    promotionLogger.logProductView(productData.id, user?.id);
+                    try {
+                        // Check if the logger exists and has the correct function
+                        if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
+                            promotionLogger.logProductView(productData.id, user?.id);
+                        } else {
+                            console.log('Product view tracked (analytics logger not available):', productData.id);
+                        }
+                    } catch (logError) {
+                        console.error('Error logging product view (non-critical):', logError);
+                        // Don't rethrow - this is a non-critical analytics function
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching product details:', err);

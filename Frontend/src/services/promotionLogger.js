@@ -58,5 +58,41 @@ export const promotionLogger = {
       console.log('Expected Price:', (product.price * (1 - product.promotion.discountValue/100)).toFixed(2));
     }
     console.groupEnd();
+  },
+
+  /**
+   * Log product view for analytics
+   * @param {String} productId - The product ID that was viewed
+   * @param {String} userId - The user ID who viewed the product (optional)
+   */
+  logProductView: (productId, userId = null) => {
+    console.log('[Analytics] Product View:', {
+      productId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // In a real application, this would send analytics data to a server
+    // For now, we just log it to the console
+  },
+
+  /**
+   * Log add to cart action for analytics
+   * @param {String} productId - The product ID added to cart
+   * @param {String} size - Selected size
+   * @param {String} color - Selected color
+   * @param {Number} quantity - Quantity added
+   */
+  logAddToCart: (productId, size, color, quantity) => {
+    console.log('[Analytics] Add to Cart:', {
+      productId,
+      size,
+      color,
+      quantity,
+      timestamp: new Date().toISOString()
+    });
+    
+    // In a real application, this would send analytics data to a server
+    // For now, we just log it to the console
   }
 }; 
