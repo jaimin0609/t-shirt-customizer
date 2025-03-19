@@ -787,42 +787,56 @@ div[class*="flex items-center"] input[type="checkbox"]+label {
     line-height: 1.2;
 }
 
-/* Fix checkbox alignment - more specific selector to override other styles */
-.sidebar-filters input[type="checkbox"],
+/* Fix checkbox visibility issues */
 .filter-option__checkbox,
+.sidebar-filters input[type="checkbox"],
+.filter-option input[type="checkbox"],
 input[type="checkbox"].h-4.w-4,
 [class*="filter"] input[type="checkbox"],
-.space-y-2 input[type="checkbox"] {
+.space-y-2 input[type="checkbox"],
+.filter-accordion input[type="checkbox"] {
     margin-right: var(--spacing-sm);
     flex-shrink: 0;
-    height: 16px !important;
-    width: 16px !important;
+    height: 18px !important;
+    width: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     position: relative;
-    top: 0;
-    vertical-align: middle;
-    display: inline-block;
     cursor: pointer;
-    border-radius: 4px;
+    appearance: auto;
+    /* Change from 'none' to 'auto' to restore default browser appearance */
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
     border: 1.5px solid var(--color-gray-400);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+    border-radius: 3px;
     background-color: white;
-    transition: border 0.2s, background-color 0.2s;
+    outline: none;
+    transition: all 0.2s ease;
 }
 
-/* Fix border and active states for checkboxes */
-input[type="checkbox"]:checked,
+/* Custom styling for checked state */
 .filter-option__checkbox:checked,
 .sidebar-filters input[type="checkbox"]:checked,
+.filter-option input[type="checkbox"]:checked,
+input[type="checkbox"].h-4.w-4:checked,
 [class*="filter"] input[type="checkbox"]:checked,
-.space-y-2 input[type="checkbox"]:checked {
+.space-y-2 input[type="checkbox"]:checked,
+.filter-accordion input[type="checkbox"]:checked {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
-    background-size: 85%;
-    background-position: center;
-    background-repeat: no-repeat;
+    position: relative;
+}
+
+/* Additional accessibility focus styles */
+.filter-option__checkbox:focus,
+.sidebar-filters input[type="checkbox"]:focus,
+.filter-option input[type="checkbox"]:focus,
+input[type="checkbox"].h-4.w-4:focus,
+[class*="filter"] input[type="checkbox"]:focus,
+.space-y-2 input[type="checkbox"]:focus,
+.filter-accordion input[type="checkbox"]:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 1px;
 }
 
 /* Fix checkbox label alignment - more specific selector */
