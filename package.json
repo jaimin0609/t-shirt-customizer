@@ -17,7 +17,8 @@
         "dependency-check:security": "node scripts/check-dependencies.js --security",
         "security-update": "node scripts/security-update.js",
         "security-update:frontend": "node scripts/security-update.js --frontend",
-        "security-update:backend": "node scripts/security-update.js --backend"
+        "security-update:backend": "node scripts/security-update.js --backend",
+        "build": "cd Frontend && npm install && npm run build && cp -r public/* dist/ && cp dist/index.html dist/404.html"
     },
     "devDependencies": {
         "autoprefixer": "^10.4.21",
