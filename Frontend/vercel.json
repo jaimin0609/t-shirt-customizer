@@ -18,6 +18,23 @@
             "destination": "/index.html"
         }
     ],
+    "routes": [
+        {
+            "handle": "filesystem"
+        },
+        {
+            "src": "/products/.*",
+            "dest": "/index.html"
+        },
+        {
+            "src": "/product/.*",
+            "dest": "/index.html"
+        },
+        {
+            "src": "/.*",
+            "dest": "/index.html"
+        }
+    ],
     "headers": [
         {
             "source": "/assets/(.*)",
