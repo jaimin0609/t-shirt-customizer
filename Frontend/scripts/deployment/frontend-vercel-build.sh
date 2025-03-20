@@ -41,30 +41,36 @@ if [ ! -f "public/critical.css" ]; then
   fi
 fi
 
-# Try direct build - MODIFIED TO BUILD DIRECTLY TO DIST ROOT
-echo "Building client bundle directly to dist root..."
+# Try direct build
+echo "Attempting to build with direct vite command..."
 if [ -f "node_modules/.bin/vite" ]; then
   echo "Using local vite from node_modules/.bin"
-  ./node_modules/.bin/vite build --outDir dist
+  ./node_modules/.bin/vite build
 elif command -v npx &> /dev/null; then
   echo "Using npx to run vite"
-  npx vite build --outDir dist
+  npx vite build
 elif command -v vite &> /dev/null; then
   echo "Using global vite"
-  vite build --outDir dist
+  vite build
 else
   echo "Vite not found, installing vite and dependencies..."
   npm install --save-dev vite cssnano postcss tailwindcss autoprefixer
-  ./node_modules/.bin/vite build --outDir dist
+  ./node_modules/.bin/vite build
 fi
 
-# Copy public files to ensure they're accessible
-echo "Copying public files to dist directory..."
-cp -r public/* dist/ || echo "No public files to copy or error copying"
-
-# Make sure index.html exists in dist root
-if [ ! -f "dist/index.html" ]; then
-  echo "WARNING: No index.html found in dist root. This will cause routing issues."
+# Create SPA routing fallback files
+echo "Creating SPA routing fallback files..."
+if [ -f "dist/index.html" ]; then
+  echo "Copying index.html to 200.html for client-side routing"
+  cp dist/index.html dist/200.html
+  cp dist/index.html dist/404.html
+  
+  # Create routes directories with fallbacks for deep links
+  mkdir -p dist/products
+  echo '<meta http-equiv="refresh" content="0;url=/" />' > dist/products/index.html
+  
+  mkdir -p dist/product
+  echo '<meta http-equiv="refresh" content="0;url=/" />' > dist/product/index.html
 fi
 
 # Verify the build output

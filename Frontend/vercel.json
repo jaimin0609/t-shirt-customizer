@@ -1,7 +1,7 @@
 {
     "version": 2,
     "framework": null,
-    "buildCommand": "npm install && chmod +x ./vercel-build.sh && ./vercel-build.sh",
+    "buildCommand": "npm install && chmod +x ./vercel-build.sh && SPA=true ./vercel-build.sh",
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "github": {
@@ -14,25 +14,16 @@
             "destination": "https://t-shirt-customizer-backend.onrender.com/api/:path*"
         },
         {
+            "source": "/products/:id",
+            "destination": "/index.html"
+        },
+        {
+            "source": "/product/:productId",
+            "destination": "/index.html"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
-        }
-    ],
-    "routes": [
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/products/.*",
-            "dest": "/index.html"
-        },
-        {
-            "src": "/product/.*",
-            "dest": "/index.html"
-        },
-        {
-            "src": "/.*",
-            "dest": "/index.html"
         }
     ],
     "headers": [

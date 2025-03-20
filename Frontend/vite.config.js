@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { resolve } from 'path'
 
 // Get current directory using ES modules pattern
 const __filename = fileURLToPath(import.meta.url)
@@ -83,7 +84,10 @@ export default defineConfig(({ mode }) => {
           }
           
           return undefined; // default to automatic chunk naming
-        }
+        },
+        input: {
+          main: resolve(__dirname, 'index.html'),
+        },
       },
       preserveEntrySignatures: "strict"
     },
@@ -164,14 +168,25 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       strictPort: true,
       host: true,
-      cors: true
+      cors: true,
+      proxy: {
+        '/api': {
+          target: 'https://t-shirt-customizer-backend.onrender.com',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '/api'),
+        },
+      }
     },
     
     preview: {
       port: 3000,
       strictPort: true,
       host: true,
-      cors: true
+      cors: true,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
     },
     
     resolve: {
