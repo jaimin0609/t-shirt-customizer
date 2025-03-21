@@ -6,6 +6,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 import { Op } from 'sequelize';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 const router = express.Router();
 
@@ -456,25 +458,95 @@ router.get('/reset-admin-temp', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('Admin123!', salt);
         
-        const admin = await User.create({
+        // Prepare admin data - without permissions first in case column doesn't exist yet
+        const adminData = {
             username: 'admin',
             name: 'Administrator',
             email: 'admin@example.com',
             password: hashedPassword,
             role: 'admin',
             status: 'active'
-        });
+        };
+        
+        // Try to create the admin user
+        let admin;
+        try {
+            admin = await User.create(adminData);
+        } catch (err) {
+            // If creating with permissions column fails, check if the error is about permissions
+            if (err.message.includes('permissions')) {
+                console.log('Attempting to create admin without permissions field');
+                // Create a simplified model without permissions
+                const UserSimple = sequelize.define('User', {
+                    username: { type: DataTypes.STRING, allowNull: false, unique: true },
+                    name: { type: DataTypes.STRING, allowNull: false },
+                    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+                    password: { type: DataTypes.STRING, allowNull: false },
+                    role: { type: DataTypes.STRING, allowNull: false, defaultValue: 'user' },
+                    status: { type: DataTypes.STRING, defaultValue: 'active' }
+                }, { tableName: 'Users' });
+                
+                // Try to create with simplified model
+                admin = await UserSimple.create(adminData);
+            } else {
+                // If it's another error, throw it
+                throw err;
+            }
+        }
         
         res.json({ 
             message: 'Admin user has been reset successfully. Use the following credentials:',
             credentials: {
                 email: 'admin@example.com',
                 password: 'Admin123!'
-            }
+            },
+            note: 'You may need to run the migration endpoint first if you got a permissions error'
         });
     } catch (error) {
         console.error('Error resetting admin user:', error);
-        res.status(500).json({ message: 'Error resetting admin user', error: error.message });
+        res.status(500).json({ 
+            message: 'Error resetting admin user', 
+            error: error.message,
+            hint: 'Try running the migration endpoint first: /api/admin/run-migration-temp'
+        });
+    }
+});
+
+// Add a temporary migration endpoint (REMOVE AFTER USE FOR SECURITY)
+router.get('/run-migration-temp', async (req, res) => {
+    try {
+        const { DataTypes } = require('sequelize');
+        const sequelize = require('../config/database.js').default;
+        
+        // Step 1: Update the role field to be a STRING instead of ENUM
+        await sequelize.getQueryInterface().changeColumn('Users', 'role', {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'user'
+        });
+        
+        console.log('Column "role" modified successfully');
+        
+        // Step 2: Add the permissions field
+        await sequelize.getQueryInterface().addColumn('Users', 'permissions', {
+            type: DataTypes.JSON,
+            allowNull: true,
+            defaultValue: null
+        });
+        
+        console.log('Column "permissions" added successfully');
+        
+        res.json({ 
+            message: 'Database migration completed successfully', 
+            success: true 
+        });
+    } catch (error) {
+        console.error('Migration error:', error);
+        res.status(500).json({ 
+            message: 'Error running migration', 
+            error: error.message,
+            hint: 'If permissions column already exists, try the reset endpoint again'
+        });
     }
 });
 
