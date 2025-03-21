@@ -1,6 +1,6 @@
 {
     "framework": "vite",
-    "buildCommand": "cd Frontend && npm install --legacy-peer-deps && npm install -g vite@6.2.2 && npm run build:vercel",
+    "buildCommand": "cd Frontend && npm install --legacy-peer-deps && sh scripts/deployment/frontend-vercel-build.sh",
     "outputDirectory": "Frontend/dist",
     "routes": [
         {
@@ -16,9 +16,7 @@
         }
     ],
     "env": {
-        "NODE_ENV": "production",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-        "SKIP_INSTALL_DEPS": "0"
+        "NODE_ENV": "production"
     },
     "build": {
         "env": {
