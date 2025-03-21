@@ -474,8 +474,35 @@ window.utilsModule = {
 };
 
 // Standard logout function
-function logout() {
+async function logout() {
     console.log('Logging out user...');
+    
+    try {
+        // Get auth token
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+            // Call the backend logout endpoint to invalidate the token
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                console.log('Successfully logged out on server');
+            } else {
+                console.warn('Server logout failed, but will continue with client logout');
+            }
+        }
+    } catch (error) {
+        console.error('Error during logout API call:', error);
+        // Continue with client-side logout even if API call fails
+    }
+    
+    // Clear local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('emergencyLogin');

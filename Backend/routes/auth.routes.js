@@ -40,7 +40,6 @@ router.post('/refresh-token',
 
 // Logout user
 router.post('/logout', 
-    auth, 
     errorController.catchAsync(authController.logout)
 );
 
