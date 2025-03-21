@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
-import { createRequire } from 'module'
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { resolve } from 'path'
@@ -11,7 +10,6 @@ import { resolve } from 'path'
 // Get current directory using ES modules pattern
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const require = createRequire(import.meta.url)
 
 const isProd = process.env.NODE_ENV === 'production'
 const analyze = process.env.ANALYZE === 'true'
@@ -84,21 +82,12 @@ export default defineConfig(({ mode }) => {
           }
           
           return undefined; // default to automatic chunk naming
-        },
-        input: {
-          main: resolve(__dirname, 'index.html'),
-        },
+        }
       },
       preserveEntrySignatures: "strict"
     },
     // Generate compressed chunks for modern browsers
-    target: 'esnext',
-    terserOptions: {
-      compress: {
-        ecma: 2020,
-        passes: isProd ? 2 : 1
-      }
-    }
+    target: 'esnext'
   }
   
   // Combine with main configuration
@@ -108,11 +97,7 @@ export default defineConfig(({ mode }) => {
         // Optimize React rendering
         jsxRuntime: 'automatic',
         // Disable React Fast Refresh which can interfere with context
-        fastRefresh: false,
-        babel: {
-          // Add default babel plugins for better compatibility
-          plugins: []
-        }
+        fastRefresh: false
       }),
       VitePWA({
         registerType: 'prompt',
@@ -158,9 +143,6 @@ export default defineConfig(({ mode }) => {
         generateScopedName: isProd ? 
           '[hash:base64:8]' : 
           '[name]__[local]'
-      },
-      preprocessorOptions: {
-        // Add any CSS preprocessor options here if needed
       }
     },
     
@@ -191,11 +173,7 @@ export default defineConfig(({ mode }) => {
     
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
-        // Add aliases for direct imports - ensure paths are correct
-        'react': path.resolve(__dirname, 'node_modules/react'),
-        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-        'react/jsx-runtime': path.resolve(__dirname, 'node_modules/react/jsx-runtime')
+        '@': path.resolve(__dirname, './src')
       },
       // Ensure .jsx extensions are handled properly
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
@@ -208,11 +186,7 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),
       'process.env.REACT_APP_VERSION': JSON.stringify(process.env.npm_package_version || '1.0.0'),
-      // Remove the CDN React flag as it causes confusion
-      'process.env.BASE_URL': JSON.stringify('/'),
-      // Explicitly set React global
-      'global.React': 'React',
-      'window.React': 'React'
+      'process.env.BASE_URL': JSON.stringify('/')
     }
   };
 });

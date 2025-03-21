@@ -1,6 +1,6 @@
 {
     "framework": "vite",
-    "buildCommand": "cd Frontend && npm install vite@5.4.14 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps && sh scripts/deployment/frontend-vercel-build.sh",
+    "buildCommand": "cd Frontend && npm install vite@6.2.2 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps && sh scripts/deployment/frontend-vercel-build.sh",
     "outputDirectory": "Frontend/dist",
     "routes": [
         {
@@ -16,7 +16,6 @@
         }
     ],
     "env": {
-        "VITE_FORCE_VERSION": "5.4.14",
         "NODE_ENV": "production"
     }
 }
