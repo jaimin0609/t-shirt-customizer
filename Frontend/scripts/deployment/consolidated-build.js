@@ -106,7 +106,10 @@ const runBuild = () => {
   // Install Vite explicitly with correct version
   console.log('Installing Vite 6.2.2 explicitly...');
   try {
-    execCommand('npm install vite@6.2.2 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps');
+    // First install Vite globally in the project
+    execCommand('npm install vite@6.2.2 --save-dev --force --legacy-peer-deps');
+    // Then install related plugins
+    execCommand('npm install @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps');
   } catch (error) {
     console.warn('Warning: Could not install Vite 6.2.2:', error.message);
   }
@@ -115,15 +118,17 @@ const runBuild = () => {
   ensureCriticalCss();
 
   try {
-    // Try to use local vite from node_modules
-    if (fs.existsSync('node_modules/.bin/vite')) {
-      console.log('Using local vite from node_modules/.bin');
-      execCommand('./node_modules/.bin/vite build');
-    } else {
-      // Try using npx vite with specific version
-      console.log('Using npx to run vite with specific version');
-      execCommand('npx vite@6.2.2 build');
+    // Try to use local vite from node_modules with npx to ensure proper resolution
+    console.log('Using npx to run vite with specific version');
+    
+    // Create a temporary package.json in the current directory if needed
+    if (!fs.existsSync('node_modules/vite')) {
+      console.log('Creating temporary vite installation...');
+      execCommand('npm install vite@6.2.2 --no-save');
     }
+    
+    // Run the build using the locally installed vite
+    execCommand('node ./node_modules/vite/bin/vite.js build');
 
     // Create SPA fallbacks
     createSpaFallbacks();
@@ -137,7 +142,7 @@ const runBuild = () => {
     // Try emergency build by installing vite directly with specific version
     try {
       execCommand('npm install --save-dev vite@6.2.2 postcss tailwindcss autoprefixer --force --legacy-peer-deps');
-      execCommand('./node_modules/.bin/vite build');
+      execCommand('node ./node_modules/vite/bin/vite.js build');
       createSpaFallbacks();
       return verifyBuildOutput();
     } catch (finalError) {
