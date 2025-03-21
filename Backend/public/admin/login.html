@@ -169,6 +169,14 @@
                 debugInfo.innerHTML = `<p>Attempting login for: ${email}</p>`;
                 debugInfo.style.display = 'block';
                 
+                // Add origin information to help debug CORS issues
+                const originInfo = {
+                    origin: window.location.origin,
+                    pathname: window.location.pathname
+                };
+                console.log('Request origin:', originInfo);
+                debugInfo.innerHTML += `<p>From: ${originInfo.origin}</p>`;
+                
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: {
@@ -178,7 +186,9 @@
                         email, 
                         password,
                         isAdminLogin: true // Add this flag for admin login
-                    })
+                    }),
+                    // Ensure credentials are included
+                    credentials: 'include'
                 });
                 
                 const responseData = await response.json();
@@ -187,6 +197,12 @@
                 if (!response.ok) {
                     // Add debug information
                     debugInfo.innerHTML += `<p>Error: ${responseData.message || 'Unknown error'}</p>`;
+                    
+                    // Special handling for CORS errors
+                    if (response.status === 403 && responseData.message && responseData.message.includes('untrusted origin')) {
+                        debugInfo.innerHTML += `<p class="text-danger">CORS Error: Your browser is blocking the request due to security settings.</p>`;
+                        debugInfo.innerHTML += `<p>Try accessing this page directly via the server URL instead of through a proxy.</p>`;
+                    }
                     
                     // Re-enable login button
                     loginButton.disabled = false;

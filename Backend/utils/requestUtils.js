@@ -65,15 +65,32 @@ export const isFromTrustedOrigin = (req) => {
     
     // Define trusted origins
     const trustedOrigins = [
-        // Add your domains here
+        // Local development
         'http://localhost:3000',
         'http://localhost:5173',
-        'https://your-production-domain.com'
+        'http://localhost:3001',
+        // Render deployment URLs
+        'https://t-shirt-customizer-backend.onrender.com',
+        'https://t-shirt-customizer-frontend.onrender.com',
+        // Include all subdomains of onrender.com
+        'onrender.com',
+        // Allow requests with no explicit origin for local testing
+        ''
     ];
     
-    // Check if origin starts with any trusted origin
+    // Check if we need to bypass this check during development
+    if (process.env.NODE_ENV !== 'production') {
+        return true; // Allow all origins in development mode
+    }
+    
+    // Check if origin exactly matches or starts with any trusted origin
     return trustedOrigins.some(trusted => {
-        return origin.startsWith(trusted);
+        if (trusted === '') return origin === '';
+        // If it's a domain suffix (like onrender.com) without http/https
+        if (!trusted.startsWith('http')) {
+            return origin.includes(trusted);
+        }
+        return origin === trusted || origin.startsWith(trusted);
     });
 };
 

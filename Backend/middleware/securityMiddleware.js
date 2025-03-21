@@ -58,19 +58,28 @@ export const initializeSecurityMiddleware = () => {
         const allowedOrigins = [
             'http://localhost:3000',
             'http://localhost:5173',
-            'https://your-production-domain.com'
+            'http://localhost:3001',
+            'https://t-shirt-customizer-backend.onrender.com',
+            'https://t-shirt-customizer-frontend.onrender.com'
         ];
 
         const origin = req.headers.origin;
         
-        // Allow requests with no origin (like mobile apps)
-        if (origin && allowedOrigins.includes(origin)) {
-            res.setHeader('Access-Control-Allow-Origin', origin);
+        // In development mode, allow all origins
+        if (process.env.NODE_ENV !== 'production') {
+            res.setHeader('Access-Control-Allow-Origin', origin || '*');
+        }
+        // In production, check against the allowlist
+        else if (origin) {
+            // Check if the origin is in our allowlist or contains onrender.com
+            if (allowedOrigins.includes(origin) || origin.includes('onrender.com')) {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+            }
         }
 
         // Set other CORS headers
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         
         // Handle preflight requests
@@ -99,13 +108,26 @@ export const initializeSecurityMiddleware = () => {
 
     // Middleware to validate Origin header for CORS requests
     const validateOrigin = (req, res, next) => {
-        // Skip origin validation for non-mutating requests
-        if (req.method === 'GET' || req.method === 'OPTIONS') {
+        // Skip origin validation for GET, OPTIONS, and authentication endpoints
+        if (req.method === 'GET' || 
+            req.method === 'OPTIONS' || 
+            req.path.startsWith('/api/auth/') ||
+            req.path.includes('/login') ||
+            req.path.includes('/logout')) {
             return next();
         }
         
         // For mutation requests (POST, PUT, DELETE), validate origin header
+        // In development mode, allow all origins
+        if (process.env.NODE_ENV !== 'production') {
+            return next();
+        }
+        
         if (!isFromTrustedOrigin(req)) {
+            console.warn(`CORS validation failed for: ${req.method} ${req.path}`);
+            console.warn(`Origin: ${req.headers.origin || 'none'}`);
+            console.warn(`Referer: ${req.headers.referer || 'none'}`);
+            
             return res.status(403).json({
                 error: 'Invalid request origin',
                 message: 'Request from untrusted origin'
