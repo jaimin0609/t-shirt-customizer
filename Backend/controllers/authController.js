@@ -96,11 +96,13 @@ export const register = async (req, res) => {
  */
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, isAdminLogin } = req.body;
+        console.log(`Login attempt for ${email}${isAdminLogin ? ' (admin login)' : ''}`);
 
         // Find user by email
         const user = await User.findOne({ where: { email } });
         if (!user) {
+            console.log(`Login failed: User not found for email ${email}`);
             return res.status(400).json({ 
                 message: 'Invalid credentials', 
                 field: 'email' 
@@ -110,14 +112,28 @@ export const login = async (req, res) => {
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log(`Login failed: Password mismatch for user ${email}`);
             return res.status(400).json({ 
                 message: 'Invalid credentials', 
                 field: 'password' 
             });
         }
+        
+        // If this is an admin login, verify user has admin role
+        if (isAdminLogin && user.role !== 'admin') {
+            console.log(`Admin login denied: User ${email} has role ${user.role}`);
+            return res.status(403).json({
+                message: 'Access denied. Admin privileges required.',
+                field: 'role'
+            });
+        }
 
-        // Generate token
-        const token = generateToken(user);
+        // Generate token with extended expiry for admin users
+        const tokenOptions = {
+            expiresIn: user.role === 'admin' ? '7d' : '1d' // Longer expiry for admins
+        };
+        const token = generateToken(user, tokenOptions);
+        console.log(`Login successful for ${email} with role ${user.role}`);
 
         res.json({
             message: 'Login successful',

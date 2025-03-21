@@ -86,16 +86,18 @@ app.use(securityMiddleware.configureCors);
 
 // Apply rate limiting to all requests
 const apiLimiter = rateLimit({
-    windowMs: 3 * 60 * 1000, // 3 minutes
-    max: process.env.NODE_ENV === 'production' ? 300 : 2000, // Much higher limit, especially in development
-    message: 'Too many requests from this IP, please try again after 3 minutes',
+    windowMs: 15 * 60 * 1000, // 15 minutes instead of 3
+    max: process.env.NODE_ENV === 'production' ? 1000 : 5000, // Much higher limits
+    message: 'Too many requests from this IP, please try again after 15 minutes',
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for admin panel routes in development and testing
+    // Skip rate limiting for admin panel routes
     skip: (req, res) => {
-        // Skip for admin panel API requests in development and testing
-        if (process.env.NODE_ENV !== 'production' && 
-            (req.path.startsWith('/admin') || req.path.startsWith('/api/admin'))) {
+        // Skip for admin panel and authentication routes
+        if (req.path.startsWith('/admin') || 
+            req.path.startsWith('/api/admin') || 
+            req.path.startsWith('/api/auth/login') ||
+            req.path.startsWith('/api/auth/logout')) {
             return true;
         }
         return false;

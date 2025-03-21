@@ -112,167 +112,6 @@ router.get('/reset-admin', async (req, res) => {
   }
 });
 
-// Emergency direct login without password check
-router.get('/emergency-login', async (req, res) => {
-  try {
-    // This route should only be accessible with a security code
-    const securityCode = req.query.secret;
-    const expectedCode = process.env.ADMIN_RESET_SECRET || 'temporary-dev-secret';
-    
-    if (securityCode !== expectedCode) {
-      console.log('Invalid security code provided for emergency login');
-      return res.status(403).json({ 
-        message: 'Access denied. Valid security code required.'
-      });
-    }
-    
-    // Find the admin user
-    const adminUser = await User.findOne({
-      where: {
-        role: 'admin'
-      },
-      order: [['createdAt', 'ASC']] // Get the oldest admin user
-    });
-    
-    if (!adminUser) {
-      return res.status(404).json({ 
-        message: 'Admin user not found. Create one first using the /reset-admin endpoint.'
-      });
-    }
-    
-    // Generate JWT token with full admin privileges
-    const token = jwt.sign(
-      { 
-        id: adminUser.id, 
-        email: adminUser.email, 
-        role: adminUser.role,
-        isEmergencyLogin: true,  // Mark this as an emergency login
-        timestamp: Date.now()    // Add timestamp for additional security
-      },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '1d' }
-    );
-    
-    // Log the emergency access
-    console.log(`Emergency login granted for admin user: ${adminUser.email} (ID: ${adminUser.id})`);
-    
-    // Remove password from response
-    const userData = adminUser.toJSON();
-    delete userData.password;
-    
-    // Add emergency login flag to the user data for client-side use
-    userData.isEmergencyLogin = true;
-    
-    // Return HTML with auto-login script
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Emergency Admin Login</title>
-          <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-          <style>
-            body { padding: 20px; }
-            pre { background: #f8f9fa; padding: 15px; border-radius: 5px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="alert alert-success">
-              <h4>Emergency Login Successful!</h4>
-              <p>You now have full administrator access to the system.</p>
-            </div>
-            
-            <div class="card mb-4">
-              <div class="card-header">User Details</div>
-              <div class="card-body">
-                <p><strong>ID:</strong> ${userData.id}</p>
-                <p><strong>Email:</strong> ${userData.email}</p>
-                <p><strong>Role:</strong> ${userData.role}</p>
-                <p><strong>Status:</strong> ${userData.status}</p>
-              </div>
-            </div>
-            
-            <div class="card mb-4">
-              <div class="card-header">Access Information</div>
-              <div class="card-body">
-                <p><strong>Access Type:</strong> <span class="badge bg-warning">Emergency Access</span></p>
-                <p><strong>Expires:</strong> 24 hours from now</p>
-                <p class="text-danger"><strong>Note:</strong> For security reasons, emergency access is logged and monitored.</p>
-              </div>
-            </div>
-            
-            <div class="d-grid gap-2">
-              <button class="btn btn-primary" id="loginBtn">Continue to Admin Panel</button>
-            </div>
-          </div>
-          
-          <script>
-            // Store the token and user data
-            localStorage.setItem('token', '${token}');
-            localStorage.setItem('user', '${JSON.stringify(userData).replace(/'/g, "\\'")}');
-            localStorage.setItem('emergencyLogin', 'true'); // Track this as an emergency login
-            localStorage.setItem('isAdminSession', 'true'); // Extra flag to ensure admin privileges
-            
-            document.getElementById('loginBtn').addEventListener('click', function() {
-              window.location.href = '/admin/index.html';
-            });
-            
-            // Auto-redirect after 5 seconds
-            setTimeout(() => {
-              window.location.href = '/admin/index.html';
-            }, 5000);
-          </script>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Emergency login error:', error);
-    res.status(500).json({ 
-      message: 'Error during emergency login', 
-      error: error.message 
-    });
-  }
-});
-
-// Verify security code for emergency access
-router.post('/verify-security-code', async (req, res) => {
-  try {
-    const { securityCode } = req.body;
-    
-    // The expected code - can be configured with environment variable
-    const expectedCode = process.env.ADMIN_RESET_SECRET || 'temporary-dev-secret';
-    
-    // Enhanced security: add a small random delay to prevent timing attacks
-    const randomDelay = Math.floor(Math.random() * 500) + 200; // 200-700ms random delay
-    await new Promise(resolve => setTimeout(resolve, randomDelay));
-    
-    // Validate security code - this is a server-side check that can't be bypassed through client inspection
-    if (securityCode !== expectedCode) {
-      console.log('Invalid security code attempt');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid security code' 
-      });
-    }
-    
-    // If code is valid, allow emergency access
-    console.log('Valid security code provided, emergency access granted');
-    return res.json({
-      success: true,
-      message: 'Security code verified'
-    });
-  } catch (error) {
-    console.error('Security code verification error:', error);
-    return res.status(500).json({ 
-      success: false,
-      message: 'Error verifying security code', 
-      error: error.message 
-    });
-  }
-});
-
 // Add new routes for user management
 
 // Get all users (admin only)
@@ -621,10 +460,14 @@ router.get('/create-simple-admin', async (req, res) => {
 // Add a direct admin login endpoint (REMOVE AFTER USE FOR SECURITY)
 router.get('/direct-login', async (req, res) => {
     try {
+        console.log('Direct login endpoint called');
+        
         // Find admin user
         const admin = await User.findOne({
             where: { role: 'admin' }
         });
+        
+        console.log('Admin user search result:', admin ? 'Found' : 'Not found');
         
         if (!admin) {
             return res.status(404).json({
@@ -633,37 +476,54 @@ router.get('/direct-login', async (req, res) => {
             });
         }
         
-        // Generate JWT token directly
-        const token = jwt.sign(
-            { 
-                id: admin.id, 
-                email: admin.email, 
-                role: admin.role 
-            },
-            process.env.JWT_SECRET || 'your-default-jwt-secret-key-for-development',
-            { expiresIn: '1d' }
-        );
+        // Get JWT secret with fallback
+        const jwtSecret = process.env.JWT_SECRET || 'your-default-jwt-secret-key-for-development';
+        console.log('Using JWT secret:', jwtSecret.substring(0, 3) + '...[redacted]');
         
-        // Return token and user info
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token,
-            user: {
-                id: admin.id,
-                username: admin.username,
-                name: admin.name,
-                email: admin.email,
-                role: admin.role
-            },
-            instructions: 'Copy this token and manually set it in your browser localStorage with key "token"'
-        });
+        try {
+            // Generate JWT token directly with explicit parameters
+            const token = jwt.sign(
+                { 
+                    id: admin.id, 
+                    email: admin.email, 
+                    role: admin.role 
+                },
+                jwtSecret,
+                { expiresIn: '1d' }
+            );
+            
+            console.log('Token generated successfully');
+            
+            // Return token and user info
+            return res.json({
+                success: true,
+                message: 'Login successful',
+                token,
+                user: {
+                    id: admin.id,
+                    username: admin.username,
+                    name: admin.name,
+                    email: admin.email,
+                    role: admin.role
+                },
+                instructions: 'Copy this token and manually set it in your browser localStorage with key "token"'
+            });
+        } catch (jwtError) {
+            console.error('JWT signing error:', jwtError);
+            return res.status(500).json({
+                success: false,
+                message: 'Error generating JWT token',
+                error: jwtError.message,
+                suggestion: 'Check if JWT_SECRET is set correctly in environment variables'
+            });
+        }
     } catch (error) {
         console.error('Error with direct login:', error);
         res.status(500).json({
             success: false,
             message: 'Error generating login token',
-            error: error.message
+            error: error.message,
+            stack: error.stack
         });
     }
 });
@@ -820,6 +680,41 @@ router.get('/login-helper', (req, res) => {
     `;
     
     res.send(html);
+});
+
+// Add an endpoint to check and fix JWT_SECRET (REMOVE AFTER USE FOR SECURITY)
+router.get('/check-jwt-secret', async (req, res) => {
+    try {
+        // Check if JWT_SECRET is set
+        const currentSecret = process.env.JWT_SECRET;
+        
+        if (!currentSecret) {
+            console.log('JWT_SECRET not found in environment');
+            
+            // Set a default JWT secret if it's not set
+            process.env.JWT_SECRET = 'temporary-jwt-secret-for-development-only';
+            console.log('Set temporary JWT_SECRET in process.env');
+            
+            return res.json({
+                success: true,
+                message: 'JWT_SECRET was not set, but has been temporarily set in memory',
+                action: 'Please set the JWT_SECRET environment variable permanently in your hosting platform'
+            });
+        }
+        
+        return res.json({
+            success: true,
+            message: 'JWT_SECRET is already set',
+            secretFirstChars: currentSecret.substring(0, 3) + '...[redacted]'
+        });
+    } catch (error) {
+        console.error('Error checking JWT_SECRET:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking JWT_SECRET',
+            error: error.message
+        });
+    }
 });
 
 // Add more admin routes as needed

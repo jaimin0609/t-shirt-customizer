@@ -13,8 +13,8 @@ const tokenBlacklist = new Set();
  * Stores IP address as key and count/timestamp as value
  */
 const rateLimitMap = new Map();
-const MAX_ATTEMPTS = process.env.NODE_ENV === 'production' ? 5 : 50; // Much more lenient in development
-const WINDOW_MS = 3 * 60 * 1000; // 3 minutes
+const MAX_ATTEMPTS = process.env.NODE_ENV === 'production' ? 50 : 100; // Increased from 5 to 50 in production
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes instead of 3
 
 /**
  * Check if a request is being rate limited
@@ -22,6 +22,11 @@ const WINDOW_MS = 3 * 60 * 1000; // 3 minutes
  * @returns {boolean} - Whether the request should be rate limited
  */
 const isRateLimited = (ip) => {
+    // Skip rate limiting for admin panel
+    if (ip.includes('127.0.0.1') || ip.includes('::1') || ip.includes('localhost')) {
+        return false;
+    }
+    
     const now = Date.now();
     
     // Clean up expired entries
@@ -246,9 +251,7 @@ const auth = async (req, res, next) => {
             id: user.id,
             email: user.email,
             role: user.role,
-            status: user.status,
-            // Pass through emergency login flag if present in token
-            isEmergencyLogin: decoded.isEmergencyLogin || false
+            status: user.status
         };
         
         // Store token in request for logout functionality
@@ -269,24 +272,6 @@ const auth = async (req, res, next) => {
  * Checks if the authenticated user has admin role
  */
 const isAdmin = (req, res, next) => {
-    // Special case for emergency login - always grant access but with improved logging
-    if (req.user && req.user.isEmergencyLogin === true) {
-        // Log the emergency access with more details
-        console.warn(`⚠️ EMERGENCY LOGIN: Admin access granted to ${req.user.email} [ID: ${req.user.id}]`);
-        console.warn(`⚠️ Emergency access to: ${req.method} ${req.originalUrl}`);
-        
-        // Add an audit log entry for emergency access
-        try {
-            // This would ideally be a separate service call to log the emergency access
-            console.warn(`⚠️ AUDIT: Emergency admin access by ${req.user.email} at ${new Date().toISOString()}`);
-        } catch (logError) {
-            console.error('Failed to log emergency access:', logError);
-        }
-        
-        next();
-        return;
-    }
-
     // Regular admin check
     if (req.user && req.user.role === 'admin') {
         next();
