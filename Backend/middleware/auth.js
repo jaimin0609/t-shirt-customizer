@@ -298,4 +298,4 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-export { auth, isAdmin, blacklistToken }; 
+export { auth, isAdmin }; 
