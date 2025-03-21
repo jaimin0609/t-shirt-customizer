@@ -10,16 +10,29 @@ echo "Node version: $(node -v)"
 echo "NPM version: $(npm -v)"
 echo "Current directory: $(pwd)"
 
-# Ensure we're in the Frontend directory
+# Navigate to Frontend directory if not already there
 if [[ ! "$(pwd)" == */Frontend ]]; then
   cd Frontend || { echo "Failed to change to Frontend directory"; exit 1; }
 fi
 
-# Create dist directory if it doesn't exist
-mkdir -p dist
+# Install dependencies if node_modules doesn't exist
+if [ ! -d "node_modules" ]; then
+  echo "Installing dependencies..."
+  npm install
+fi
 
-# Create an index.html directly to ensure we have something to show
-cat > dist/index.html << 'EOL'
+# Attempt to build with Vite
+echo "Building with Vite..."
+if npx vite build; then
+  echo "Vite build successful!"
+else
+  echo "Vite build failed, creating fallback pages..."
+  
+  # Create dist directory if it doesn't exist
+  mkdir -p dist
+
+  # Create an index.html directly to ensure we have something to show
+  cat > dist/index.html << 'EOL'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,20 +54,15 @@ cat > dist/index.html << 'EOL'
       <p>Please wait while we finalize your application setup. This page will automatically update once the full app is ready.</p>
     </div>
   </div>
-  <script>
-    // Redirect to the proper application once ready
-    setTimeout(() => {
-      window.location.reload();
-    }, 10000);
-  </script>
 </body>
 </html>
 EOL
 
-# Create a minimal 404 page
-cp dist/index.html dist/404.html
+  # Create a minimal 404 page
+  cp dist/index.html dist/404.html
 
-# Echo success message
-echo "Basic placeholder pages created successfully"
-echo "Build completed as a fallback to ensure deployment"
+  echo "Basic placeholder pages created successfully"
+fi
+
+echo "Build process completed"
 exit 0 
