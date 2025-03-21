@@ -515,8 +515,11 @@ router.get('/reset-admin-temp', async (req, res) => {
 // Add a temporary migration endpoint (REMOVE AFTER USE FOR SECURITY)
 router.get('/run-migration-temp', async (req, res) => {
     try {
+        // Use dynamic import instead of require for ES modules
         const { DataTypes } = require('sequelize');
-        const sequelize = require('../config/database.js').default;
+        
+        // Use existing sequelize instance that was already imported at the top
+        // instead of requiring the module again
         
         // Step 1: Update the role field to be a STRING instead of ENUM
         await sequelize.getQueryInterface().changeColumn('Users', 'role', {
