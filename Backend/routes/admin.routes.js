@@ -445,6 +445,39 @@ router.post('/users/:id/reset-password', auth, isAdmin, async (req, res) => {
     }
 });
 
+// Add a temporary reset endpoint (REMOVE AFTER USE FOR SECURITY)
+// This endpoint will reset admin users and can be called without authentication
+router.get('/reset-admin-temp', async (req, res) => {
+    try {
+        // DELETE FROM "Users" WHERE role = 'admin';
+        await User.destroy({ where: { role: 'admin' } });
+        
+        // Create a new admin user
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('Admin123!', salt);
+        
+        const admin = await User.create({
+            username: 'admin',
+            name: 'Administrator',
+            email: 'admin@example.com',
+            password: hashedPassword,
+            role: 'admin',
+            status: 'active'
+        });
+        
+        res.json({ 
+            message: 'Admin user has been reset successfully. Use the following credentials:',
+            credentials: {
+                email: 'admin@example.com',
+                password: 'Admin123!'
+            }
+        });
+    } catch (error) {
+        console.error('Error resetting admin user:', error);
+        res.status(500).json({ message: 'Error resetting admin user', error: error.message });
+    }
+});
+
 // Add more admin routes as needed
 
 export default router; 
