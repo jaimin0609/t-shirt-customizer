@@ -19,11 +19,11 @@ echo "Directory contents: $(ls -la)"
 export PATH="$PATH:$(pwd)/node_modules/.bin:/vercel/path0/node_modules/.bin"
 echo "PATH: $PATH"
 
-# Verify that PostCSS and Tailwind are installed
-echo "Checking for PostCSS and Tailwind..."
-if [ ! -d "node_modules/postcss" ] || [ ! -d "node_modules/tailwindcss" ]; then
-  echo "PostCSS or Tailwind not found, installing dependencies..."
-  npm install --save-dev postcss tailwindcss autoprefixer cssnano
+# Verify that Vite, PostCSS and Tailwind are installed
+echo "Checking for dependencies..."
+if [ ! -d "node_modules/vite" ] || [ ! -d "node_modules/postcss" ] || [ ! -d "node_modules/tailwindcss" ]; then
+  echo "Installing Vite and dependencies..."
+  npm install --save-dev vite@6.2.2 postcss tailwindcss autoprefixer cssnano --force --legacy-peer-deps
 fi
 
 # Ensure critical CSS is generated
@@ -41,22 +41,9 @@ if [ ! -f "public/critical.css" ]; then
   fi
 fi
 
-# Try direct build
-echo "Attempting to build with direct vite command..."
-if [ -f "node_modules/.bin/vite" ]; then
-  echo "Using local vite from node_modules/.bin"
-  ./node_modules/.bin/vite build
-elif command -v npx &> /dev/null; then
-  echo "Using npx to run vite"
-  npx vite build
-elif command -v vite &> /dev/null; then
-  echo "Using global vite"
-  vite build
-else
-  echo "Vite not found, installing vite and dependencies..."
-  npm install --save-dev vite cssnano postcss tailwindcss autoprefixer
-  ./node_modules/.bin/vite build
-fi
+# Try direct build with npx to ensure the right version is used
+echo "Attempting to build with npx vite command..."
+npx --yes vite@6.2.2 build
 
 # Verify the build output
 if [ -d "dist" ]; then

@@ -118,17 +118,11 @@ const runBuild = () => {
   ensureCriticalCss();
 
   try {
-    // Try to use local vite from node_modules with npx to ensure proper resolution
+    // Use npx to run vite directly, which will handle finding the right binary
     console.log('Using npx to run vite with specific version');
     
-    // Create a temporary package.json in the current directory if needed
-    if (!fs.existsSync('node_modules/vite')) {
-      console.log('Creating temporary vite installation...');
-      execCommand('npm install vite@6.2.2 --no-save');
-    }
-    
-    // Run the build using the locally installed vite
-    execCommand('node ./node_modules/vite/bin/vite.js build');
+    // Run the build using npx to ensure correct resolution
+    execCommand('npx --yes vite@6.2.2 build');
 
     // Create SPA fallbacks
     createSpaFallbacks();
@@ -139,10 +133,11 @@ const runBuild = () => {
     console.error('Build failed:', error.message);
     console.log('Attempting emergency build with direct installation...');
     
-    // Try emergency build by installing vite directly with specific version
+    // Try emergency build with a different approach
     try {
-      execCommand('npm install --save-dev vite@6.2.2 postcss tailwindcss autoprefixer --force --legacy-peer-deps');
-      execCommand('node ./node_modules/vite/bin/vite.js build');
+      // Try a global install approach
+      execCommand('npm install -g vite@6.2.2 --force');
+      execCommand('npx --yes vite@6.2.2 build');
       createSpaFallbacks();
       return verifyBuildOutput();
     } catch (finalError) {
