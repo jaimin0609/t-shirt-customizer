@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -268,6 +269,180 @@ router.post('/verify-security-code', async (req, res) => {
       error: error.message 
     });
   }
+});
+
+// Add new routes for user management
+
+// Get all users (admin only)
+router.get('/users', auth, isAdmin, async (req, res) => {
+    try {
+        const users = await User.findAll({
+            attributes: { exclude: ['password'] }
+        });
+        
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Create a new user (admin only)
+router.post('/users', auth, isAdmin, async (req, res) => {
+    try {
+        const { username, name, email, password, role, permissions } = req.body;
+        
+        // Validate role
+        const validRoles = ['admin', 'manager', 'editor', 'user'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ 
+                message: 'Invalid role. Must be one of: admin, manager, editor, user',
+                field: 'role'
+            });
+        }
+        
+        // Check if user already exists
+        const existingUser = await User.findOne({
+            where: {
+                [Op.or]: [{ email }, { username }]
+            }
+        });
+        
+        if (existingUser) {
+            const field = existingUser.email === email ? 'email' : 'username';
+            return res.status(400).json({
+                message: `User with this ${field} already exists`,
+                field
+            });
+        }
+        
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        
+        // Create user
+        const user = await User.create({
+            username,
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            permissions,
+            status: 'active'
+        });
+        
+        // Return user without password
+        const userData = user.toJSON();
+        delete userData.password;
+        
+        res.status(201).json({
+            message: 'User created successfully',
+            user: userData
+        });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update a user (admin only)
+router.put('/users/:id', auth, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, name, email, role, permissions, status } = req.body;
+        
+        // Find user
+        const user = await User.findByPk(id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Update user
+        await user.update({
+            username: username || user.username,
+            name: name || user.name,
+            email: email || user.email,
+            role: role || user.role,
+            permissions: permissions || user.permissions,
+            status: status || user.status
+        });
+        
+        // Return updated user without password
+        const userData = user.toJSON();
+        delete userData.password;
+        
+        res.json({
+            message: 'User updated successfully',
+            user: userData
+        });
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Delete a user (admin only)
+router.delete('/users/:id', auth, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Prevent admins from deleting themselves
+        if (req.user.id === parseInt(id)) {
+            return res.status(400).json({ message: 'You cannot delete your own account' });
+        }
+        
+        // Find user
+        const user = await User.findByPk(id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Delete user
+        await user.destroy();
+        
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Reset user password (admin only)
+router.post('/users/:id/reset-password', auth, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newPassword } = req.body;
+        
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ 
+                message: 'New password must be at least 8 characters long',
+                field: 'newPassword'
+            });
+        }
+        
+        // Find user
+        const user = await User.findByPk(id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Hash and update password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        await user.update({
+            password: hashedPassword,
+            tokenVersion: (user.tokenVersion || 0) + 1 // Invalidate existing tokens
+        });
+        
+        res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
 // Add more admin routes as needed

@@ -337,4 +337,14 @@ router.post('/test-password', async (req, res) => {
   }
 });
 
+// Check if first-time setup is needed
+router.get('/check-setup', 
+    errorController.catchAsync(authController.checkFirstTimeSetup)
+);
+
+// Handle first-time admin setup
+router.post('/first-time-setup', 
+    errorController.catchAsync(authController.firstTimeAdminSetup)
+);
+
 export default router; 

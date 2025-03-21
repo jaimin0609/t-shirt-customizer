@@ -271,11 +271,116 @@ export const resetPassword = async (req, res) => {
     }
 };
 
+/**
+ * Check if any admin user exists in the system
+ * Used for first-time setup flow
+ */
+export const checkFirstTimeSetup = async (req, res) => {
+    try {
+        // Check if any admin user exists
+        const adminCount = await User.count({
+            where: { role: 'admin' }
+        });
+        
+        res.json({
+            needsSetup: adminCount === 0,
+            message: adminCount === 0 ? 
+                'No admin users found. First-time setup required.' : 
+                'Admin user(s) already configured.'
+        });
+    } catch (error) {
+        console.error('First-time setup check error:', error);
+        res.status(500).json({ message: 'Server error checking first-time setup status' });
+    }
+};
+
+/**
+ * Handle first-time admin registration
+ * This can only be used when no admin accounts exist
+ */
+export const firstTimeAdminSetup = async (req, res) => {
+    try {
+        // Verify no admin users exist
+        const adminCount = await User.count({
+            where: { role: 'admin' }
+        });
+        
+        if (adminCount > 0) {
+            return res.status(403).json({ 
+                message: 'Setup already completed. Admin user already exists.' 
+            });
+        }
+        
+        // Validate input
+        const { username, name, email, password } = req.body;
+        
+        if (!username || !name || !email || !password) {
+            return res.status(400).json({ 
+                message: 'All fields are required: username, name, email, password' 
+            });
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ 
+                message: 'Invalid email format',
+                field: 'email'
+            });
+        }
+        
+        // Validate password strength
+        if (password.length < 8) {
+            return res.status(400).json({
+                message: 'Password must be at least 8 characters long',
+                field: 'password'
+            });
+        }
+        
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        
+        // Create admin user
+        const user = await User.create({
+            username,
+            name,
+            email,
+            password: hashedPassword,
+            role: 'admin',
+            status: 'active'
+        });
+        
+        // Generate token
+        const token = generateToken(user);
+        
+        // Log the successful setup
+        console.log(`First-time admin setup completed. Admin user created: ${email}`);
+        
+        res.status(201).json({
+            message: 'Admin setup completed successfully',
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('First-time admin setup error:', error);
+        res.status(500).json({ message: 'Server error during admin setup' });
+    }
+};
+
 export default {
     register,
     login,
     refreshToken,
     logout,
     requestPasswordReset,
-    resetPassword
+    resetPassword,
+    checkFirstTimeSetup,
+    firstTimeAdminSetup
 }; 

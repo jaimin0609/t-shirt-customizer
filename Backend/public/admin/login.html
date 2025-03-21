@@ -223,8 +223,26 @@
         }
 
         // Check auth on page load
-        checkAdminAuth();
-        
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSetupStatus();
+            checkAdminAuth();
+        });
+
+        // Add function to check if setup is needed
+        async function checkSetupStatus() {
+            try {
+                const response = await fetch('/api/auth/check-setup');
+                const data = await response.json();
+                
+                if (data.needsSetup) {
+                    console.log('First-time setup needed. Redirecting to setup page...');
+                    window.location.href = '/admin/setup.html';
+                }
+            } catch (error) {
+                console.error('Error checking setup status:', error);
+            }
+        }
+
         // Add event listener for emergency login button
         document.getElementById('emergencyLoginBtn').addEventListener('click', performEmergencyLogin);
         

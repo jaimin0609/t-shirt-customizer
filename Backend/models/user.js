@@ -71,8 +71,21 @@ const User = sequelize.define('User', {
         }
     },
     role: {
-        type: DataTypes.ENUM('admin', 'user', 'customer'),
-        defaultValue: 'user'
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'user',
+        validate: {
+            isIn: [['admin', 'manager', 'editor', 'user']]
+        }
+    },
+    permissions: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: null,
+        get() {
+            const rawValue = this.getDataValue('permissions');
+            return rawValue ? rawValue : this.getDefaultPermissions();
+        }
     },
     profileImage: {
         type: DataTypes.STRING,
@@ -200,6 +213,49 @@ User.prototype.resetFailedLoginAttempts = async function() {
     this.failedLoginAttempts = 0;
     this.accountLockedUntil = null;
     return this.save();
+};
+
+/**
+ * Get default permissions based on role
+ */
+User.prototype.getDefaultPermissions = function() {
+    const role = this.getDataValue('role');
+    
+    switch(role) {
+        case 'admin':
+            return {
+                users: ['create', 'read', 'update', 'delete', 'manage'],
+                products: ['create', 'read', 'update', 'delete', 'manage'],
+                orders: ['create', 'read', 'update', 'delete', 'manage'],
+                analytics: ['read', 'export'],
+                settings: ['update']
+            };
+        case 'manager':
+            return {
+                users: ['read'],
+                products: ['create', 'read', 'update'],
+                orders: ['read', 'update'],
+                analytics: ['read'],
+                settings: []
+            };
+        case 'editor':
+            return {
+                users: [],
+                products: ['read', 'update'],
+                orders: ['read'],
+                analytics: [],
+                settings: []
+            };
+        case 'user':
+        default:
+            return {
+                users: [],
+                products: ['read'],
+                orders: ['read'],
+                analytics: [],
+                settings: []
+            };
+    }
 };
 
 export default User; 
