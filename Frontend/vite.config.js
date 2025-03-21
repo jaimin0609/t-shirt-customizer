@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+// Explicit import path for Vite to prevent resolution issues
+import { defineConfig } from './node_modules/vite/dist/node/index.js'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'

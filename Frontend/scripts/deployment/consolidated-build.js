@@ -95,6 +95,39 @@ const installDependencies = () => {
 };
 
 /**
+ * Create a temporary module resolution helper
+ * This helps overcome Vite import issues in environments like Vercel
+ */
+const createTempModuleResolver = () => {
+  console.log('Creating temporary module resolver for Vite...');
+  
+  // Create a temporary file to help with module resolution
+  const tempDir = path.resolve(process.cwd(), '.vite-temp');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  
+  // Create a temp package.json to ensure resolution
+  const tempPackageJson = path.join(tempDir, 'package.json');
+  fs.writeFileSync(tempPackageJson, JSON.stringify({
+    "type": "module",
+    "dependencies": {
+      "vite": "6.2.2"
+    }
+  }, null, 2));
+  
+  // Create a temp js file that simply re-exports vite
+  const tempJsFile = path.join(tempDir, 'vite-resolver.mjs');
+  fs.writeFileSync(tempJsFile, `
+    // This file helps resolve Vite in difficult environments
+    import * as vite from 'vite';
+    export default vite;
+  `);
+  
+  return tempDir;
+};
+
+/**
  * Run the build process
  */
 const runBuild = () => {
@@ -103,11 +136,14 @@ const runBuild = () => {
   // Ensure dependencies before building
   ensureTailwindDependencies();
 
+  // Create a temporary module resolver
+  const tempModuleDir = createTempModuleResolver();
+
   // Install Vite explicitly with correct version
   console.log('Installing Vite 6.2.2 explicitly...');
   try {
-    // First install Vite globally in the project
-    execCommand('npm install vite@6.2.2 --save-dev --force --legacy-peer-deps');
+    // Install Vite with exact path
+    execCommand('npm install vite@6.2.2 --save-exact --save-dev --force --legacy-peer-deps');
     // Then install related plugins
     execCommand('npm install @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps');
   } catch (error) {
@@ -118,11 +154,19 @@ const runBuild = () => {
   ensureCriticalCss();
 
   try {
-    // Use npx to run vite directly, which will handle finding the right binary
+    // Use npx with --no-install to ensure we use the version we just installed
     console.log('Using npx to run vite with specific version');
     
-    // Run the build using npx to ensure correct resolution
-    execCommand('npx --yes vite@6.2.2 build');
+    // Set NODE_OPTIONS to help with module resolution
+    process.env.NODE_OPTIONS = '--experimental-vm-modules --no-warnings';
+    
+    // Run the build with environment variable to point to our temp resolver
+    execCommand('npx --no-install vite@6.2.2 build', {
+      env: {
+        ...process.env,
+        VITE_TEMP_RESOLVER: tempModuleDir
+      }
+    });
 
     // Create SPA fallbacks
     createSpaFallbacks();
@@ -135,9 +179,8 @@ const runBuild = () => {
     
     // Try emergency build with a different approach
     try {
-      // Try a global install approach
-      execCommand('npm install -g vite@6.2.2 --force');
-      execCommand('npx --yes vite@6.2.2 build');
+      // Try a more direct approach with specific node options
+      execCommand('node --experimental-vm-modules --no-warnings ./node_modules/vite/bin/vite.js build');
       createSpaFallbacks();
       return verifyBuildOutput();
     } catch (finalError) {

@@ -1,6 +1,6 @@
 {
     "framework": "vite",
-    "buildCommand": "cd Frontend && npm install && npm run build:vercel",
+    "buildCommand": "cd Frontend && npm install --legacy-peer-deps && npm run build:vercel",
     "outputDirectory": "Frontend/dist",
     "routes": [
         {
@@ -17,5 +17,11 @@
     ],
     "env": {
         "NODE_ENV": "production"
-    }
+    },
+    "build": {
+        "env": {
+            "NODE_OPTIONS": "--experimental-vm-modules --no-warnings"
+        }
+    },
+    "nodeVersion": "18.x"
 }

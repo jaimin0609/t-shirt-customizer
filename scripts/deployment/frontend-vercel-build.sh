@@ -19,12 +19,26 @@ echo "Directory contents: $(ls -la)"
 export PATH="$PATH:$(pwd)/node_modules/.bin:/vercel/path0/node_modules/.bin"
 echo "PATH: $PATH"
 
-# Verify that Vite, PostCSS and Tailwind are installed
-echo "Checking for dependencies..."
-if [ ! -d "node_modules/vite" ] || [ ! -d "node_modules/postcss" ] || [ ! -d "node_modules/tailwindcss" ]; then
-  echo "Installing Vite and dependencies..."
-  npm install --save-dev vite@6.2.2 postcss tailwindcss autoprefixer cssnano --force --legacy-peer-deps
-fi
+# Enable experimental modules for ESM compatibility
+export NODE_OPTIONS="--experimental-vm-modules --no-warnings"
+echo "NODE_OPTIONS: $NODE_OPTIONS"
+
+# Create a temporary vite resolver directory
+echo "Creating temporary vite resolver..."
+TEMP_DIR=".vite-temp"
+mkdir -p $TEMP_DIR
+cat > $TEMP_DIR/package.json << EOL
+{
+  "type": "module",
+  "dependencies": {
+    "vite": "6.2.2"
+  }
+}
+EOL
+
+# Verify that Vite and dependencies are installed
+echo "Installing Vite and dependencies..."
+npm install --save-dev vite@6.2.2 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-exact --force --legacy-peer-deps
 
 # Ensure critical CSS is generated
 echo "Generating critical CSS if needed..."
@@ -41,9 +55,15 @@ if [ ! -f "public/critical.css" ]; then
   fi
 fi
 
-# Try direct build with npx to ensure the right version is used
-echo "Attempting to build with npx vite command..."
-npx --yes vite@6.2.2 build
+# Try direct build with node to ensure the right version is used
+echo "Attempting build with direct node command..."
+if [ -f "node_modules/vite/bin/vite.js" ]; then
+  echo "Using direct node command with Vite binary"
+  node --experimental-vm-modules --no-warnings node_modules/vite/bin/vite.js build
+else
+  echo "Vite binary not found, falling back to npx"
+  VITE_TEMP_RESOLVER=$TEMP_DIR npx --no-install vite@6.2.2 build
+fi
 
 # Verify the build output
 if [ -d "dist" ]; then
