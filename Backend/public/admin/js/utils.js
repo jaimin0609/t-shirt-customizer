@@ -482,35 +482,59 @@ async function logout() {
         const token = localStorage.getItem('token');
         
         if (token) {
-            // Call the backend logout endpoint to invalidate the token
-            const response = await fetch('/api/auth/logout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+            try {
+                // Call the backend logout endpoint to invalidate the token
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    // Set a timeout to prevent hanging
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (response.ok) {
+                    console.log('Successfully logged out on server');
+                } else {
+                    console.warn('Server logout failed, but will continue with client logout');
                 }
-            });
-            
-            if (response.ok) {
-                console.log('Successfully logged out on server');
-            } else {
-                console.warn('Server logout failed, but will continue with client logout');
+            } catch (apiError) {
+                console.warn('Error during logout API call:', apiError);
+                // Continue with client-side logout even if API call fails
             }
         }
     } catch (error) {
-        console.error('Error during logout API call:', error);
-        // Continue with client-side logout even if API call fails
+        console.error('Error during logout process:', error);
+        // Continue with client-side logout even if error occurs
+    } finally {
+        // Always clear local storage
+        try {
+            // Clear all admin-related storage items
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('emergencyLogin');
+            localStorage.removeItem('isAdminSession');
+            localStorage.removeItem('lastAccess');
+            localStorage.removeItem('tokenExpiration');
+            
+            // Clear session storage as well
+            sessionStorage.clear();
+            
+            // Remove any cookies
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Redirect to login page
+            console.log('Redirecting to login page...');
+            window.location.href = '/admin/login.html';
+        } catch (clearError) {
+            console.error('Error clearing storage during logout:', clearError);
+            // Force redirect as last resort
+            window.location.href = '/admin/login.html?error=logout_failed';
+        }
     }
-    
-    // Clear local storage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('emergencyLogin');
-    localStorage.removeItem('isAdminSession');
-    
-    // Redirect to login page
-    console.log('Redirecting to login page...');
-    window.location.href = '/admin/login.html';
 }
 
 // Setup logout button event listeners
