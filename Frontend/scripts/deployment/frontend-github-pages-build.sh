@@ -7,11 +7,11 @@ echo "Starting GitHub Pages build script (wrapper)..."
 # Determine script directory for relative paths
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Make sure the build script is executable
-chmod +x "$SCRIPT_DIR/build.sh"
+# Try to make the build script executable, but don't fail if it doesn't work
+chmod +x "$SCRIPT_DIR/build.sh" || echo "Could not set executable permission (this is normal on some platforms)"
 
-# Run the unified build script with platform=github
-"$SCRIPT_DIR/build.sh" --platform=github
+# Run the unified build script with platform=github using sh
+sh "$SCRIPT_DIR/build.sh" --platform=github
 
 # Return the same exit status as the build script
 exit $?
