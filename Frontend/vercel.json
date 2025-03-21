@@ -1,7 +1,7 @@
 {
     "version": 2,
-    "buildCommand": "cd Frontend && npm install && npm run build:vercel",
-    "outputDirectory": "Frontend/dist",
+    "buildCommand": "npm install && npm run build:vercel",
+    "outputDirectory": "dist",
     "routes": [
         {
             "src": "/api/(.*)",

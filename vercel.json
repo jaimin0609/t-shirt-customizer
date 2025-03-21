@@ -1,7 +1,7 @@
 {
     "version": 2,
-    "buildCommand": "node vercel-build.js",
-    "outputDirectory": "dist",
+    "buildCommand": "cd Frontend && npm install && npm run build:vercel",
+    "outputDirectory": "Frontend/dist",
     "rewrites": [
         {
             "source": "/api/(.*)",
