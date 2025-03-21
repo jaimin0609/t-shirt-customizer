@@ -3,6 +3,8 @@ import { Sequelize } from 'sequelize';
 
 // Initialize Sequelize with the database configuration
 let sequelize;
+
+// Check if we have a DATABASE_URL (for production)
 if (process.env.DATABASE_URL) {
     console.log('Using DATABASE_URL for connection');
     sequelize = new Sequelize(process.env.DATABASE_URL, {
@@ -16,11 +18,18 @@ if (process.env.DATABASE_URL) {
         }
     });
 } else {
+    // Validate required environment variables
+    if (!process.env.DB_NAME || !process.env.DB_USER) {
+        console.error('Missing required database environment variables (DB_NAME, DB_USER)');
+        process.exit(1);
+    }
+    
+    // For local development
     console.log('Using individual connection parameters');
     sequelize = new Sequelize(
-        process.env.DB_NAME || 'tshirt_customizer',
-        process.env.DB_USER || 'root',
-        process.env.DB_PASSWORD || '6941@Sjp',
+        process.env.DB_NAME,
+        process.env.DB_USER,
+        process.env.DB_PASSWORD,
         {
             host: process.env.DB_HOST || 'localhost',
             dialect: process.env.DB_DIALECT || 'mysql',

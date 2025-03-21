@@ -18,22 +18,47 @@ if (fs.existsSync(envPath)) {
 }
 
 // Initialize Sequelize with the database configuration
-const sequelize = new Sequelize(
-    process.env.DB_NAME || 'tshirt_customizer',
-    process.env.DB_USER || 'root',
-    process.env.DB_PASSWORD || '6941@Sjp',
-    {
-        host: process.env.DB_HOST || 'localhost',
-        dialect: process.env.DB_DIALECT || 'mysql',
-        logging: console.log,
+let sequelize;
+
+// Check if we have a DATABASE_URL (for production)
+if (process.env.DATABASE_URL) {
+    sequelize = new Sequelize(process.env.DATABASE_URL, {
+        dialect: 'postgres',
         dialectOptions: {
-            ssl: process.env.DB_SSL === 'true' ? {
+            ssl: {
                 require: true,
                 rejectUnauthorized: false
-            } : false
-        }
+            }
+        },
+        logging: console.log
+    });
+    console.log('Using PostgreSQL with DATABASE_URL');
+} else {
+    // Validate required environment variables
+    if (!process.env.DB_NAME || !process.env.DB_USER) {
+        console.error('Missing required database environment variables (DB_NAME, DB_USER)');
+        process.exit(1);
     }
-);
+    
+    // For local development
+    sequelize = new Sequelize(
+        process.env.DB_NAME,
+        process.env.DB_USER,
+        process.env.DB_PASSWORD,
+        {
+            host: process.env.DB_HOST || 'localhost',
+            dialect: process.env.DB_DIALECT || 'mysql',
+            logging: console.log,
+            dialectOptions: {
+                ssl: process.env.DB_SSL === 'true' ? {
+                    require: true,
+                    rejectUnauthorized: false
+                } : false
+            }
+        }
+    );
+    console.log('Using local database configuration');
+}
 
 const runMigration = async () => {
     try {

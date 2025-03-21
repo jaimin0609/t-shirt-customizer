@@ -1,9 +1,12 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
+import { ERROR_TYPES, reportError } from '../services/errorHandler';
+import config from '../config/appConfig';
 
 /**
- * ErrorBoundary component to catch JavaScript errors anywhere in the child component tree
- * and display a fallback UI instead of crashing the whole app
+ * ErrorBoundary component that catches JavaScript errors in its child component tree
+ * and displays a fallback UI instead of crashing the entire app
  */
 class ErrorBoundary extends Component {
     constructor(props) {
@@ -12,155 +15,162 @@ class ErrorBoundary extends Component {
             hasError: false,
             error: null,
             errorInfo: null,
-            errorSource: 'component' // Default error source
+            componentStack: null
         };
     }
 
+    /**
+     * Update state when an error occurs - React lifecycle method
+     */
     static getDerivedStateFromError(error) {
-        // Update state so the next render will show the fallback UI
-        console.error('Error caught in ErrorBoundary.getDerivedStateFromError:', error);
+        return { hasError: true, error };
+    }
 
-        // Try to classify the error
-        let errorSource = 'component';
-        if (error && error.toString) {
-            const errorString = error.toString();
-            if (errorString.includes('createContext') ||
-                errorString.includes('useContext')) {
-                errorSource = 'context';
-            } else if (errorString.includes('useState') ||
-                errorString.includes('useEffect') ||
-                errorString.includes('useReducer')) {
-                errorSource = 'hooks';
-            } else if (errorString.includes('Suspense') ||
-                errorString.includes('lazy')) {
-                errorSource = 'suspense';
-            } else if (errorString.includes('null') ||
-                errorString.includes('undefined') ||
-                errorString.includes('is not a function')) {
-                errorSource = 'null-reference';
-            }
+    /**
+     * Log error details when an error is caught - React lifecycle method
+     */
+    componentDidCatch(error, errorInfo) {
+        // Log error to console in development
+        if (config.IS_DEV) {
+            console.error('Error caught by ErrorBoundary:', error);
+            console.error('Component stack:', errorInfo.componentStack);
         }
 
-        return {
-            hasError: true,
-            error,
-            errorSource
-        };
+        // Store component stack in state
+        this.setState({
+            errorInfo,
+            componentStack: errorInfo.componentStack
+        });
+
+        // Report error if enabled
+        if (config.FEATURES.ENABLE_ERROR_REPORTING) {
+            reportError(error, 'boundary', {
+                componentStack: errorInfo.componentStack,
+                componentName: this.props.name || 'Unknown'
+            });
+        }
     }
 
-    componentDidCatch(error, errorInfo) {
-        // Log the error to the console
-        console.error('Error caught by ErrorBoundary.componentDidCatch:', error);
-        console.error('Component stack:', errorInfo?.componentStack);
-
-        this.setState({ errorInfo });
-
-        // You could also log to an error reporting service here
-        // logErrorToService(error, errorInfo);
-    }
-
+    /**
+     * Reload the page - used as recovery action
+     */
     handleReload = () => {
         window.location.reload();
-    }
+    };
 
-    handleGoHome = () => {
-        window.location.href = '/';
-    }
+    /**
+     * Reset the error state - attempt to recover without page reload
+     */
+    handleReset = () => {
+        this.setState({
+            hasError: false,
+            error: null,
+            errorInfo: null,
+            componentStack: null
+        });
 
-    renderErrorDetails() {
-        const { error, errorInfo, errorSource } = this.state;
+        if (this.props.onReset && typeof this.props.onReset === 'function') {
+            this.props.onReset();
+        }
+    };
 
-        // Different error types get different helper messages
-        let errorDescription = "We're sorry, but an error occurred while rendering this page.";
-        let suggestedAction = "Try reloading the page or clearing your browser cache.";
+    /**
+     * Determine user-friendly error message based on error type
+     */
+    getFriendlyErrorMessage() {
+        const { error } = this.state;
 
-        if (errorSource === 'context') {
-            errorDescription = "There was a problem with React context initialization.";
-            suggestedAction = "This may be due to an issue with how components are loaded. Try clearing your browser cache and reloading.";
-        } else if (errorSource === 'hooks') {
-            errorDescription = "There was a problem with React hooks in a component.";
-            suggestedAction = "This might be caused by a state management issue.";
-        } else if (errorSource === 'suspense') {
-            errorDescription = "There was a problem loading a component.";
-            suggestedAction = "This might be caused by a network issue. Check your connection and try again.";
-        } else if (errorSource === 'null-reference') {
-            errorDescription = "A component tried to access a property or method that doesn't exist.";
-            suggestedAction = "This might be caused by missing data or a timing issue.";
+        if (!error) {
+            return 'An unexpected error occurred.';
         }
 
-        return (
-            <div className="bg-red-50 p-4 rounded-md mb-4">
-                <p className="text-red-700 mb-2">{errorDescription}</p>
-                <p className="text-gray-700 mb-4">{suggestedAction}</p>
-                <details className="text-left mb-4">
-                    <summary className="cursor-pointer text-gray-700 font-medium">Technical Details</summary>
-                    <pre className="mt-2 text-sm text-gray-600 overflow-auto p-2 bg-gray-100 rounded">
-                        {error && error.toString()}
-                    </pre>
-                    {errorInfo && (
-                        <pre className="mt-2 text-sm text-gray-600 overflow-auto p-2 bg-gray-100 rounded max-h-60">
-                            {errorInfo.componentStack}
-                        </pre>
-                    )}
-                </details>
-            </div>
-        );
+        // Check for known error types
+        const errorType = error.type ||
+            (error.message && error.message.includes('Network')) ? ERROR_TYPES.NETWORK :
+            ERROR_TYPES.UI;
+
+        switch (errorType) {
+            case ERROR_TYPES.NETWORK:
+                return 'We\'re having trouble connecting to our servers. Please check your internet connection.';
+            case ERROR_TYPES.AUTH:
+                return 'Your session may have expired. Please try signing in again.';
+            case ERROR_TYPES.VALIDATION:
+                return 'There was a problem with some of the data in this view.';
+            default:
+                return this.props.fallback || 'Something went wrong. We\'ve been notified and are working on a fix.';
+        }
     }
 
     render() {
-        const { hasError } = this.state;
-        const { fallback, fallbackRender, children } = this.props;
+        const { hasError, error, componentStack } = this.state;
+        const { children, showReset = true, showHome = true } = this.props;
 
-        if (hasError) {
-            // If a fallback component is provided, use it
-            if (fallback) {
-                return fallback;
-            }
-
-            // If a custom fallback renderer is provided, use that
-            if (fallbackRender) {
-                return fallbackRender({
-                    error: this.state.error,
-                    errorInfo: this.state.errorInfo,
-                    errorSource: this.state.errorSource,
-                    reset: this.handleReload
-                });
-            }
-
-            // Otherwise use the default fallback UI
-            return (
-                <div className="error-boundary-container flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
-                    <div className="error-card bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h2>
-                        {this.renderErrorDetails()}
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <button
-                                onClick={this.handleReload}
-                                className="btn bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                            >
-                                Reload Page
-                            </button>
-                            <button
-                                onClick={this.handleGoHome}
-                                className="btn bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
-                            >
-                                Go to Homepage
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
+        if (!hasError) {
+            return children;
         }
 
-        // If no error, render children normally
-        return children;
+        // Error details to show in development only
+        const errorDetails = config.IS_DEV ? (
+            <div className="error-details">
+                <h3>Error Details (Development Only)</h3>
+                <p className="error-message">{error?.toString()}</p>
+                {componentStack && (
+                    <details>
+                        <summary>Component Stack</summary>
+                        <pre>{componentStack}</pre>
+                    </details>
+                )}
+            </div>
+        ) : null;
+
+        // Primary error message and actions
+        return (
+            <div className="error-boundary">
+                <div className="error-content">
+                    <h2>Oops! Something Went Wrong</h2>
+                    <p className="error-message">{this.getFriendlyErrorMessage()}</p>
+
+                    <div className="error-actions">
+                        <button
+                            className="btn btn-primary"
+                            onClick={this.handleReload}
+                        >
+                            Reload Page
+                        </button>
+
+                        {showReset && (
+                            <button
+                                className="btn btn-secondary"
+                                onClick={this.handleReset}
+                            >
+                                Try Again
+                            </button>
+                        )}
+
+                        {showHome && (
+                            <Link
+                                to="/"
+                                className="btn btn-link"
+                            >
+                                Go to Homepage
+                            </Link>
+                        )}
+                    </div>
+
+                    {errorDetails}
+                </div>
+            </div>
+        );
     }
 }
 
 ErrorBoundary.propTypes = {
     children: PropTypes.node.isRequired,
-    fallback: PropTypes.element, // A React element to show instead
-    fallbackRender: PropTypes.func // A render prop function
+    fallback: PropTypes.string,
+    showReset: PropTypes.bool,
+    showHome: PropTypes.bool,
+    name: PropTypes.string,
+    onReset: PropTypes.func
 };
 
 export default ErrorBoundary; 

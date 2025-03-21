@@ -6,14 +6,35 @@
  */
 
 const { Sequelize } = require('sequelize');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config();
 
-// Get the database URL from environment variable
-const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_URI;
+// Get the database URL from environment variable or build from components
+let dbUrl = process.env.DATABASE_URL || process.env.DATABASE_URI;
 
+// If no DATABASE_URL is provided, try to build one from individual components
 if (!dbUrl) {
-  console.error('ERROR: No DATABASE_URL provided');
-  console.error('Please set DATABASE_URL environment variable');
-  process.exit(1);
+  const dbName = process.env.DB_NAME;
+  const dbUser = process.env.DB_USER;
+  const dbPassword = process.env.DB_PASSWORD;
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbDialect = process.env.DB_DIALECT || 'mysql';
+  const dbPort = process.env.DB_PORT || (dbDialect === 'mysql' ? 3306 : 5432);
+  
+  // Validate required environment variables
+  if (!dbName || !dbUser) {
+    console.error('ERROR: Missing required database environment variables (DB_NAME, DB_USER)');
+    console.error('Please set these in .env file or provide DATABASE_URL');
+    process.exit(1);
+  }
+  
+  // Construct URL based on dialect
+  if (dbDialect === 'postgres') {
+    dbUrl = `postgres://${dbUser}:${encodeURIComponent(dbPassword)}@${dbHost}:${dbPort}/${dbName}`;
+  } else {
+    dbUrl = `mysql://${dbUser}:${encodeURIComponent(dbPassword)}@${dbHost}:${dbPort}/${dbName}`;
+  }
 }
 
 // Determine if using PostgreSQL or another database
@@ -86,47 +107,30 @@ async function runManualMigration() {
     );
     console.log('Existing columns:', existingColumns);
     
-    // For PostgreSQL, we need to use quoted table names
-    const tableRef = isPostgres ? `"${tableName}"` : tableName;
-    
     // Add resetToken column if it doesn't exist
     if (!existingColumns.includes('resettoken')) {
-      console.log(`Adding resetToken column to ${tableName} table...`);
-      try {
-        await sequelize.query(`
-          ALTER TABLE ${tableRef} 
-          ADD COLUMN "${isPostgres ? 'resetToken' : 'resetToken'}" VARCHAR(255) NULL
-        `);
-        console.log('Added resetToken column successfully');
-      } catch (error) {
-        // Handle column already exists error
-        if (error.message && error.message.includes('already exists')) {
-          console.log('resetToken column already exists (caught in error handler)');
-        } else {
-          console.error('Error adding resetToken column:', error.message);
-        }
-      }
+      console.log('Adding resetToken column...');
+      
+      const addResetTokenQuery = isPostgres
+        ? `ALTER TABLE "${tableName}" ADD COLUMN "resettoken" VARCHAR(255)`
+        : `ALTER TABLE ${tableName} ADD COLUMN resetToken VARCHAR(255)`;
+      
+      await sequelize.query(addResetTokenQuery);
+      console.log('resetToken column added successfully');
     } else {
       console.log('resetToken column already exists, skipping');
     }
     
     // Add resetTokenExpiry column if it doesn't exist
     if (!existingColumns.includes('resettokenexpiry')) {
-      console.log(`Adding resetTokenExpiry column to ${tableName} table...`);
-      try {
-        await sequelize.query(`
-          ALTER TABLE ${tableRef} 
-          ADD COLUMN "${isPostgres ? 'resetTokenExpiry' : 'resetTokenExpiry'}" TIMESTAMP NULL
-        `);
-        console.log('Added resetTokenExpiry column successfully');
-      } catch (error) {
-        // Handle column already exists error
-        if (error.message && error.message.includes('already exists')) {
-          console.log('resetTokenExpiry column already exists (caught in error handler)');
-        } else {
-          console.error('Error adding resetTokenExpiry column:', error.message);
-        }
-      }
+      console.log('Adding resetTokenExpiry column...');
+      
+      const addExpiryQuery = isPostgres
+        ? `ALTER TABLE "${tableName}" ADD COLUMN "resettokenexpiry" TIMESTAMP WITH TIME ZONE`
+        : `ALTER TABLE ${tableName} ADD COLUMN resetTokenExpiry DATETIME`;
+      
+      await sequelize.query(addExpiryQuery);
+      console.log('resetTokenExpiry column added successfully');
     } else {
       console.log('resetTokenExpiry column already exists, skipping');
     }

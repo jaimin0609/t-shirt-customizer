@@ -1,21 +1,37 @@
 /**
  * Script to create a public coupon for the promotion banner
  * Run with: node create-public-coupon.js
+ * 
+ * This script requires the following environment variables:
+ * - ADMIN_EMAIL - The admin email to use for login
+ * - ADMIN_PASSWORD - The admin password to use for login
+ * - API_URL - The API URL to use for requests (e.g., http://localhost:5000)
  */
 
 import fetch from 'node-fetch';
+import 'dotenv/config';
+
+// Validate required environment variables
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    console.error('Error: Missing required environment variables (ADMIN_EMAIL, ADMIN_PASSWORD)');
+    console.error('Please set these variables in your .env file or provide them as command-line arguments.');
+    process.exit(1);
+}
+
+// Get API URL from environment or use default
+const API_URL = process.env.API_URL || 'http://localhost:5000';
 
 async function createPublicCoupon() {
     try {
-        // Replace with your actual admin credentials
-        const loginResponse = await fetch('http://localhost:5000/api/auth/login', {
+        // Use environment variables for admin credentials
+        const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                email: 'admin@example.com', // Update with actual admin email
-                password: 'Admin123!'        // Update with actual admin password
+                email: process.env.ADMIN_EMAIL,
+                password: process.env.ADMIN_PASSWORD
             })
         });
 
@@ -27,7 +43,7 @@ async function createPublicCoupon() {
         console.log('✅ Logged in successfully, got admin token');
 
         // Create the public coupon
-        const couponResponse = await fetch('http://localhost:5000/api/coupons/generate', {
+        const couponResponse = await fetch(`${API_URL}/api/coupons/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -59,7 +75,7 @@ async function createPublicCoupon() {
         console.log(JSON.stringify(couponData, null, 2));
         
         // Verify the coupon is in the public list
-        const publicCouponsResponse = await fetch('http://localhost:5000/api/coupons/public');
+        const publicCouponsResponse = await fetch(`${API_URL}/api/coupons/public`);
         
         if (!publicCouponsResponse.ok) {
             throw new Error(`Failed to fetch public coupons with status ${publicCouponsResponse.status}`);
@@ -70,7 +86,8 @@ async function createPublicCoupon() {
         console.log(JSON.stringify(publicCoupons, null, 2));
         
     } catch (error) {
-        console.error('❌ Error creating public coupon:', error);
+        console.error('❌ Error creating public coupon:', error.message);
+        process.exit(1);
     }
 }
 

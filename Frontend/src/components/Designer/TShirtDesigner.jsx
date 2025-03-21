@@ -1,626 +1,326 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { fabric } from 'fabric';
-import { toast } from 'react-toastify';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
+import { useComponentPerformance } from '../../utils/performanceMonitor';
+import { useNotification } from '../../contexts/NotificationContext';
+import useErrorHandler from '../../hooks/useErrorHandler';
+import config from '../../config/appConfig';
 
-const TShirtDesigner = ({ onSaveDesign }) => {
+// Import styles
+import './DesignerStyles.css';
+
+// Import our new components
+import DesignCanvas from './DesignCanvas';
+import TextControls from './TextControls';
+import ImageControls from './ImageControls';
+
+// Fonts available for text
+const AVAILABLE_FONTS = [
+    'Arial',
+    'Times New Roman',
+    'Courier New',
+    'Georgia',
+    'Verdana',
+    'Helvetica',
+    'Comic Sans MS',
+    'Impact',
+    'Tahoma'
+];
+
+/**
+ * TShirtDesigner component for customizing t-shirts
+ * This is a refactored version that uses the extracted components
+ */
+const TShirtDesigner = ({
+    initialColor = '#FFFFFF',
+    onSaveDesign
+}) => {
+    const { trackRender, trackOperation } = useComponentPerformance('TShirtDesigner');
+    trackRender();
+
+    const { showSuccess, showError } = useNotification();
+    const { handleError, withErrorHandling } = useErrorHandler();
+
     const canvasRef = useRef(null);
-    const fileInputRef = useRef(null);
-    const [canvas, setCanvas] = useState(null);
+    const [tshirtColor, setTshirtColor] = useState(initialColor);
     const [selectedObject, setSelectedObject] = useState(null);
-    const [tshirtColor, setTshirtColor] = useState('#ffffff');
+    const [designMode, setDesignMode] = useState('text'); // 'text' or 'image'
     const [loading, setLoading] = useState(false);
-    const [showLayerControls, setShowLayerControls] = useState(false);
-    const [textOptions, setTextOptions] = useState({
-        text: 'Your Text Here',
-        fontSize: 20,
-        fontFamily: 'Arial',
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-        textAlign: 'center',
-        fill: '#000000'
-    });
 
-    // Available colors for the t-shirt
-    const colors = [
-        { name: 'White', value: '#ffffff' },
-        { name: 'Black', value: '#000000' },
-        { name: 'Navy', value: '#000080' },
-        { name: 'Red', value: '#ff0000' },
-        { name: 'Green', value: '#008000' },
-        { name: 'Yellow', value: '#ffff00' },
-        { name: 'Purple', value: '#800080' },
-        { name: 'Gray', value: '#808080' }
-    ];
+    // T-shirt image based on color
+    const getShirtImageUrl = useCallback((color) => {
+        const colorCode = color.replace('#', '');
+        return `/assets/images/tshirts/${colorCode}.png`;
+    }, []);
 
-    // Available fonts
-    const fonts = [
-        'Arial', 'Helvetica', 'Times New Roman',
-        'Courier New', 'Verdana', 'Georgia',
-        'Comic Sans MS', 'Impact', 'Tahoma'
-    ];
+    // Available colors for t-shirt
+    const TSHIRT_COLORS = useMemo(() => [
+        { name: 'White', hex: '#FFFFFF' },
+        { name: 'Black', hex: '#000000' },
+        { name: 'Red', hex: '#FF0000' },
+        { name: 'Blue', hex: '#0000FF' },
+        { name: 'Green', hex: '#008000' },
+        { name: 'Yellow', hex: '#FFFF00' },
+        { name: 'Purple', hex: '#800080' },
+        { name: 'Gray', hex: '#808080' }
+    ], []);
 
-    // Initialize canvas
-    useEffect(() => {
-        if (canvasRef.current) {
-            // Set up canvas with device pixel ratio for crisp rendering
-            const dpr = window.devicePixelRatio || 1;
-
-            const fabricCanvas = new fabric.Canvas(canvasRef.current, {
-                width: 200,
-                height: 200,
-                backgroundColor: 'transparent',
-                selection: true
-            });
-
-            // Apply device pixel ratio for better rendering
-            fabricCanvas.setDimensions(
-                { width: 200 * dpr, height: 200 * dpr },
-                { cssOnly: true }
-            );
-            fabricCanvas.setZoom(dpr);
-
-            // Add a boundary box to indicate the design area
-            const boundaryBox = new fabric.Rect({
-                width: 190,
-                height: 190,
-                fill: 'transparent',
-                stroke: 'currentColor', // Use currentColor for better theme integration
-                strokeWidth: 2,
-                strokeDashArray: [5, 5],
-                selectable: false,
-                evented: false,
-                originX: 'center',
-                originY: 'center',
-                left: 100,
-                top: 100,
-                className: 'text-blue-500' // Use Tailwind class for color
-            });
-            fabricCanvas.add(boundaryBox);
-            fabricCanvas.sendToBack(boundaryBox);
-
-            // Setup event listeners
-            fabricCanvas.on('selection:created', handleObjectSelected);
-            fabricCanvas.on('selection:updated', handleObjectSelected);
-            fabricCanvas.on('selection:cleared', () => setSelectedObject(null));
-
-            // Set object limits to keep designs within the T-shirt
-            fabricCanvas.on('object:moving', function (e) {
-                const obj = e.target;
-                const bounds = {
-                    top: obj.height * obj.scaleY / 2,
-                    bottom: fabricCanvas.height - (obj.height * obj.scaleY / 2),
-                    left: obj.width * obj.scaleX / 2,
-                    right: fabricCanvas.width - (obj.width * obj.scaleX / 2)
-                };
-
-                obj.setCoords();
-
-                // Limit object movement
-                if (obj.top < bounds.top) {
-                    obj.top = bounds.top;
-                }
-                if (obj.top > bounds.bottom) {
-                    obj.top = bounds.bottom;
-                }
-                if (obj.left < bounds.left) {
-                    obj.left = bounds.left;
-                }
-                if (obj.left > bounds.right) {
-                    obj.left = bounds.right;
-                }
-            });
-
-            // Limit scaling to keep objects within bounds
-            fabricCanvas.on('object:scaling', function (e) {
-                const obj = e.target;
-                obj.setCoords();
-
-                // Prevent oversized objects
-                if (obj.scaleX * obj.width > fabricCanvas.width * 0.8) {
-                    obj.scaleX = fabricCanvas.width * 0.8 / obj.width;
-                }
-                if (obj.scaleY * obj.height > fabricCanvas.height * 0.8) {
-                    obj.scaleY = fabricCanvas.height * 0.8 / obj.height;
-                }
-            });
-
-            setCanvas(fabricCanvas);
-
-            // Clean up
-            return () => {
-                fabricCanvas.dispose();
-            };
-        }
+    // Handle color selection
+    const handleColorChange = useCallback((color) => {
+        setTshirtColor(color);
     }, []);
 
     // Handle object selection
-    const handleObjectSelected = (e) => {
-        const selectedObj = e.selected[0];
-        setSelectedObject(selectedObj);
-        setShowLayerControls(true);
+    const handleObjectSelected = useCallback((obj) => {
+        setSelectedObject(obj);
 
-        // Update text options if the selected object is a text
-        if (selectedObj && selectedObj.type === 'text') {
-            setTextOptions({
-                text: selectedObj.text,
-                fontSize: selectedObj.fontSize || 20,
-                fontFamily: selectedObj.fontFamily || 'Arial',
-                fontWeight: selectedObj.fontWeight || 'normal',
-                fontStyle: selectedObj.fontStyle || 'normal',
-                textAlign: selectedObj.textAlign || 'center',
-                fill: selectedObj.fill || '#000000'
-            });
+        // Set design mode based on object type
+        if (obj && obj.type === 'i-text') {
+            setDesignMode('text');
+        } else if (obj && obj.type === 'image') {
+            setDesignMode('image');
         }
-    };
+    }, []);
 
-    // Add text to canvas
-    const addText = () => {
-        if (!canvas) return;
+    // Handle adding text
+    const handleAddText = useCallback(() => {
+        if (canvasRef.current) {
+            canvasRef.current.addText('Add your text here');
+            setDesignMode('text');
+        }
+    }, []);
 
-        const text = new fabric.Text(textOptions.text, {
-            left: 100,
-            top: 100,
-            fontSize: textOptions.fontSize,
-            fontFamily: textOptions.fontFamily,
-            fontWeight: textOptions.fontWeight,
-            fontStyle: textOptions.fontStyle,
-            textAlign: textOptions.textAlign,
-            fill: textOptions.fill,
-            cornerSize: 10,
-            transparentCorners: false,
-            originX: 'center',
-            originY: 'center'
-        });
+    // Handle adding image
+    const handleAddImage = useCallback((url) => {
+        if (canvasRef.current) {
+            canvasRef.current.addImage(url);
+            setDesignMode('image');
+        }
+    }, []);
 
-        canvas.add(text);
-        canvas.setActiveObject(text);
-        setSelectedObject(text);
-        canvas.renderAll();
-        toast.success('Text added! You can drag, resize and customize it.');
-    };
-
-    // Update text options
-    const handleTextChange = (e) => {
-        const { name, value } = e.target;
-        setTextOptions(prev => ({ ...prev, [name]: value }));
-
-        // Update selected text object if exists
-        if (selectedObject && selectedObject.type === 'text') {
-            selectedObject.set(name, value);
-            if (name === 'text') {
-                selectedObject.setText(value);
+    // Handle updating object properties
+    const handleObjectUpdate = useCallback((property, value) => {
+        if (canvasRef.current && selectedObject) {
+            if (property === 'filter') {
+                canvasRef.current.applyFilter(selectedObject, value.type, value.value);
+            } else {
+                canvasRef.current.updateObject(selectedObject, property, value);
             }
-            canvas.renderAll();
         }
-    };
+    }, [selectedObject]);
 
-    // Handle image upload
-    const handleImageUpload = (e) => {
-        if (!canvas || !e.target.files || !e.target.files[0]) return;
+    // Handle removal of selected object
+    const handleRemoveSelected = useCallback(() => {
+        if (canvasRef.current && selectedObject) {
+            canvasRef.current.removeSelected();
+            setSelectedObject(null);
+        }
+    }, [selectedObject]);
 
-        const file = e.target.files[0];
-        const reader = new FileReader();
+    // Reset the canvas
+    const handleResetCanvas = useCallback(() => {
+        if (canvasRef.current) {
+            canvasRef.current.resetCanvas();
+            setSelectedObject(null);
+        }
+    }, []);
 
-        setLoading(true);
-        reader.onload = function (event) {
-            const imgObj = new Image();
-            imgObj.src = event.target.result;
-
-            imgObj.onload = function () {
-                const image = new fabric.Image(imgObj);
-
-                // Scale down the image if it's too large
-                if (image.width > 150 || image.height > 150) {
-                    const scale = Math.min(150 / image.width, 150 / image.height);
-                    image.scale(scale);
-                }
-
-                // Center the image on the canvas
-                image.set({
-                    left: 100,
-                    top: 100,
-                    originX: 'center',
-                    originY: 'center'
-                });
-
-                canvas.add(image);
-                canvas.setActiveObject(image);
-                setSelectedObject(image);
-                canvas.renderAll();
-                setLoading(false);
-                toast.success('Image added! You can drag and resize it.');
-            };
-        };
-
-        reader.readAsDataURL(file);
-        e.target.value = null; // Reset input
-    };
-
-    // Remove selected object
-    const removeSelected = () => {
-        if (!canvas || !selectedObject) return;
-
-        canvas.remove(selectedObject);
-        setSelectedObject(null);
-        setShowLayerControls(false);
-        canvas.renderAll();
-        toast.info('Element removed');
-    };
-
-    // Bring selected object to front
-    const bringToFront = () => {
-        if (!canvas || !selectedObject) return;
-
-        selectedObject.bringToFront();
-        canvas.renderAll();
-        toast.info('Brought to front');
-    };
-
-    // Send selected object to back
-    const sendToBack = () => {
-        if (!canvas || !selectedObject) return;
-
-        selectedObject.sendToBack();
-        canvas.renderAll();
-        toast.info('Sent to back');
-    };
+    // Handle design mode toggle
+    const handleModeToggle = useCallback((mode) => {
+        setDesignMode(mode);
+    }, []);
 
     // Save the design
-    const saveDesign = () => {
-        if (!canvas) return;
+    const handleSaveDesign = useCallback(withErrorHandling(async () => {
+        const endTiming = trackOperation('saveDesign');
+
+        if (!canvasRef.current) {
+            showError('Canvas not initialized');
+            endTiming({ status: 'error', reason: 'canvas_not_initialized' });
+            return;
+        }
 
         try {
-            // Store original objects visibility
-            const boundaryBox = canvas.getObjects().find(obj =>
-                obj.type === 'rect' && obj.strokeDashArray && obj.fill === 'transparent'
-            );
+            setLoading(true);
 
-            // Hide boundary box for the screenshot
-            if (boundaryBox) {
-                boundaryBox.visible = false;
-            }
+            // Get design as data URL
+            const designImageUrl = canvasRef.current.exportCanvas();
 
-            canvas.renderAll();
-
-            // Convert canvas to image
-            const dataURL = canvas.toDataURL({
-                format: 'png',
-                quality: 1
-            });
-
-            // Restore boundary box visibility
-            if (boundaryBox) {
-                boundaryBox.visible = true;
-            }
-
-            canvas.renderAll();
-
-            // Call the onSaveDesign callback with design data
+            // Call the provided onSaveDesign function with the design
             if (onSaveDesign) {
-                onSaveDesign({
-                    image: dataURL,
-                    color: tshirtColor,
-                    timestamp: new Date().getTime()
+                await onSaveDesign({
+                    designImage: designImageUrl,
+                    tshirtColor,
+                    timestamp: new Date().toISOString()
                 });
             }
 
-            toast.success('Design saved successfully!');
+            showSuccess('Design saved successfully!');
+            endTiming({ status: 'success' });
         } catch (error) {
-            console.error('Error saving design:', error);
-            toast.error('Failed to save design');
+            handleError(error, 'Failed to save design');
+            endTiming({ status: 'error', message: error.message });
+        } finally {
+            setLoading(false);
         }
-    };
+    }, { showNotification: true }), [handleError, onSaveDesign, showError, showSuccess, tshirtColor, trackOperation]);
 
-    // Change shirt color
-    const changeShirtColor = (color) => {
-        setTshirtColor(color);
-    };
+    // Generate a random design (for fun)
+    const generateRandomDesign = useCallback(() => {
+        if (!canvasRef.current) return;
 
-    // Get the color name from its value
-    const getColorName = (colorValue) => {
-        const colorObj = colors.find(c => c.value === colorValue);
-        return colorObj ? colorObj.name : 'Custom';
-    };
+        // Reset canvas
+        canvasRef.current.resetCanvas();
+
+        // Random color
+        const randomColor = TSHIRT_COLORS[Math.floor(Math.random() * TSHIRT_COLORS.length)].hex;
+        setTshirtColor(randomColor);
+
+        // Add random text
+        const texts = ['Awesome T-Shirt', 'Cool Design', 'Be Creative', 'Express Yourself', 'Unique Style'];
+        const randomText = texts[Math.floor(Math.random() * texts.length)];
+        canvasRef.current.addText(randomText);
+
+        // Add random image
+        const icons = [
+            '/assets/images/icons/t-shirt-icon.png',
+            '/assets/images/icons/heart-icon.png',
+            '/assets/images/icons/star-icon.png'
+        ];
+        const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+        canvasRef.current.addImage(randomIcon);
+    }, [TSHIRT_COLORS]);
+
+    // Memoize background image URL to prevent unnecessary canvas updates
+    const backgroundImageUrl = useMemo(() => getShirtImageUrl(tshirtColor), [getShirtImageUrl, tshirtColor]);
+
+    // Memoize the TextControls component props
+    const textControlsProps = useMemo(() => ({
+        selectedObject: selectedObject?.type === 'i-text' ? selectedObject : null,
+        onUpdate: handleObjectUpdate,
+        fonts: AVAILABLE_FONTS
+    }), [selectedObject, handleObjectUpdate]);
+
+    // Memoize the ImageControls component props
+    const imageControlsProps = useMemo(() => ({
+        selectedObject: selectedObject?.type === 'image' ? selectedObject : null,
+        onAddImage: handleAddImage,
+        onUpdate: handleObjectUpdate
+    }), [selectedObject, handleAddImage, handleObjectUpdate]);
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-10">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Design Your T-Shirt</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Left column - Controls */}
-                <div className="space-y-6">
-                    {/* T-shirt Color Selection */}
-                    <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                        <h3 className="font-semibold text-gray-800 mb-3">Select T-shirt Color</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {colors.map((color) => (
+        <div className="tshirt-designer">
+            <div className="designer-layout">
+                <div className="designer-sidebar">
+                    <div className="designer-tools">
+                        <div className="tool-section">
+                            <h3>Design Mode</h3>
+                            <div className="button-group">
                                 <button
-                                    key={color.value}
-                                    className={`w-8 h-8 rounded-full border-2 ${tshirtColor === color.value ? 'border-blue-500' : 'border-gray-300'}`}
-                                    style={{ backgroundColor: color.value }}
-                                    onClick={() => changeShirtColor(color.value)}
-                                    title={color.name}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Add elements section */}
-                    <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                        <h3 className="font-semibold text-gray-800 mb-3">Add Elements</h3>
-                        <div className="flex gap-2 mb-3">
-                            <button
-                                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded flex items-center justify-center"
-                                onClick={addText}
-                            >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Add Text
-                            </button>
-                            <button
-                                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded flex items-center justify-center"
-                                onClick={() => fileInputRef.current.click()}
-                            >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Upload Image
-                            </button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleImageUpload}
-                                className="hidden"
-                                accept="image/*"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Text options section - only shown when text is selected */}
-                    {selectedObject && selectedObject.type === 'text' && (
-                        <div className="bg-gray-50 rounded-lg p-4 shadow-sm animate-fadeIn">
-                            <h3 className="font-semibold text-gray-800 mb-3">Text Options</h3>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Text</label>
-                                    <input
-                                        type="text"
-                                        name="text"
-                                        value={textOptions.text}
-                                        onChange={handleTextChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Font Family</label>
-                                    <select
-                                        name="fontFamily"
-                                        value={textOptions.fontFamily}
-                                        onChange={handleTextChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        {fonts.map(font => (
-                                            <option key={font} value={font}>{font}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
-                                    <input
-                                        type="number"
-                                        name="fontSize"
-                                        min="8"
-                                        max="80"
-                                        value={textOptions.fontSize}
-                                        onChange={handleTextChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                                    <input
-                                        type="color"
-                                        name="fill"
-                                        value={textOptions.fill}
-                                        onChange={handleTextChange}
-                                        className="w-full h-10 border border-gray-300 rounded px-1 py-1"
-                                    />
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        className={`px-3 py-1 border rounded ${textOptions.fontWeight === 'bold' ? 'bg-gray-200' : 'bg-white'}`}
-                                        onClick={() => handleTextChange({ target: { name: 'fontWeight', value: textOptions.fontWeight === 'bold' ? 'normal' : 'bold' } })}
-                                        title="Bold"
-                                    >
-                                        B
-                                    </button>
-                                    <button
-                                        className={`px-3 py-1 border rounded ${textOptions.fontStyle === 'italic' ? 'bg-gray-200' : 'bg-white'}`}
-                                        onClick={() => handleTextChange({ target: { name: 'fontStyle', value: textOptions.fontStyle === 'italic' ? 'normal' : 'italic' } })}
-                                        title="Italic"
-                                    >
-                                        I
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Layer controls - only shown when an object is selected */}
-                    {showLayerControls && (
-                        <div className="bg-gray-50 rounded-lg p-4 shadow-sm animate-fadeIn">
-                            <h3 className="font-semibold text-gray-800 mb-3">Layer Controls</h3>
-                            <div className="flex gap-2">
-                                <button
-                                    className="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded"
-                                    onClick={removeSelected}
+                                    className={`mode-button ${designMode === 'text' ? 'active' : ''}`}
+                                    onClick={() => handleModeToggle('text')}
                                 >
-                                    Delete
+                                    <span role="img" aria-label="Text mode">📝</span> Text
                                 </button>
                                 <button
-                                    className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded"
-                                    onClick={bringToFront}
+                                    className={`mode-button ${designMode === 'image' ? 'active' : ''}`}
+                                    onClick={() => handleModeToggle('image')}
                                 >
-                                    Bring Forward
-                                </button>
-                                <button
-                                    className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded"
-                                    onClick={sendToBack}
-                                >
-                                    Send Back
+                                    <span role="img" aria-label="Image mode">🖼️</span> Image
                                 </button>
                             </div>
                         </div>
-                    )}
+
+                        <div className="tool-section">
+                            <h3>T-Shirt Color</h3>
+                            <div className="color-picker">
+                                {TSHIRT_COLORS.map((color) => (
+                                    <div
+                                        key={color.hex}
+                                        className={`color-swatch ${tshirtColor === color.hex ? 'selected' : ''}`}
+                                        style={{ backgroundColor: color.hex }}
+                                        onClick={() => handleColorChange(color.hex)}
+                                        title={color.name}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="tool-section">
+                            <h3>Add Elements</h3>
+                            <div className="button-group">
+                                <button
+                                    className="add-element-button"
+                                    onClick={handleAddText}
+                                >
+                                    Add Text
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="tool-section">
+                            <h3>Actions</h3>
+                            <div className="button-group">
+                                <button
+                                    className="action-button remove-button"
+                                    onClick={handleRemoveSelected}
+                                    disabled={!selectedObject}
+                                >
+                                    Remove Selected
+                                </button>
+                                <button
+                                    className="action-button"
+                                    onClick={handleResetCanvas}
+                                >
+                                    Reset Canvas
+                                </button>
+                                <button
+                                    className="action-button fun-button"
+                                    onClick={generateRandomDesign}
+                                >
+                                    Random Design
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Render controls based on design mode */}
+                    <div className="design-controls">
+                        {designMode === 'text' ? (
+                            <TextControls {...textControlsProps} />
+                        ) : (
+                            <ImageControls {...imageControlsProps} />
+                        )}
+                    </div>
                 </div>
 
-                {/* Middle column - T-shirt Preview */}
-                <div className="flex flex-col items-center">
-                    <div className="relative">
-                        <div className="relative w-[300px] h-[380px]">
-                            {/* Improved SVG with accessibility features */}
-                            <svg
-                                viewBox="0 0 500 600"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-full h-full pointer-events-none"
-                                role="img"
-                                aria-label={`T-shirt design template in ${getColorName(tshirtColor)} color`}
-                            >
-                                <title>T-shirt Design Template - {getColorName(tshirtColor)}</title>
+                <div className="designer-canvas-container">
+                    <DesignCanvas
+                        ref={canvasRef}
+                        width={500}
+                        height={600}
+                        onObjectSelected={handleObjectSelected}
+                        tshirtColor={tshirtColor}
+                        backgroundImageUrl={backgroundImageUrl}
+                    />
 
-                                {/* T-shirt color description for screen readers */}
-                                <text x="0" y="20" className="sr-only">
-                                    {`T-shirt color: ${getColorName(tshirtColor)}`}
-                                </text>
-
-                                {/* T-shirt shape */}
-                                <path
-                                    d="M 100,100 L 170,30 L 330,30 L 400,100 L 350,150 L 350,550 L 150,550 L 150,150 L 100,100 z"
-                                    fill={tshirtColor}
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                />
-
-                                {/* Left sleeve */}
-                                <path
-                                    d="M 100,100 L 70,200 L 130,200 L 150,150 z"
-                                    fill={tshirtColor}
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                />
-
-                                {/* Right sleeve */}
-                                <path
-                                    d="M 400,100 L 430,200 L 370,200 L 350,150 z"
-                                    fill={tshirtColor}
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                />
-
-                                {/* Collar */}
-                                <path
-                                    d="M 200,30 L 250,60 L 300,30"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                />
-                            </svg>
-
-                            {/* Improved canvas container with clear design area indication */}
-                            <div className="absolute top-[100px] left-[50px]">
-                                <div className="relative w-[200px] h-[200px] border-2 border-dashed border-blue-500 rounded">
-                                    <canvas
-                                        ref={canvasRef}
-                                        id="tshirt-canvas"
-                                        className="w-full h-full"
-                                        aria-label="Design canvas area. Use the controls to add and customize elements."
-                                    />
-                                </div>
-                            </div>
-
-                            {loading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="mt-4 text-center">
-                            <div className="text-xs text-gray-500 bg-gray-100 rounded-md p-2 shadow-sm">
-                                <p className="font-medium text-gray-600 mb-1">Design Area</p>
-                                <p>Elements within the blue dotted border will be printed</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p className="text-sm text-gray-600 mt-4 text-center">
-                        Click and drag to move elements. <br />
-                        Use corner handles to resize.
-                    </p>
-                </div>
-
-                {/* Right column - Tips and Save */}
-                <div className="space-y-6">
-                    <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                        <h3 className="font-semibold text-gray-800 mb-3">Design Tips</h3>
-                        <ul className="text-sm text-gray-600 space-y-2">
-                            <li className="flex items-start">
-                                <svg className="w-4 h-4 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Keep your design simple and focused for better visibility.
-                            </li>
-                            <li className="flex items-start">
-                                <svg className="w-4 h-4 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Consider the t-shirt color when choosing text and image colors.
-                            </li>
-                            <li className="flex items-start">
-                                <svg className="w-4 h-4 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                High contrast between design and shirt color works best.
-                            </li>
-                            <li className="flex items-start">
-                                <svg className="w-4 h-4 text-blue-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                For image uploads, transparent PNG files work best.
-                            </li>
-                        </ul>
-                    </div>
-
-                    <button
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200 flex items-center justify-center"
-                        onClick={saveDesign}
-                    >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                        </svg>
-                        Save Design
-                    </button>
-
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <h3 className="font-semibold text-yellow-800 mb-2 flex items-center">
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Note
-                        </h3>
-                        <p className="text-sm text-yellow-700">
-                            This is a simplified preview. The printed design may appear slightly different. Professional adjustments will be made before printing to ensure best quality.
-                        </p>
+                    <div className="designer-actions">
+                        <button
+                            className="save-button"
+                            onClick={handleSaveDesign}
+                            disabled={loading}
+                        >
+                            {loading ? 'Saving...' : 'Save Design'}
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     );
+};
+
+TShirtDesigner.propTypes = {
+    initialColor: PropTypes.string,
+    onSaveDesign: PropTypes.func.isRequired
 };
 
 export default TShirtDesigner; 

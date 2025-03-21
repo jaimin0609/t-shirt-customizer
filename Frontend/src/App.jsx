@@ -15,9 +15,25 @@ import MainLayout from './layouts/MainLayout';
 // Utilities
 import { initAnalytics } from './services/analyticsService';
 import ErrorBoundary from './components/ErrorBoundary';
+import { notifyError } from './services/errorHandler';
 
 // UI Components
 import SkipLink from './components/UI/SkipLink';
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
+import HomePage from './pages/Home';
+import ProductsPage from './pages/Products';
+import ProductDetailPage from './pages/ProductDetail';
+import CustomizerPage from './pages/Customizer';
+import CartPage from './pages/Cart';
+import CheckoutPage from './pages/Checkout';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetail';
+import LoginPage from './pages/Login';
+import RegisterPage from './pages/Register';
+import ProfilePage from './pages/Profile';
+import NotFoundPage from './pages/NotFound';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 
 // Loading spinner for Suspense fallback
 const LoadingSpinner = () => (
@@ -41,18 +57,18 @@ const App = ({ isSSR = false, initialState = {} }) => {
 
   // Lazily load route components for code splitting in client
   // During SSR, these would be pre-rendered
-  const HomePage = React.lazy(() => import('./pages/HomePage'));
-  const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
-  const ProductDetailPage = React.lazy(() => import('./pages/ProductDetailPage'));
-  const DesignStudioPage = React.lazy(() => import('./pages/DesignStudioPage'));
-  const AboutPage = React.lazy(() => import('./pages/AboutPage'));
-  const CartPage = React.lazy(() => import('./pages/CartPage'));
-  const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
-  const SignupPage = React.lazy(() => import('./pages/SignupPage'));
-  const LoginPage = React.lazy(() => import('./pages/LoginPage'));
-  const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
-  const WishlistPage = React.lazy(() => import('./pages/WishlistPage'));
-  const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+  const HomePageComponent = React.lazy(() => import('./pages/HomePage'));
+  const ProductsPageComponent = React.lazy(() => import('./pages/ProductsPage'));
+  const ProductDetailPageComponent = React.lazy(() => import('./pages/ProductDetailPage'));
+  const DesignStudioPageComponent = React.lazy(() => import('./pages/DesignStudioPage'));
+  const AboutPageComponent = React.lazy(() => import('./pages/AboutPage'));
+  const CartPageComponent = React.lazy(() => import('./pages/CartPage.styled'));
+  const CheckoutPageComponent = React.lazy(() => import('./pages/CheckoutPage'));
+  const SignupPageComponent = React.lazy(() => import('./pages/SignupPage'));
+  const LoginPageComponent = React.lazy(() => import('./pages/LoginPage'));
+  const ProfilePageComponent = React.lazy(() => import('./pages/ProfilePage'));
+  const WishlistPageComponent = React.lazy(() => import('./pages/WishlistPage'));
+  const NotFoundPageComponent = React.lazy(() => import('./pages/NotFoundPage'));
 
   useEffect(() => {
     // Skip client-side initialization if we're rendering on the server
@@ -74,9 +90,18 @@ const App = ({ isSSR = false, initialState = {} }) => {
         event.error.toString().includes('useState')
       )) {
         setLoadError(event.error);
+        // Use our error notification system for uncaught errors
+        notifyError('An application error occurred. Please try refreshing the page.');
       }
     };
     window.addEventListener('error', errorHandler);
+
+    // Also handle unhandled promise rejections
+    const rejectionHandler = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      notifyError('A network or server error occurred. Please check your connection.');
+    };
+    window.addEventListener('unhandledrejection', rejectionHandler);
 
     // Handle initialization in a safe way
     const initApp = async () => {
@@ -107,6 +132,7 @@ const App = ({ isSSR = false, initialState = {} }) => {
       } catch (error) {
         console.error('Error during app initialization:', error);
         setInitError(error);
+        notifyError('Failed to initialize the application properly.');
         setIsLoaded(true); // Still set as loaded even if there's an error
       }
     };
@@ -125,6 +151,7 @@ const App = ({ isSSR = false, initialState = {} }) => {
     return () => {
       console.log('App component unmounting');
       window.removeEventListener('error', errorHandler);
+      window.removeEventListener('unhandledrejection', rejectionHandler);
       clearTimeout(timeoutId);
     };
   }, [isLoaded, isSSR]);
@@ -146,11 +173,13 @@ const App = ({ isSSR = false, initialState = {} }) => {
   if (initError || loadError) {
     const error = initError || loadError;
     return (
-      <div className="error-message p-4 bg-red-50 text-red-700 rounded m-4">
+      <div className="error-message p-4 bg-red-50 text-red-700 rounded m-4" role="alert" aria-live="assertive">
         <h2 className="text-xl font-bold">Application Error</h2>
         <p>{error.message || 'An unknown error occurred'}</p>
         <div className="mt-2 text-sm text-gray-600">
-          {error.stack && <pre className="overflow-auto max-h-40">{error.stack}</pre>}
+          {process.env.NODE_ENV !== 'production' && error.stack &&
+            <pre className="overflow-auto max-h-40">{error.stack}</pre>
+          }
         </div>
         <button
           className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
@@ -172,20 +201,50 @@ const App = ({ isSSR = false, initialState = {} }) => {
         <MainLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/product/:productId" element={<ProductDetailPage />} />
-              <Route path="/product/:_id" element={<ProductDetailPage />} />
-              <Route path="/custom-design-studio" element={<DesignStudioPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/wishlist" element={<WishlistPage />} />
-              <Route path="*" element={<NotFoundPage />} />
+              <Route path="/" element={<HomePageComponent />} />
+              <Route path="/products" element={<ProductsPageComponent />} />
+              <Route path="/products/:id" element={<ProductDetailPageComponent />} />
+              <Route path="/product/:productId" element={<ProductDetailPageComponent />} />
+              <Route path="/product/:_id" element={<ProductDetailPageComponent />} />
+              <Route path="/custom-design-studio" element={<DesignStudioPageComponent />} />
+              <Route path="/about" element={<AboutPageComponent />} />
+              <Route path="/cart" element={<CartPageComponent />} />
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <CheckoutPageComponent />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute>
+                    <OrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders/:orderId"
+                element={
+                  <ProtectedRoute>
+                    <OrderDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/signup" element={<SignupPageComponent />} />
+              <Route path="/login" element={<LoginPageComponent />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePageComponent />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/wishlist" element={<WishlistPageComponent />} />
+              <Route path="*" element={<NotFoundPageComponent />} />
             </Routes>
           </Suspense>
         </MainLayout>

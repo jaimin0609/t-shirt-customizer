@@ -1,0 +1,453 @@
+/* 
+ * Designer Component Styles
+ * Contains styles for the T-Shirt Designer component and all related sub-components
+ */
+
+/* Main Layout */
+.tshirt-designer {
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.designer-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .designer-layout {
+        flex-direction: row;
+    }
+}
+
+/* Sidebar */
+.designer-sidebar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.designer-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Tool Sections */
+.tool-section {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tool-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+}
+
+/* Button Groups */
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Mode Buttons */
+.mode-button {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mode-button:hover {
+    background-color: #e5e7eb;
+}
+
+.mode-button.active {
+    background-color: #3b82f6;
+    border-color: #2563eb;
+    color: white;
+}
+
+/* Color Picker */
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.color-swatch {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-swatch.selected {
+    border-color: #3b82f6;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Add Element Button */
+.add-element-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    background-color: #3b82f6;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.add-element-button:hover {
+    background-color: #2563eb;
+}
+
+/* Action Buttons */
+.action-button {
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-button:hover {
+    background-color: #e5e7eb;
+}
+
+.action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-button.remove-button {
+    background-color: #ef4444;
+    border-color: #dc2626;
+    color: white;
+}
+
+.action-button.remove-button:hover {
+    background-color: #dc2626;
+}
+
+.action-button.fun-button {
+    background-color: #8b5cf6;
+    border-color: #7c3aed;
+    color: white;
+}
+
+.action-button.fun-button:hover {
+    background-color: #7c3aed;
+}
+
+/* Design Controls */
+.design-controls {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Canvas Container */
+.designer-canvas-container {
+    position: relative;
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.designer-canvas-container canvas {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.25rem;
+}
+
+/* Save Button */
+.designer-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.save-button {
+    padding: 0.75rem 1.5rem;
+    background-color: #3b82f6;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-button:hover {
+    background-color: #2563eb;
+}
+
+.save-button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* Text Controls */
+.text-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.text-controls .message {
+    text-align: center;
+    padding: 1rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.value-display {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Font Style Toggles */
+.style-toggles {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.style-toggle {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    background-color: #f9fafb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.style-toggle:hover {
+    background-color: #f3f4f6;
+}
+
+.style-toggle.active {
+    background-color: #3b82f6;
+    border-color: #2563eb;
+    color: white;
+}
+
+/* Alignment Buttons */
+.alignment-group {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.alignment-button {
+    flex: 1;
+    padding: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.alignment-button:hover {
+    background-color: #f3f4f6;
+}
+
+.alignment-button.active {
+    background-color: #3b82f6;
+    border-color: #2563eb;
+    color: white;
+}
+
+/* Image Controls */
+.image-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.upload-section,
+.library-section {
+    margin-bottom: 1rem;
+}
+
+.upload-section h4,
+.library-section h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.file-input {
+    display: none;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.library-image {
+    padding: 0.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    background-color: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.library-image:hover {
+    transform: scale(1.05);
+    border-color: #3b82f6;
+}
+
+.library-image img {
+    max-width: 100%;
+    max-height: 2rem;
+}
+
+/* Flip Buttons */
+.flip-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    background-color: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.flip-button:hover {
+    background-color: #f3f4f6;
+}
+
+.flip-button.active {
+    background-color: #3b82f6;
+    border-color: #2563eb;
+    color: white;
+}
+
+/* Loading state */
+.loading-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 0.375rem;
+    z-index: 10;
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25rem solid #f3f4f6;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease forwards;
+}

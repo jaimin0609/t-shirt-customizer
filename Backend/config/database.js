@@ -1,44 +1,37 @@
 import { Sequelize } from 'sequelize';
 import 'dotenv/config';
+import { createSequelizeInstance, testConnection } from '../utils/databaseUtils.js';
 
+// Create a singleton instance of Sequelize
 let sequelize;
 
-// Check if we have a DATABASE_URL (for production)
-if (process.env.DATABASE_URL) {
-    sequelize = new Sequelize(process.env.DATABASE_URL, {
-        dialect: 'postgres',
-        dialectOptions: {
-            ssl: {
-                require: true,
-                rejectUnauthorized: false
-            }
-        },
-        logging: false
-    });
-    console.log('Using PostgreSQL with DATABASE_URL');
-} else {
-    // For local development
-    sequelize = new Sequelize(
-        process.env.DB_NAME,
-        process.env.DB_USER,
-        process.env.DB_PASSWORD,
-        {
-            host: process.env.DB_HOST,
-            dialect: process.env.DB_DIALECT || 'mysql',
-            logging: false
-        }
-    );
-    console.log('Using local database configuration');
-}
+/**
+ * Get the database connection instance
+ * @returns {Sequelize} The configured Sequelize instance
+ */
+const getConnection = () => {
+  // If we already have a connection, return it (singleton pattern)
+  if (sequelize) {
+    return sequelize;
+  }
+  
+  try {
+    // Create a new connection with appropriate configuration
+    sequelize = createSequelizeInstance();
+    return sequelize;
+  } catch (error) {
+    console.error('Database configuration error:', error.message);
+    throw error;
+  }
+};
+
+// Create the connection
+sequelize = getConnection();
 
 // Test the connection
 (async () => {
-    try {
-        await sequelize.authenticate();
-        console.log('Database connection has been established successfully.');
-    } catch (error) {
-        console.error('Unable to connect to the database:', error);
-    }
+  await testConnection(sequelize);
 })();
 
-export default sequelize; 
+export default sequelize;
+export { getConnection }; 

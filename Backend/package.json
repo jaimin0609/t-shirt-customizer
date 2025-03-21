@@ -15,7 +15,10 @@
     "track-migration": "node track-reset-token-migration.cjs",
     "manual-migration": "node manual-migration.cjs",
     "test-migration": "node test-migration.cjs",
-    "start-with-migration": "node manual-migration.cjs && node server.js"
+    "start-with-migration": "node manual-migration.cjs && node server.js",
+    "auto-migrate": "node scripts/auto-migrate.js",
+    "auto-migrate:check": "node scripts/auto-migrate.js --dry-run",
+    "test-db-config": "node scripts/test-db-config.js"
   },
   "keywords": [],
   "author": "",
@@ -44,7 +47,7 @@
     "pg-hstore": "^2.3.4",
     "sanitize-html": "^2.14.0",
     "sequelize": "^6.30.0",
-    "sharp": "^0.33.2",
+    "sharp": "^0.32.6",
     "stripe": "^14.25.0",
     "three": "^0.174.0",
     "umzug": "^3.8.2",

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
+import { getClientIp } from '../utils/requestUtils.js';
 
 /**
  * Token blacklist for revoked tokens
@@ -54,13 +55,80 @@ const isRateLimited = (ip) => {
 };
 
 /**
+ * Add a token to the blacklist
+ * @param {string} token - The token to blacklist
+ * @returns {void}
+ */
+export const blacklistToken = (token) => {
+    if (!token) return;
+    
+    try {
+        // Only add valid tokens to blacklist
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Calculate token expiration time
+        const expiryTime = decoded.exp * 1000;
+        
+        // Add token to blacklist
+        tokenBlacklist.add(token);
+        
+        // Schedule removal from blacklist after token expires
+        // This helps prevent memory leaks in the blacklist
+        const timeUntilExpiry = expiryTime - Date.now();
+        if (timeUntilExpiry > 0) {
+            setTimeout(() => {
+                tokenBlacklist.delete(token);
+            }, timeUntilExpiry);
+        }
+    } catch (error) {
+        // If token is invalid or expired, no need to blacklist
+        console.error('Error blacklisting token:', error.message);
+    }
+};
+
+/**
+ * Generate a secure JWT token
+ * @param {Object} user - User object to encode in token
+ * @param {Object} options - Additional token options
+ * @returns {string} JWT token
+ */
+export const generateToken = (user, options = {}) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET environment variable is not set');
+    }
+    
+    const payload = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tokenVersion: user.tokenVersion || 0,
+        // Include additional claims from options
+        ...options
+    };
+    
+    // Default expiration time is 1 day
+    const expiresIn = options.expiresIn || '1d';
+    
+    return jwt.sign(
+        payload,
+        process.env.JWT_SECRET,
+        { 
+            expiresIn,
+            // Include issued at claim for additional security
+            issuer: 'tshirt-customizer-api',
+            audience: 'tshirt-customizer-client'
+        }
+    );
+};
+
+/**
  * Authentication middleware
  * Verifies JWT token and adds user to request
  */
 const auth = async (req, res, next) => {
     try {
         // Get client IP for rate limiting
-        const ip = req.ip || req.connection.remoteAddress;
+        const ip = getClientIp(req);
         
         // Check for rate limiting
         if (isRateLimited(ip)) {
@@ -111,7 +179,10 @@ const auth = async (req, res, next) => {
         // Verify token
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
+            decoded = jwt.verify(token, process.env.JWT_SECRET, {
+                issuer: 'tshirt-customizer-api',
+                audience: 'tshirt-customizer-client'
+            });
         } catch (jwtError) {
             console.error('JWT verification error:', jwtError.name);
             
@@ -227,28 +298,4 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-/**
- * Logout helper to add token to blacklist
- * @param {string} token - The token to blacklist
- */
-const revokeToken = (token) => {
-    if (token) {
-        tokenBlacklist.add(token);
-        
-        // In a real production environment, we would also:
-        // 1. Store the blacklist in Redis or another persistent store
-        // 2. Set an expiration based on the token's original expiry
-        // 3. Periodically clean up expired tokens from the blacklist
-        
-        // For this implementation, we'll clean up the blacklist if it gets too large
-        if (tokenBlacklist.size > 1000) {
-            // This is a simple cleanup that removes random tokens
-            // In production, you'd want to remove the oldest tokens first
-            const tokensArray = Array.from(tokenBlacklist);
-            const tokensToRemove = tokensArray.slice(0, 200); // Remove oldest 200
-            tokensToRemove.forEach(t => tokenBlacklist.delete(t));
-        }
-    }
-};
-
-export { auth, isAdmin, revokeToken }; 
+export { auth, isAdmin, blacklistToken, generateToken }; 

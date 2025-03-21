@@ -1,87 +1,17 @@
 #!/bin/bash
+# Wrapper script for the unified build script with Vercel-specific settings
+# This script uses the new consolidated build process
 
-# Set environment to production
-export NODE_ENV=production
+echo "Starting Vercel build script (wrapper)..."
 
-echo "Starting Vercel shell build script..."
+# Determine script directory for relative paths
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Ensure proper error logging
-set -e
-set -o pipefail
+# Make sure the build script is executable
+chmod +x "$SCRIPT_DIR/build.sh"
 
-# Print environment info
-echo "Node version: $(node -v)"
-echo "NPM version: $(npm -v)"
-echo "Current directory: $(pwd)"
-echo "Directory contents: $(ls -la)"
+# Run the unified build script with platform=vercel
+"$SCRIPT_DIR/build.sh" --platform=vercel
 
-# Ensure path includes node_modules/.bin
-export PATH="$PATH:$(pwd)/node_modules/.bin:/vercel/path0/node_modules/.bin"
-echo "PATH: $PATH"
-
-# Verify that PostCSS and Tailwind are installed
-echo "Checking for PostCSS and Tailwind..."
-if [ ! -d "node_modules/postcss" ] || [ ! -d "node_modules/tailwindcss" ]; then
-  echo "PostCSS or Tailwind not found, installing dependencies..."
-  npm install --save-dev postcss tailwindcss autoprefixer cssnano
-fi
-
-# Ensure critical CSS is generated
-echo "Generating critical CSS if needed..."
-if [ ! -f "public/critical.css" ]; then
-  mkdir -p public
-  
-  # Check if we're using the new CSS structure
-  if [ -f "src/styles/index.css" ]; then
-    echo "Using new CSS structure with styles directory"
-    cp src/styles/index.css public/critical.css
-  else
-    echo "Using legacy CSS structure"
-    cp src/index.css public/critical.css
-  fi
-fi
-
-# Try direct build
-echo "Attempting to build with direct vite command..."
-if [ -f "node_modules/.bin/vite" ]; then
-  echo "Using local vite from node_modules/.bin"
-  ./node_modules/.bin/vite build
-elif command -v npx &> /dev/null; then
-  echo "Using npx to run vite"
-  npx vite build
-elif command -v vite &> /dev/null; then
-  echo "Using global vite"
-  vite build
-else
-  echo "Vite not found, installing vite and dependencies..."
-  npm install --save-dev vite cssnano postcss tailwindcss autoprefixer
-  ./node_modules/.bin/vite build
-fi
-
-# Create SPA routing fallback files
-echo "Creating SPA routing fallback files..."
-if [ -f "dist/index.html" ]; then
-  echo "Copying index.html to 200.html for client-side routing"
-  cp dist/index.html dist/200.html
-  cp dist/index.html dist/404.html
-  
-  # Create routes directories with fallbacks for deep links
-  mkdir -p dist/products
-  echo '<meta http-equiv="refresh" content="0;url=/" />' > dist/products/index.html
-  
-  mkdir -p dist/product
-  echo '<meta http-equiv="refresh" content="0;url=/" />' > dist/product/index.html
-fi
-
-# Verify the build output
-if [ -d "dist" ]; then
-  echo "Build successful! Contents of dist directory:"
-  ls -la dist
-  echo "Assets directory:"
-  ls -la dist/assets || echo "No assets directory found"
-else
-  echo "Build failed - no dist directory created"
-  exit 1
-fi
-
-echo "Build script completed successfully" 
+# Return the same exit status as the build script
+exit $? 

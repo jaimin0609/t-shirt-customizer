@@ -1,31 +1,32 @@
 // Simple script to fix product images in the database
-import db from '../models/index.js';
-import dotenv from 'dotenv';
+import { Product } from '../models/index.js';
+import 'dotenv/config';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 // Initialize environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, '..', '.env') });
 
 // Validate Cloudinary cloud name
 if (!process.env.CLOUDINARY_CLOUD_NAME) {
-  console.warn('⚠️ CLOUDINARY_CLOUD_NAME environment variable is missing');
+  console.error('❌ CLOUDINARY_CLOUD_NAME environment variable is missing!');
+  console.error('Please set this variable in your .env file.');
+  process.exit(1);
 }
 
-// Default placeholder URL
-const DEFAULT_PLACEHOLDER = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'placeholder'}/image/upload/v1650052235/tshirt-customizer/placeholder-product.jpg`;
+// Default placeholder URL using the configured Cloudinary account
+const DEFAULT_PLACEHOLDER = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1650052235/tshirt-customizer/placeholder-product.jpg`;
 
 // Function to fix product images
 async function fixProductImages() {
     try {
         console.log('Connecting to database...');
-        await db.sequelize.authenticate();
+        await sequelize.authenticate();
         console.log('Database connection established');
         
         // Get all products from the database
-        const products = await db.Product.findAll();
+        const products = await Product.findAll();
         console.log(`Found ${products.length} products in the database`);
         
         // Fix each product
@@ -44,6 +45,7 @@ async function fixProductImages() {
         console.log('All products updated successfully');
     } catch (error) {
         console.error('Error fixing product images:', error);
+        process.exit(1);
     }
 }
 

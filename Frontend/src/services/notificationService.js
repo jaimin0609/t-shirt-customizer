@@ -6,7 +6,7 @@ import axios from 'axios';
 // Removing dependency on authService for build compatibility
 // import { getAuthHeaders, isTokenExpired, refreshToken } from './authService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
 
 // Helper functions moved locally from authService to avoid import errors
 const getAuthHeaders = () => {

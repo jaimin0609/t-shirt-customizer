@@ -14,6 +14,9 @@ import './styles/main.css';
 import './index.css';
 import './App.css';
 
+// Import performance benchmark tools for development mode
+import { addBenchmarkButton } from './utils/benchmarkExamples';
+
 // Ensure React is globally available in case any modules are looking for it
 // This needs to happen before importing any components that might use createContext
 window.React = React;
@@ -82,6 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     console.log('React app rendered successfully');
+
+    // Add benchmark button in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Adding performance benchmark button in development mode');
+      addBenchmarkButton();
+    }
   } catch (error) {
     console.error('Error rendering React application:', error);
 

@@ -1,191 +1,231 @@
 // Direct import React as fallback
-import React from 'react';
-import { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import PropTypes from 'prop-types';
+import config from '../config/appConfig';
 
-// Import services consistently
-const notificationService = {
-    // Placeholder implementations until real service is connected
-    fetchUnreadNotifications: async (limit = 10) => {
-        console.log('Fetching notifications with limit:', limit);
-        // Mock implementation
-        return { notifications: [], count: 0 };
-    },
-    getNotificationCount: async () => {
-        // Mock implementation
-        return 0;
-    },
-    markNotificationsAsRead: async (ids) => {
-        console.log('Marking notifications as read:', ids);
-        // Mock implementation
-        return true;
-    },
-    markAllNotificationsAsRead: async () => {
-        console.log('Marking all notifications as read');
-        // Mock implementation
-        return true;
-    },
-    formatNotifications: (notifications) => {
-        // Mock implementation
-        return notifications.map(n => ({
-            ...n,
-            formattedDate: new Date(n.createdAt).toLocaleString()
-        }));
+// Create notification context
+const NotificationContext = createContext();
+
+// Define notification types
+export const NOTIFICATION_TYPES = {
+    SUCCESS: 'success',
+    ERROR: 'error',
+    WARNING: 'warning',
+    INFO: 'info'
+};
+
+// Define action types
+const ACTIONS = {
+    ADD_NOTIFICATION: 'ADD_NOTIFICATION',
+    REMOVE_NOTIFICATION: 'REMOVE_NOTIFICATION',
+    CLEAR_ALL: 'CLEAR_ALL'
+};
+
+// Initial state
+const initialState = {
+    notifications: []
+};
+
+// Generate a unique ID for notifications
+const generateId = () => `notification-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+// Reducer function
+const notificationReducer = (state, action) => {
+    switch (action.type) {
+        case ACTIONS.ADD_NOTIFICATION:
+            return {
+                ...state,
+                notifications: [
+                    ...state.notifications,
+                    {
+                        ...action.payload,
+                        id: action.payload.id || generateId()
+                    }
+                ]
+            };
+
+        case ACTIONS.REMOVE_NOTIFICATION:
+            return {
+                ...state,
+                notifications: state.notifications.filter(
+                    notification => notification.id !== action.payload
+                )
+            };
+
+        case ACTIONS.CLEAR_ALL:
+            return {
+                ...state,
+                notifications: []
+            };
+
+        default:
+            return state;
     }
 };
 
-// Create notification context with safer pattern
-const NotificationContext = createContext({
-    notifications: [],
-    unreadCount: 0,
-    loading: false,
-    error: null,
-    isOpen: false,
-    fetchNotifications: () => { },
-    refreshNotificationCount: () => { },
-    markAsRead: () => { },
-    markAllAsRead: () => { },
-    toggleNotifications: () => { },
-    closeNotifications: () => { }
-});
+/**
+ * NotificationProvider component that provides notification functionality
+ * to its children components
+ */
+export function NotificationProvider({ children }) {
+    const [state, dispatch] = useReducer(notificationReducer, initialState);
 
-// Export NotificationContext for direct use if needed
-export { NotificationContext };
+    /**
+     * Add a new notification
+     * 
+     * @param {Object} notification - The notification to add
+     * @param {string} notification.message - The message to display
+     * @param {string} notification.type - The type of notification (success, error, warning, info)
+     * @param {number} notification.duration - Duration in ms before auto-closing (0 for persistent)
+     * @param {Function} notification.onClose - Callback function called when notification is closed
+     * @param {boolean} notification.dismissible - Whether the notification can be manually closed
+     * @param {string} notification.title - Optional title for the notification
+     * @param {Object} notification.data - Optional additional data for the notification
+     * @returns {string} The ID of the created notification
+     */
+    const addNotification = useCallback((notification) => {
+        // Apply defaults from config
+        const completeNotification = {
+            type: NOTIFICATION_TYPES.INFO,
+            duration: config.UI.TOAST_DURATION,
+            dismissible: true,
+            ...notification,
+            timestamp: Date.now()
+        };
 
-export const NotificationProvider = ({ children }) => {
-    const { isAuthenticated } = useAuth();
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [isOpen, setIsOpen] = useState(false);
+        const id = completeNotification.id || generateId();
+        completeNotification.id = id;
 
-    // Fetch notifications from the API
-    const fetchNotifications = useCallback(async (limit = 10) => {
-        if (!isAuthenticated) return;
+        dispatch({
+            type: ACTIONS.ADD_NOTIFICATION,
+            payload: completeNotification
+        });
 
-        setLoading(true);
-        setError(null);
+        // Auto-remove notification after duration (if not persistent)
+        if (completeNotification.duration > 0) {
+            setTimeout(() => {
+                removeNotification(id);
 
-        try {
-            const data = await notificationService.fetchUnreadNotifications(limit);
-            setNotifications(notificationService.formatNotifications(data.notifications || []));
-            setUnreadCount(data.count || 0);
-        } catch (err) {
-            console.error('Error fetching notifications:', err);
-            setError('Failed to fetch notifications');
-        } finally {
-            setLoading(false);
+                // Call onClose callback if provided
+                if (completeNotification.onClose && typeof completeNotification.onClose === 'function') {
+                    completeNotification.onClose();
+                }
+            }, completeNotification.duration);
         }
-    }, [isAuthenticated]);
 
-    // Fetch notification count only
-    const refreshNotificationCount = useCallback(async () => {
-        if (!isAuthenticated) return;
-
-        try {
-            const count = await notificationService.getNotificationCount();
-            setUnreadCount(count);
-        } catch (err) {
-            console.error('Error fetching notification count:', err);
-        }
-    }, [isAuthenticated]);
-
-    // Mark a single notification as read
-    const markAsRead = useCallback(async (notificationId) => {
-        try {
-            await notificationService.markNotificationsAsRead([notificationId]);
-
-            // Update local state
-            setNotifications(prevNotifications =>
-                prevNotifications.map(notification =>
-                    notification.id === notificationId
-                        ? { ...notification, read: true }
-                        : notification
-                )
-            );
-
-            // Refresh the count
-            refreshNotificationCount();
-        } catch (err) {
-            console.error('Error marking notification as read:', err);
-            setError('Failed to mark notification as read');
-        }
-    }, [refreshNotificationCount]);
-
-    // Mark all notifications as read
-    const markAllAsRead = useCallback(async () => {
-        try {
-            await notificationService.markAllNotificationsAsRead();
-
-            // Update local state
-            setNotifications(prevNotifications =>
-                prevNotifications.map(notification => ({ ...notification, read: true }))
-            );
-
-            // Reset the unread count
-            setUnreadCount(0);
-        } catch (err) {
-            console.error('Error marking all notifications as read:', err);
-            setError('Failed to mark all notifications as read');
-        }
+        return id;
     }, []);
 
-    // Toggle the notification dropdown
-    const toggleNotifications = useCallback(() => {
-        setIsOpen(prevState => !prevState);
-
-        // If opening, fetch latest notifications
-        if (!isOpen) {
-            fetchNotifications();
-        }
-    }, [isOpen, fetchNotifications]);
-
-    // Close the notification dropdown
-    const closeNotifications = useCallback(() => {
-        setIsOpen(false);
+    /**
+     * Remove a notification by ID
+     * 
+     * @param {string} id - The ID of the notification to remove
+     */
+    const removeNotification = useCallback((id) => {
+        dispatch({ type: ACTIONS.REMOVE_NOTIFICATION, payload: id });
     }, []);
 
-    // Initial load and periodic refresh
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchNotifications();
+    /**
+     * Clear all notifications
+     */
+    const clearAllNotifications = useCallback(() => {
+        dispatch({ type: ACTIONS.CLEAR_ALL });
+    }, []);
 
-            // Set up periodic refresh every 5 minutes
-            const intervalId = setInterval(() => {
-                refreshNotificationCount();
-            }, 5 * 60 * 1000);
+    /**
+     * Helper function to add a success notification
+     * 
+     * @param {string} message - The message to display
+     * @param {Object} options - Additional options for the notification
+     * @returns {string} The ID of the created notification
+     */
+    const showSuccess = useCallback((message, options = {}) => {
+        return addNotification({
+            ...options,
+            message,
+            type: NOTIFICATION_TYPES.SUCCESS
+        });
+    }, [addNotification]);
 
-            return () => clearInterval(intervalId);
-        }
-    }, [isAuthenticated, fetchNotifications, refreshNotificationCount]);
+    /**
+     * Helper function to add an error notification
+     * 
+     * @param {string} message - The message to display
+     * @param {Object} options - Additional options for the notification
+     * @returns {string} The ID of the created notification
+     */
+    const showError = useCallback((message, options = {}) => {
+        return addNotification({
+            ...options,
+            message,
+            type: NOTIFICATION_TYPES.ERROR
+        });
+    }, [addNotification]);
+
+    /**
+     * Helper function to add a warning notification
+     * 
+     * @param {string} message - The message to display
+     * @param {Object} options - Additional options for the notification
+     * @returns {string} The ID of the created notification
+     */
+    const showWarning = useCallback((message, options = {}) => {
+        return addNotification({
+            ...options,
+            message,
+            type: NOTIFICATION_TYPES.WARNING
+        });
+    }, [addNotification]);
+
+    /**
+     * Helper function to add an info notification
+     * 
+     * @param {string} message - The message to display
+     * @param {Object} options - Additional options for the notification
+     * @returns {string} The ID of the created notification
+     */
+    const showInfo = useCallback((message, options = {}) => {
+        return addNotification({
+            ...options,
+            message,
+            type: NOTIFICATION_TYPES.INFO
+        });
+    }, [addNotification]);
+
+    // Value object to be provided to consumers
+    const value = {
+        notifications: state.notifications,
+        addNotification,
+        removeNotification,
+        clearAllNotifications,
+        showSuccess,
+        showError,
+        showWarning,
+        showInfo
+    };
 
     return (
-        <NotificationContext.Provider
-            value={{
-                notifications,
-                unreadCount,
-                loading,
-                error,
-                isOpen,
-                fetchNotifications,
-                refreshNotificationCount,
-                markAsRead,
-                markAllAsRead,
-                toggleNotifications,
-                closeNotifications
-            }}
-        >
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     );
+}
+
+NotificationProvider.propTypes = {
+    children: PropTypes.node.isRequired
 };
 
-// Custom hook to use the notification context
-export const useNotification = () => {
+/**
+ * Custom hook to use the notification context
+ * 
+ * @returns {Object} The notification context value
+ */
+export function useNotification() {
     const context = useContext(NotificationContext);
-    if (!context) {
+    if (context === undefined) {
         throw new Error('useNotification must be used within a NotificationProvider');
     }
     return context;
-}; 
+}
+
+export default NotificationContext; 

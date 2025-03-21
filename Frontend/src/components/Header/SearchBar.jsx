@@ -37,7 +37,7 @@ const SearchBar = ({
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
             // Use the backend URL to create a full image path
-            return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002'}${imagePath}`;
+            return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://t-shirt-customizer-backend.onrender.com'}${imagePath}`;
         }
 
         // Otherwise, assume it's a local asset

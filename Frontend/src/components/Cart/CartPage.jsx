@@ -101,6 +101,7 @@ const CartPage = () => {
 
         try {
             // Apply coupon using the backend API
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
             const result = await contextApplyCoupon(couponCode, subtotal);
 
             if (!result.success) {
@@ -151,7 +152,7 @@ const CartPage = () => {
         }
 
         // Handle backend paths (assuming backend URL is available)
-        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
         return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
     };
 

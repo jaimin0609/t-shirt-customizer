@@ -14,6 +14,9 @@ import { createRequire } from 'module';
 import { fixProductImagesColumn } from './scripts/fix-production-images.js';
 // Import email service
 import { initializeEmailService } from './services/emailService.js';
+import morgan from 'morgan';
+import { initializeSecurityMiddleware } from './middleware/securityMiddleware.js';
+import securityTester from './middleware/securityTester.js';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 
@@ -58,6 +61,10 @@ import diagnosticsRoutes from './routes/diagnostics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import errorHandler from './middleware/errorHandler.js';
+import userRoutes from './routes/users.routes.js';
+import categoryRoutes from './routes/categories.routes.js';
+import reviewRoutes from './routes/reviews.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,145 +75,86 @@ const app = express();
 // This fixes the "ERR_ERL_UNEXPECTED_X_FORWARDED_FOR" warning
 app.set('trust proxy', 1);
 
-// Create and configure allowlist of domains for CORS
-const createCorsAllowList = () => {
-  // Start with essential domains
-  const staticAllowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5002',
-    'http://127.0.0.1:5002',
-    'https://t-shirt-customizer-backend.onrender.com',
-    'https://uniqverse-five.vercel.app',
-    'https://uniqverse.vercel.app'
-  ];
-  
-  // Add any additional domains from environment variable if present
-  const envAllowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : [];
-  
-  // Combine both lists
-  return [...new Set([...staticAllowedOrigins, ...envAllowedOrigins])];
-};
+// Security middleware initialization
+const securityMiddleware = initializeSecurityMiddleware();
 
-const corsAllowList = createCorsAllowList();
+// Apply basic security headers
+app.use(securityMiddleware.configureHelmet);
 
-// Middleware
-app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, etc)
-        if (!origin) return callback(null, true);
-        
-        // Check if origin is in allowlist
-        if (corsAllowList.includes(origin)) {
-            callback(null, true);
-        } else if (origin.endsWith('.vercel.app')) {
-            // Allow specific vercel subdomains for development
-            callback(null, true);
-        } else {
-            console.warn(`Origin rejected by CORS policy: ${origin}`);
-            callback(new Error(`Origin ${origin} not allowed by CORS policy`));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    maxAge: 86400 // 24 hours
-}));
+// Configure CORS
+app.use(securityMiddleware.configureCors);
 
-// Enhanced security headers with Helmet
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com', 'https://cdn.jsdelivr.net'],
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
-            imgSrc: ["'self'", 'https://res.cloudinary.com', 'data:', 'blob:'],
-            connectSrc: ["'self'", ...corsAllowList],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
-            frameSrc: ["'self'", 'https://js.stripe.com'],
-            upgradeInsecureRequests: [],
-        },
-    },
-    crossOriginEmbedderPolicy: false, // Allow embedding resources from approved domains
-    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Needed for OAuth flows
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // Required for loading resources from CDNs
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true
-    },
-    xssFilter: true,
-    noSniff: true,
-    dnsPrefetchControl: { allow: false },
-}));
-
-// Body parser middleware
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
-app.use(cookieParser());
-
-// Rate limiting for all routes
+// Apply rate limiting to all requests
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 500, // limit each IP to 500 requests per windowMs
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    max: 100, // limit each IP to 100 requests per windowMs
     message: 'Too many requests from this IP, please try again after 15 minutes',
-    skip: (req) => {
-        // Skip rate limiting for development environment
-        return process.env.NODE_ENV === 'development' || 
-               req.ip === '127.0.0.1' || 
-               req.ip === '::1';
-    }
+    standardHeaders: true,
+    legacyHeaders: false
 });
-
-// Apply rate limiter to all routes
 app.use(apiLimiter);
 
-// Stricter rate limiting for authentication routes to prevent brute force attacks
-const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 30, // limit each IP to 30 login/register requests per hour
-    message: 'Too many login attempts, please try again after an hour',
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => process.env.NODE_ENV === 'development'
+// Middleware for parsing request bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser middleware
+app.use(cookieParser());
+
+// Logging middleware
+const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(morganFormat, {
+    skip: (req, res) => process.env.NODE_ENV === 'test'
+}));
+
+// Add security testing middleware in development
+if (process.env.NODE_ENV !== 'production') {
+    app.use(securityTester);
+    console.log('🔍 Security testing middleware enabled for development');
+}
+
+// Validate Origin header for cross-origin requests that modify state
+app.use(securityMiddleware.validateOrigin);
+
+// Apply CSRF protection to routes that need it
+// This is applied selectively to routes that modify state, excluding authentication endpoints
+app.use(securityMiddleware.validateCsrfToken);
+
+// Provide CSRF token for forms
+app.get('/api/csrf-token', securityMiddleware.csrfProtection, (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Additional security: clear sensitive headers that might be added by underlying platforms
+// Security headers for all responses
 app.use((req, res, next) => {
-    res.removeHeader('X-Powered-By');
+    // Additional security headers not covered by helmet
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
     next();
 });
 
 // Routes
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/analytics', analyticsRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/products', productsRoutes);
-app.use('/api/cart', cartRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payment', paymentRoutes);
-app.use('/api/admin-profile', adminProfileRoutes);
 app.use('/api/customers', customerRoutes);
-app.use('/api/coupons', couponRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/promotions', promotionRoutes);
-app.use('/api/product-variants', productVariantsRoutes);
-app.use('/api/diagnostics', diagnosticsRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin/profile', adminProfileRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'Server is healthy', environment: process.env.NODE_ENV || 'development' });
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Route to redirect to admin panel

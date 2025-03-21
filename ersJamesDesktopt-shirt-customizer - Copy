@@ -1,0 +1,17 @@
+[1mdiff --git a/Frontend/src/components/Header/DesignMenu.jsx b/Frontend/src/components/Header/DesignMenu.jsx[m
+[1mindex 0f53676..84479a3 100644[m
+[1m--- a/Frontend/src/components/Header/DesignMenu.jsx[m
+[1m+++ b/Frontend/src/components/Header/DesignMenu.jsx[m
+[36m@@ -3,9 +3,9 @@[m [mimport { Link } from 'react-router-dom';[m
+ [m
+ const DesignMenu = () => {[m
+     const designItems = [[m
+[31m-        { name: 'Design Gallery', href: '/designs', description: 'Browse our collection of pre-made designs' },[m
+[31m-        { name: 'Custom Design', href: '/custom-design', description: 'Create your own custom t-shirt design' },[m
+[31m-        { name: '3D Designer', href: '/3d-designer', description: 'Use our 3D design tool for perfect visualization' }[m
+[32m+[m[32m        { name: 'Design Gallery', href: '/designs' },[m
+[32m+[m[32m        { name: 'Custom Design', href: '/custom-design' },[m
+[32m+[m[32m        { name: '3D Designer', href: '/3d-designer' }[m
+     ];[m
+ [m
+     return ([m

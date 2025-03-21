@@ -4,6 +4,42 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 
+// Define password validation regex patterns
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+
+/**
+ * Validate password strength against security requirements
+ * @param {string} password - The password to validate
+ * @returns {boolean} True if password meets all requirements
+ */
+const validatePasswordStrength = (password) => {
+    if (!password || typeof password !== 'string') {
+        return false;
+    }
+    
+    // Check minimum length
+    if (password.length < PASSWORD_MIN_LENGTH) {
+        return false;
+    }
+    
+    // Check for at least one uppercase, one lowercase, one number, one special char
+    if (!PASSWORD_REGEX.test(password)) {
+        return false;
+    }
+    
+    // Check for common passwords (basic implementation)
+    const commonPasswords = [
+        'password', 'admin123', '123456', 'qwerty', 'letmein', 
+        'welcome', 'monkey', 'password123', '123456789', 'qwerty123'
+    ];
+    if (commonPasswords.includes(password.toLowerCase())) {
+        return false;
+    }
+    
+    return true;
+};
+
 const User = sequelize.define('User', {
     id: {
         type: DataTypes.INTEGER,
@@ -29,7 +65,10 @@ const User = sequelize.define('User', {
     },
     password: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
+        validate: {
+            notEmpty: true
+        }
     },
     role: {
         type: DataTypes.ENUM('admin', 'user', 'customer'),
@@ -50,20 +89,117 @@ const User = sequelize.define('User', {
     resetTokenExpiry: {
         type: DataTypes.DATE,
         allowNull: true
+    },
+    tokenVersion: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false
+    },
+    lastPasswordChange: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    failedLoginAttempts: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    accountLockedUntil: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     hooks: {
         beforeCreate: async (user) => {
             if (user.password) {
+                // Validate password strength on creation
+                if (!validatePasswordStrength(user.password)) {
+                    throw new Error('Password does not meet security requirements');
+                }
+                
+                // Use a higher cost factor for increased security (10-12 is recommended)
                 user.password = await bcrypt.hash(user.password, 12);
+                user.lastPasswordChange = new Date();
             }
         },
         beforeUpdate: async (user) => {
             if (user.changed('password')) {
+                // Validate password strength on update
+                if (!validatePasswordStrength(user.password)) {
+                    throw new Error('Password does not meet security requirements');
+                }
+                
                 user.password = await bcrypt.hash(user.password, 12);
+                user.lastPasswordChange = new Date();
+                
+                // Increment tokenVersion to invalidate existing tokens
+                if (user.tokenVersion !== undefined) {
+                    user.tokenVersion += 1;
+                }
             }
+        }
+    },
+    // Add instance methods to the model
+    instanceMethods: {
+        /**
+         * Compare a password with the stored hash
+         * @param {string} candidatePassword - Password to compare
+         * @returns {Promise<boolean>} True if passwords match
+         */
+        comparePassword: async function(candidatePassword) {
+            return bcrypt.compare(candidatePassword, this.password);
+        },
+        
+        /**
+         * Increment failed login attempts counter
+         * @returns {Promise} Update result
+         */
+        incrementFailedLoginAttempts: async function() {
+            this.failedLoginAttempts += 1;
+            
+            // Lock account after 5 failed attempts for 30 minutes
+            if (this.failedLoginAttempts >= 5) {
+                const lockTime = new Date();
+                lockTime.setMinutes(lockTime.getMinutes() + 30);
+                this.accountLockedUntil = lockTime;
+            }
+            
+            return this.save();
+        },
+        
+        /**
+         * Reset failed login attempts counter
+         * @returns {Promise} Update result
+         */
+        resetFailedLoginAttempts: async function() {
+            this.failedLoginAttempts = 0;
+            this.accountLockedUntil = null;
+            return this.save();
         }
     }
 });
+
+// Add instance methods (Sequelize v6 syntax)
+User.prototype.comparePassword = async function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
+
+User.prototype.incrementFailedLoginAttempts = async function() {
+    this.failedLoginAttempts += 1;
+    
+    // Lock account after 5 failed attempts for 30 minutes
+    if (this.failedLoginAttempts >= 5) {
+        const lockTime = new Date();
+        lockTime.setMinutes(lockTime.getMinutes() + 30);
+        this.accountLockedUntil = lockTime;
+    }
+    
+    return this.save();
+};
+
+User.prototype.resetFailedLoginAttempts = async function() {
+    this.failedLoginAttempts = 0;
+    this.accountLockedUntil = null;
+    return this.save();
+};
 
 export default User; 

@@ -1,358 +1,212 @@
-import axios from 'axios';
+/**
+ * Authentication Service
+ * Handles user authentication and session management
+ */
+import apiClient, { api } from './apiClient';
+import { handleApiError } from './errorHandler';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-// URL validation helper to prevent SSRF attacks
-const validateUrl = (url) => {
-    try {
-        const parsedUrl = new URL(url);
-        const allowedHosts = [
-            new URL(API_URL).hostname,
-            'localhost',
-            '127.0.0.1'
-        ];
-        
-        // Only allow URLs from our API or localhost
-        if (!allowedHosts.includes(parsedUrl.hostname)) {
-            console.error('Security: Blocked request to unauthorized host:', parsedUrl.hostname);
-            throw new Error('URL not allowed');
-        }
-        
-        return url;
-    } catch (error) {
-        // If the URL is malformed or not allowed, default to the API URL
-        console.error('Invalid URL detected, using safe default');
-        return API_URL;
-    }
-};
+const TOKEN_KEY = 'token';
+const USER_KEY = 'user';
 
 class AuthService {
-    constructor() {
-        this.token = localStorage.getItem('token');
-        this.user = JSON.parse(localStorage.getItem('user'));
-        
-        // Remove existing interceptors if any
-        this.requestInterceptor = null;
-        this.responseInterceptor = null;
-        
-        this.setupInterceptors();
+  constructor() {
+    this.user = JSON.parse(localStorage.getItem(USER_KEY)) || null;
+    this.token = localStorage.getItem(TOKEN_KEY) || null;
+    this.tokenExpiration = localStorage.getItem('tokenExpiration') || null;
+  }
+
+  /**
+   * Login a user
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Object} User data
+   */
+  async login(email, password) {
+    try {
+      const data = await api.post('/auth/login', { email, password });
+      this.setSession(data);
+      return data.user;
+    } catch (error) {
+      throw handleApiError(error, 'Login failed');
     }
+  }
+
+  /**
+   * Register a new user
+   * @param {Object} userData - User registration data
+   * @returns {Object} User data
+   */
+  async register(userData) {
+    try {
+      const data = await api.post('/auth/register', userData);
+      this.setSession(data);
+      return data.user;
+    } catch (error) {
+      throw handleApiError(error, 'Registration failed');
+    }
+  }
+
+  /**
+   * Logout the current user
+   */
+  async logout() {
+    try {
+      // Call logout endpoint to invalidate token on server
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local session data, even if server call fails
+      this.clearSession();
+    }
+  }
+
+  /**
+   * Update user profile
+   * @param {Object} profileData - Updated profile data
+   * @returns {Object} Updated user data
+   */
+  async updateProfile(profileData) {
+    try {
+      const data = await api.put('/users/profile', profileData);
+      // Update stored user data
+      this.user = data.user;
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      return data.user;
+    } catch (error) {
+      throw handleApiError(error, 'Profile update failed');
+    }
+  }
+
+  /**
+   * Change user password
+   * @param {Object} passwordData - Old and new password
+   * @returns {Object} Success message
+   */
+  async changePassword(passwordData) {
+    try {
+      return await api.put('/users/password', passwordData);
+    } catch (error) {
+      throw handleApiError(error, 'Password change failed');
+    }
+  }
+
+  /**
+   * Request password reset
+   * @param {string} email - User email
+   * @returns {Object} Success message
+   */
+  async requestPasswordReset(email) {
+    try {
+      return await api.post('/auth/request-reset', { email });
+    } catch (error) {
+      throw handleApiError(error, 'Password reset request failed');
+    }
+  }
+
+  /**
+   * Reset password with token
+   * @param {string} token - Reset token
+   * @param {string} password - New password
+   * @returns {Object} Success message
+   */
+  async resetPassword(token, password) {
+    try {
+      return await api.post('/auth/reset-password', { token, password });
+    } catch (error) {
+      throw handleApiError(error, 'Password reset failed');
+    }
+  }
+
+  /**
+   * Verify user email
+   * @param {string} token - Verification token
+   * @returns {Object} Success message
+   */
+  async verifyEmail(token) {
+    try {
+      return await api.post('/auth/verify-email', { token });
+    } catch (error) {
+      throw handleApiError(error, 'Email verification failed');
+    }
+  }
+
+  /**
+   * Check if user is authenticated
+   * @returns {boolean}
+   */
+  isAuthenticated() {
+    return !!this.token && !this.isTokenExpired();
+  }
+
+  /**
+   * Check if token is expired
+   * @returns {boolean}
+   */
+  isTokenExpired() {
+    if (!this.tokenExpiration) return true;
+    return new Date(this.tokenExpiration) < new Date();
+  }
+
+  /**
+   * Get current user
+   * @returns {Object} User data
+   */
+  getCurrentUser() {
+    return this.user;
+  }
+
+  /**
+   * Set session data after login/register
+   * @param {Object} data - Session data (token, user)
+   * @private
+   */
+  setSession(data) {
+    this.token = data.token;
+    this.user = data.user;
+    this.tokenExpiration = data.expiresAt;
     
-    setupInterceptors() {
-        // Remove existing interceptors
-        if (this.requestInterceptor !== null) {
-            axios.interceptors.request.eject(this.requestInterceptor);
-        }
-        
-        if (this.responseInterceptor !== null) {
-            axios.interceptors.response.eject(this.responseInterceptor);
-        }
-        
-        // Add token to all requests if it exists and validate URLs
-        this.requestInterceptor = axios.interceptors.request.use(
-            (config) => {
-                // Get the latest token from localStorage (not from instance variable)
-                const currentToken = localStorage.getItem('token');
-                if (currentToken) {
-                    config.headers.Authorization = `Bearer ${currentToken}`;
-                }
-                
-                // Validate URL to prevent SSRF
-                if (config.url && !config.url.startsWith('/')) {
-                    config.url = validateUrl(config.url);
-                }
-                
-                return config;
-            },
-            (error) => {
-                return Promise.reject(error);
-            }
-        );
+    // Store in localStorage for persistence
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    localStorage.setItem('tokenExpiration', data.expiresAt);
+  }
 
-        // Handle token expiration - with special case for profile updates
-        this.responseInterceptor = axios.interceptors.response.use(
-            (response) => {
-                return response;
-            },
-            async (error) => {
-                // Check if the request URL is for a profile update
-                const isProfileUpdate = error.config && 
-                    (error.config.url.includes('/auth/profile') || 
-                     error.config.url.includes('/auth/me'));
-                
-                console.log(`Request failed for URL: ${error.config?.url}`, 
-                    `Status: ${error.response?.status}`, 
-                    `Is profile update: ${isProfileUpdate}`);
-                
-                // Only logout for 401 errors that are NOT from profile operations
-                if (error.response?.status === 401 && localStorage.getItem('token') && !isProfileUpdate) {
-                    console.log('Unauthorized access detected, logging out');
-                    await this.logout();
-                    window.location.href = '/login';
-                }
-                
-                return Promise.reject(error);
-            }
-        );
-    }
+  /**
+   * Clear session data on logout
+   * @private
+   */
+  clearSession() {
+    this.token = null;
+    this.user = null;
+    this.tokenExpiration = null;
+    
+    // Remove from localStorage
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('tokenExpiration');
+  }
 
-    async login(email, password) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/login`, {
-                email,
-                password
-            });
-            
-            this.setSession(response.data);
-            return response.data.user;
-        } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to login');
-        }
+  /**
+   * Refresh user data from the server
+   * @returns {Object} Updated user data
+   */
+  async refreshUser() {
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('Not authenticated');
+      }
+      
+      const data = await api.get('/users/profile');
+      this.user = data.user;
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      return data.user;
+    } catch (error) {
+      throw handleApiError(error, 'Failed to refresh user data');
     }
-
-    async register(firstName, lastName, email, password) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/customer/register`, {
-                firstName,
-                lastName,
-                email,
-                password
-            });
-            
-            this.setSession(response.data);
-            return response.data.user;
-        } catch (error) {
-            // Check if this is an "Email already registered" error
-            if (error.response?.status === 400 && error.response?.data?.message === 'Email already registered') {
-                throw new Error('This email is already registered. Please login instead.');
-            }
-            
-            throw new Error(error.response?.data?.message || 'Failed to register');
-        }
-    }
-
-    async logout() {
-        try {
-            if (this.token) {
-                await axios.post(`${API_URL}/auth/logout`);
-            }
-        } catch (error) {
-            console.error('Error during logout:', error);
-        } finally {
-            this.clearSession();
-        }
-    }
-
-    async verifyEmail(token) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/verify-email`, { token });
-            return response.data;
-        } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to verify email');
-        }
-    }
-
-    async requestPasswordReset(email) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/forgot-password`, { email });
-            return response.data;
-        } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to request password reset');
-        }
-    }
-
-    async resetPassword(token, newPassword) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/reset-password`, {
-                token,
-                newPassword
-            });
-            return response.data;
-        } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to reset password');
-        }
-    }
-
-    async updateProfile(userData) {
-        try {
-            console.log('Sending profile update data:', userData);
-            
-            // Save the current token before the request
-            const currentToken = localStorage.getItem('token');
-            
-            // Make the request with current authorization header
-            const response = await axios.put(`${API_URL}/auth/profile`, userData);
-            console.log('Profile update response:', response.data);
-            
-            // Extract user data from response (with or without token)
-            let updatedUser;
-            
-            if (response.data.token) {
-                console.log('Received new token with profile update');
-                const { token, ...userData } = response.data;
-                
-                // Update the token in localStorage
-                localStorage.setItem('token', token);
-                this.token = token;
-                
-                updatedUser = userData;
-            } else {
-                updatedUser = response.data;
-            }
-            
-            // Update user data without touching the token
-            this.setUser(updatedUser);
-            
-            // Verify token is still in localStorage
-            if (!localStorage.getItem('token') && currentToken) {
-                console.log('Restoring token after profile update');
-                localStorage.setItem('token', currentToken);
-                this.token = currentToken;
-            }
-            
-            // Re-setup interceptors with the latest token
-            this.setupInterceptors();
-            
-            return updatedUser;
-        } catch (error) {
-            console.error('Profile update error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Failed to update profile');
-        }
-    }
-
-    async getCurrentUser() {
-        try {
-            const currentToken = localStorage.getItem('token');
-            if (!currentToken) return null;
-            
-            console.log('Fetching current user data');
-            
-            // Make sure we're using the current token from localStorage
-            const response = await axios.get(`${API_URL}/auth/me`, {
-                headers: {
-                    Authorization: `Bearer ${currentToken}`
-                }
-            });
-            
-            console.log('Current user data received:', response.data);
-            const currentUser = response.data;
-            
-            // Update the user without changing the token
-            this.setUser(currentUser);
-            
-            return currentUser;
-        } catch (error) {
-            console.error('Failed to fetch current user:', error.response?.data || error.message);
-            
-            // Don't clear the token on this error
-            if (error.response?.status === 401) {
-                console.log('Authentication error, but not clearing token for getCurrentUser');
-            }
-            
-            return null;
-        }
-    }
-
-    async changePassword(currentPassword, newPassword) {
-        try {
-            const response = await axios.post(`${API_URL}/auth/change-password`, {
-                currentPassword,
-                newPassword
-            });
-            return response.data;
-        } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to change password');
-        }
-    }
-
-    setSession(authData) {
-        if (authData.token) {
-            this.token = authData.token;
-            this.user = authData.user;
-            localStorage.setItem('token', authData.token);
-            localStorage.setItem('user', JSON.stringify(authData.user));
-            
-            // Re-setup interceptors with the new token
-            this.setupInterceptors();
-        }
-    }
-
-    clearSession() {
-        this.token = null;
-        this.user = null;
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Re-setup interceptors (will run without token)
-        this.setupInterceptors();
-    }
-
-    setUser(user) {
-        this.user = user;
-        localStorage.setItem('user', JSON.stringify(user));
-    }
-
-    isAuthenticated() {
-        return !!localStorage.getItem('token');
-    }
-
-    getUser() {
-        return this.user;
-    }
-
-    getToken() {
-        return localStorage.getItem('token');
-    }
+  }
 }
 
-export const authService = new AuthService();
-
-/**
- * Check if the current JWT token is expired
- * @returns {boolean} - True if token is expired or not present
- */
-export const isTokenExpired = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return true;
-    
-    try {
-        // JWT tokens are in format: header.payload.signature
-        const payload = token.split('.')[1];
-        // Decode the base64 payload
-        const decoded = JSON.parse(atob(payload));
-        // Check if the expiration time (exp) is less than current time
-        return decoded.exp * 1000 < Date.now();
-    } catch (error) {
-        console.error('Error checking token expiration:', error);
-        return true; // Assume expired if there's an error
-    }
-};
-
-/**
- * Refresh the auth token
- * @returns {Promise<void>}
- */
-export const refreshToken = async () => {
-    try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/refresh-token`);
-        if (response.data && response.data.token) {
-            localStorage.setItem('token', response.data.token);
-        }
-    } catch (error) {
-        console.error('Error refreshing token:', error);
-        // If refresh fails, logout the user
-        await authService.logout();
-    }
-};
-
-/**
- * Get authentication headers with current token
- * @returns {Object} - Headers object with Authorization
- */
-export const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-        Authorization: token ? `Bearer ${token}` : '',
-        'Content-Type': 'application/json'
-    };
-}; 
+// Export singleton instance
+const authService = new AuthService();
+export default authService; 
