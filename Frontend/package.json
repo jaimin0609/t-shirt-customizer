@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   },
   "scripts": {
     "dev": "vite",
@@ -65,6 +65,9 @@
     "lodash": "^4.17.21",
     "glob-parent": "^5.1.2",
     "sourcemap-codec": "@jridgewell/sourcemap-codec@1.4.15",
-    "three-mesh-bvh": "^0.8.0"
+    "three-mesh-bvh": "^0.8.0",
+    "npmlog": "@npmcli/lib-log@1.0.1",
+    "gauge": "gauge4@4.0.4",
+    "are-we-there-yet": "which-pm@2.0.0"
   }
 }

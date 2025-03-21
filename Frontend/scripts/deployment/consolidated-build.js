@@ -154,14 +154,15 @@ const runBuild = () => {
   ensureCriticalCss();
 
   try {
-    // Use npx with --no-install to ensure we use the version we just installed
+    // Use npx with --yes flag to allow installing if needed
     console.log('Using npx to run vite with specific version');
     
     // Set NODE_OPTIONS to help with module resolution
     process.env.NODE_OPTIONS = '--experimental-vm-modules --no-warnings';
     
     // Run the build with environment variable to point to our temp resolver
-    execCommand('npx --no-install vite@6.2.2 build', {
+    // Remove --no-install flag and add --yes to allow package installation
+    execCommand('npx --yes vite@6.2.2 build', {
       env: {
         ...process.env,
         VITE_TEMP_RESOLVER: tempModuleDir
@@ -179,8 +180,9 @@ const runBuild = () => {
     
     // Try emergency build with a different approach
     try {
-      // Try a more direct approach with specific node options
-      execCommand('node --experimental-vm-modules --no-warnings ./node_modules/vite/bin/vite.js build');
+      // Try installing vite globally first
+      execCommand('npm install -g vite@6.2.2');
+      execCommand('npx --yes vite@6.2.2 build');
       createSpaFallbacks();
       return verifyBuildOutput();
     } catch (finalError) {

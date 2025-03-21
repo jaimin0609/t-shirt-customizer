@@ -1,5 +1,23 @@
-// Explicit import path for Vite to prevent resolution issues
-import { defineConfig } from './node_modules/vite/dist/node/index.js'
+// Multiple fallback approaches for importing Vite
+let defineConfig;
+try {
+  // First try importing from vite directly
+  ({ defineConfig } = await import('vite'));
+} catch (e) {
+  try {
+    // Try importing from explicit path
+    ({ defineConfig } = await import('./node_modules/vite/dist/node/index.js'));
+  } catch (e) {
+    try {
+      // Try importing from our custom patch
+      ({ defineConfig } = await import('./src/vite-patch.js'));
+    } catch (e) {
+      // Last resort: define a minimal compatible version
+      console.warn('Failed to import defineConfig, using fallback');
+      defineConfig = (config) => config;
+    }
+  }
+}
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'

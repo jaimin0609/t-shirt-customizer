@@ -23,6 +23,14 @@ echo "PATH: $PATH"
 export NODE_OPTIONS="--experimental-vm-modules --no-warnings"
 echo "NODE_OPTIONS: $NODE_OPTIONS"
 
+# Install Vite globally for immediate availability
+echo "Installing Vite globally..."
+npm install -g vite@6.2.2
+
+# Install Vite and dependencies locally
+echo "Installing Vite and dependencies locally..."
+npm install --save-dev vite@6.2.2 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-exact --force --legacy-peer-deps
+
 # Create a temporary vite resolver directory
 echo "Creating temporary vite resolver..."
 TEMP_DIR=".vite-temp"
@@ -35,10 +43,6 @@ cat > $TEMP_DIR/package.json << EOL
   }
 }
 EOL
-
-# Verify that Vite and dependencies are installed
-echo "Installing Vite and dependencies..."
-npm install --save-dev vite@6.2.2 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-exact --force --legacy-peer-deps
 
 # Ensure critical CSS is generated
 echo "Generating critical CSS if needed..."
@@ -55,14 +59,25 @@ if [ ! -f "public/critical.css" ]; then
   fi
 fi
 
-# Try direct build with node to ensure the right version is used
-echo "Attempting build with direct node command..."
-if [ -f "node_modules/vite/bin/vite.js" ]; then
-  echo "Using direct node command with Vite binary"
-  node --experimental-vm-modules --no-warnings node_modules/vite/bin/vite.js build
-else
-  echo "Vite binary not found, falling back to npx"
-  VITE_TEMP_RESOLVER=$TEMP_DIR npx --no-install vite@6.2.2 build
+# Try multiple build approaches to ensure success
+echo "Attempting Vite build with multiple strategies..."
+
+# Strategy 1: Direct global Vite command
+echo "Strategy 1: Using global Vite command"
+vite build || true
+
+# Strategy 2: NPX with yes flag
+if [ ! -d "dist" ]; then
+  echo "Strategy 2: Using NPX with yes flag"
+  npx --yes vite@6.2.2 build || true
+fi
+
+# Strategy 3: Direct Node execution
+if [ ! -d "dist" ]; then
+  echo "Strategy 3: Direct Node execution"
+  if [ -f "node_modules/vite/bin/vite.js" ]; then
+    node --experimental-vm-modules --no-warnings node_modules/vite/bin/vite.js build || true
+  fi
 fi
 
 # Verify the build output
