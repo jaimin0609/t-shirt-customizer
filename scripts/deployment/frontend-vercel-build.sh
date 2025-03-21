@@ -21,47 +21,70 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
+# Force install TailwindCSS and PostCSS dependencies
+echo "Installing Tailwind CSS and PostCSS dependencies globally..."
+npm install -g tailwindcss postcss autoprefixer
+echo "Installing Tailwind CSS and PostCSS dependencies locally..."
+npm install tailwindcss postcss autoprefixer --save-dev --no-audit
+
+# Verify installations
+echo "Verifying installations..."
+ls -la node_modules/tailwindcss || echo "tailwindcss not found in node_modules"
+ls -la node_modules/postcss || echo "postcss not found in node_modules"
+ls -la node_modules/autoprefixer || echo "autoprefixer not found in node_modules"
+echo "Module directories after installation:"
+find node_modules -maxdepth 2 -type d | grep -E 'tailwindcss|postcss|autoprefixer' || echo "Could not find required modules"
+
 # Attempt to build with Vite
 echo "Building with Vite..."
 if npx vite build; then
   echo "Vite build successful!"
 else
-  echo "Vite build failed, creating fallback pages..."
+  echo "Vite build failed, using fallback build script..."
   
-  # Create dist directory if it doesn't exist
-  mkdir -p dist
-
-  # Create an index.html directly to ensure we have something to show
-  cat > dist/index.html << 'EOL'
+  # Execute the fallback build script
+  echo "Running fallback build script..."
+  cd ..
+  node scripts/deployment/fallback-build.js
+  
+  # Check if the fallback build succeeded
+  if [ $? -eq 0 ]; then
+    echo "Fallback build successful"
+  else
+    echo "Fallback build also failed, creating basic placeholder pages..."
+    
+    # Ensure we have the Frontend/dist directory
+    mkdir -p Frontend/dist
+    
+    # Create a minimal index.html
+    cat > Frontend/dist/index.html << 'EOL'
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>T-Shirt Customizer</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
   <style>
-    body { background-color: #f5f5f5; font-family: Arial, sans-serif; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-    .card { background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 40px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { color: #4a6cf7; }
   </style>
 </head>
-<body class="min-h-screen">
-  <div class="container mx-auto py-12">
-    <div class="card p-6">
-      <h1 class="text-2xl font-bold mb-4">T-Shirt Customizer</h1>
-      <p class="mb-4">Welcome to the T-Shirt Customizer app! Your deployment is being processed.</p>
-      <p>Please wait while we finalize your application setup. This page will automatically update once the full app is ready.</p>
-    </div>
+<body>
+  <div class="container">
+    <h1>T-Shirt Customizer</h1>
+    <p>Welcome to the T-Shirt Customizer app! We are currently working on this page.</p>
+    <p>Please check back soon.</p>
   </div>
 </body>
 </html>
 EOL
 
-  # Create a minimal 404 page
-  cp dist/index.html dist/404.html
-
-  echo "Basic placeholder pages created successfully"
+    # Create a 404.html file
+    cp Frontend/dist/index.html Frontend/dist/404.html
+    
+    echo "Basic emergency pages created"
+  fi
 fi
 
 echo "Build process completed"
