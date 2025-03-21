@@ -1,6 +1,6 @@
 {
-    "framework": "vite",
-    "buildCommand": "cd Frontend && sh ../scripts/deployment/frontend-vercel-build.sh",
+    "version": 2,
+    "buildCommand": "node scripts/static-build.js",
     "outputDirectory": "Frontend/dist",
     "routes": [
         {
