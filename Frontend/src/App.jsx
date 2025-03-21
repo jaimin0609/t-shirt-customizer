@@ -21,18 +21,18 @@ import { notifyError } from './services/errorHandler';
 import SkipLink from './components/UI/SkipLink';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
-import HomePage from './pages/Home';
-import ProductsPage from './pages/Products';
-import ProductDetailPage from './pages/ProductDetail';
-import CustomizerPage from './pages/Customizer';
-import CartPage from './pages/Cart';
-import CheckoutPage from './pages/Checkout';
+import HomePage from './pages/HomePage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import DesignStudioPage from './pages/DesignStudioPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
-import OrderDetailPage from './pages/OrderDetail';
-import LoginPage from './pages/Login';
-import RegisterPage from './pages/Register';
-import ProfilePage from './pages/Profile';
-import NotFoundPage from './pages/NotFound';
+import OrderDetailPage from './pages/OrderDetailPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import ProfilePage from './pages/ProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 
 // Loading spinner for Suspense fallback
@@ -57,18 +57,18 @@ const App = ({ isSSR = false, initialState = {} }) => {
 
   // Lazily load route components for code splitting in client
   // During SSR, these would be pre-rendered
-  const HomePageComponent = React.lazy(() => import('./pages/HomePage'));
-  const ProductsPageComponent = React.lazy(() => import('./pages/ProductsPage'));
-  const ProductDetailPageComponent = React.lazy(() => import('./pages/ProductDetailPage'));
-  const DesignStudioPageComponent = React.lazy(() => import('./pages/DesignStudioPage'));
-  const AboutPageComponent = React.lazy(() => import('./pages/AboutPage'));
-  const CartPageComponent = React.lazy(() => import('./pages/CartPage.styled'));
-  const CheckoutPageComponent = React.lazy(() => import('./pages/CheckoutPage'));
-  const SignupPageComponent = React.lazy(() => import('./pages/SignupPage'));
-  const LoginPageComponent = React.lazy(() => import('./pages/LoginPage'));
-  const ProfilePageComponent = React.lazy(() => import('./pages/ProfilePage'));
-  const WishlistPageComponent = React.lazy(() => import('./pages/WishlistPage'));
-  const NotFoundPageComponent = React.lazy(() => import('./pages/NotFoundPage'));
+  const HomePageLazy = React.lazy(() => import('./pages/HomePage'));
+  const ProductsPageLazy = React.lazy(() => import('./pages/ProductsPage'));
+  const ProductDetailPageLazy = React.lazy(() => import('./pages/ProductDetailPage'));
+  const DesignStudioPageLazy = React.lazy(() => import('./pages/DesignStudioPage'));
+  const AboutPageLazy = React.lazy(() => import('./pages/AboutPage'));
+  const CartPageLazy = React.lazy(() => import('./pages/CartPage'));
+  const CheckoutPageLazy = React.lazy(() => import('./pages/CheckoutPage'));
+  const SignupPageLazy = React.lazy(() => import('./pages/SignupPage'));
+  const LoginPageLazy = React.lazy(() => import('./pages/LoginPage'));
+  const ProfilePageLazy = React.lazy(() => import('./pages/ProfilePage'));
+  const WishlistPageLazy = React.lazy(() => import('./pages/WishlistPage'));
+  const NotFoundPageLazy = React.lazy(() => import('./pages/NotFoundPage'));
 
   useEffect(() => {
     // Skip client-side initialization if we're rendering on the server
@@ -201,19 +201,19 @@ const App = ({ isSSR = false, initialState = {} }) => {
         <MainLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<HomePageComponent />} />
-              <Route path="/products" element={<ProductsPageComponent />} />
-              <Route path="/products/:id" element={<ProductDetailPageComponent />} />
-              <Route path="/product/:productId" element={<ProductDetailPageComponent />} />
-              <Route path="/product/:_id" element={<ProductDetailPageComponent />} />
-              <Route path="/custom-design-studio" element={<DesignStudioPageComponent />} />
-              <Route path="/about" element={<AboutPageComponent />} />
-              <Route path="/cart" element={<CartPageComponent />} />
+              <Route path="/" element={<HomePageLazy />} />
+              <Route path="/products" element={<ProductsPageLazy />} />
+              <Route path="/products/:id" element={<ProductDetailPageLazy />} />
+              <Route path="/product/:productId" element={<ProductDetailPageLazy />} />
+              <Route path="/product/:_id" element={<ProductDetailPageLazy />} />
+              <Route path="/custom-design-studio" element={<DesignStudioPageLazy />} />
+              <Route path="/about" element={<AboutPageLazy />} />
+              <Route path="/cart" element={<CartPageLazy />} />
               <Route
                 path="/checkout"
                 element={
                   <ProtectedRoute>
-                    <CheckoutPageComponent />
+                    <CheckoutPageLazy />
                   </ProtectedRoute>
                 }
               />
@@ -233,18 +233,18 @@ const App = ({ isSSR = false, initialState = {} }) => {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/signup" element={<SignupPageComponent />} />
-              <Route path="/login" element={<LoginPageComponent />} />
+              <Route path="/signup" element={<SignupPageLazy />} />
+              <Route path="/login" element={<LoginPageLazy />} />
               <Route
                 path="/profile"
                 element={
                   <ProtectedRoute>
-                    <ProfilePageComponent />
+                    <ProfilePageLazy />
                   </ProtectedRoute>
                 }
               />
-              <Route path="/wishlist" element={<WishlistPageComponent />} />
-              <Route path="*" element={<NotFoundPageComponent />} />
+              <Route path="/wishlist" element={<WishlistPageLazy />} />
+              <Route path="*" element={<NotFoundPageLazy />} />
             </Routes>
           </Suspense>
         </MainLayout>

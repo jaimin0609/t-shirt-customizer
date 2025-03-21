@@ -10,186 +10,51 @@ import sequelize from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import { sendPasswordResetEmail } from '../services/emailService.js';
 import { sanitizeInput } from '../utils/requestUtils.js';
+import authController from '../controllers/authController.js';
+import errorController from '../controllers/errorController.js';
+import { 
+    validateLogin, 
+    validateRegistration, 
+    validatePasswordResetRequest, 
+    validatePasswordReset 
+} from '../validators/authValidators.js';
 
 const router = express.Router();
 
 // Register a new user
-router.post('/register', async (req, res) => {
-    try {
-        // Sanitize user inputs
-        const username = sanitizeInput(req.body.username);
-        const name = sanitizeInput(req.body.name);
-        const email = sanitizeInput(req.body.email);
-        const password = req.body.password; // Don't sanitize passwords
-        const role = req.body.role || 'user';
-        
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ 
-                message: 'Invalid email format',
-                field: 'email'
-            });
-        }
-        
-        // Check if user already exists
-        const existingUser = await User.findOne({ 
-            where: { 
-                [Op.or]: [{ email }, { username }] 
-            } 
-        });
-        
-        if (existingUser) {
-            if (existingUser.email === email) {
-                return res.status(400).json({ 
-                    message: 'Email already registered',
-                    field: 'email'
-                });
-            }
-            if (existingUser.username === username) {
-                return res.status(400).json({ 
-                    message: 'Username already taken',
-                    field: 'username'
-                });
-            }
-        }
-        
-        // Create user (password will be hashed by model hooks)
-        const user = await User.create({
-            username,
-            name,
-            email,
-            password,
-            role
-        });
-        
-        // Generate JWT token using the new secure function
-        const token = generateToken(user);
-        
-        // Return user data and token (exclude password)
-        const userData = user.toJSON();
-        delete userData.password;
-        
-        res.status(201).json({
-            message: 'User registered successfully',
-            user: userData,
-            token
-        });
-    } catch (error) {
-        console.error('Registration error:', error);
-        
-        // Handle password validation errors from model hooks
-        if (error.message === 'Password does not meet security requirements') {
-            return res.status(400).json({ 
-                message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
-                field: 'password'
-            });
-        }
-        
-        res.status(500).json({ message: 'Error registering user' });
-    }
-});
+router.post('/register', 
+    validateRegistration, 
+    errorController.catchAsync(authController.register)
+);
 
 // Login user
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password, isAdminLogin } = req.body;
-        console.log('Login attempt - Details:', { 
-            email, 
-            isAdminLogin,
-            body: JSON.stringify(req.body),
-            headers: JSON.stringify(req.headers['content-type']),
-            method: req.method
-        });
-        
-        // Find user by email
-        const user = await User.findOne({ where: { email } });
-        if (!user) {
-            console.log('Login failure - User not found:', email);
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        console.log('User found:', { id: user.id, email: user.email, role: user.role, status: user.status });
-        
-        // Check if account is locked due to too many failed attempts
-        if (user.accountLockedUntil && new Date() < new Date(user.accountLockedUntil)) {
-            console.log('Account locked for user:', email);
-            const waitMinutes = Math.ceil((new Date(user.accountLockedUntil) - new Date()) / 60000);
-            return res.status(401).json({ 
-                message: `Account temporarily locked. Please try again in ${waitMinutes} minutes`,
-                lockedUntil: user.accountLockedUntil
-            });
-        }
-        
-        // Verify password
-        let isPasswordValid = false;
-        
-        try {
-            // Use the new comparePassword method from the model
-            isPasswordValid = await user.comparePassword(password);
-            console.log('Standard password validation result:', isPasswordValid);
-        } catch (bcryptError) {
-            console.error('bcrypt error during password validation:', bcryptError);
-            // Don't expose bcrypt errors to client, but log them for debugging
-        }
-        
-        console.log('Password validation:', { isPasswordValid, providedPassword: !!password });
-        
-        if (!isPasswordValid) {
-            // Increment failed login attempts
-            await user.incrementFailedLoginAttempts();
-            
-            console.log('Invalid password for user:', email);
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
+router.post('/login', 
+    validateLogin, 
+    errorController.catchAsync(authController.login)
+);
 
-        // Reset failed login attempts on successful login
-        await user.resetFailedLoginAttempts();
-        
-        // Check if user is active
-        if (user.status !== 'active') {
-            console.log('User account inactive:', email);
-            return res.status(401).json({ message: 'Account is inactive' });
-        }
+// Refresh token
+router.post('/refresh-token', 
+    errorController.catchAsync(authController.refreshToken)
+);
 
-        // If this is an admin login, verify admin role
-        if (isAdminLogin && user.role !== 'admin') {
-            console.log('Non-admin attempting admin login:', { email, role: user.role });
-            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-        }
-        
-        // Generate JWT token using the new secure function
-        const token = generateToken(user);
-        
-        // Return user data and token (exclude password)
-        const userData = user.toJSON();
-        delete userData.password;
-        
-        console.log('Login successful:', { email, role: user.role });
-        
-        res.json({
-            message: 'Login successful',
-            user: userData,
-            token
-        });
-    } catch (error) {
-        console.error('Login error - Exception details:', error);
-        console.error('Error stack:', error.stack);
-        res.status(500).json({ message: 'Error logging in' });
-    }
-});
+// Logout user
+router.post('/logout', 
+    auth, 
+    errorController.catchAsync(authController.logout)
+);
 
-// Logout
-router.post('/logout', auth, async (req, res) => {
-    try {
-        // Add the current token to the blacklist
-        blacklistToken(req.token);
-        
-        res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-        console.error('Logout error:', error);
-        res.status(500).json({ message: 'Error logging out' });
-    }
-});
+// Request password reset
+router.post('/request-reset', 
+    validatePasswordResetRequest, 
+    errorController.catchAsync(authController.requestPasswordReset)
+);
+
+// Reset password
+router.post('/reset-password', 
+    validatePasswordReset, 
+    errorController.catchAsync(authController.resetPassword)
+);
 
 // Get current user
 router.get('/me', auth, async (req, res) => {
@@ -470,82 +335,6 @@ router.post('/test-password', async (req, res) => {
       message: 'Error testing password', 
       error: error.message 
     });
-  }
-});
-
-// Request password reset
-router.post('/forgot-password', async (req, res) => {
-    try {
-        const { email } = req.body;
-        
-        if (!email) {
-            return res.status(400).json({ message: 'Email is required' });
-        }
-        
-        // Find user by email
-        const user = await User.findOne({ where: { email } });
-        
-        // Always return success even if user not found (security)
-        if (!user) {
-            return res.status(200).json({ message: 'If your email exists in our system, you will receive a password reset link shortly' });
-        }
-        
-        // Generate unique reset token
-        const resetToken = uuidv4();
-        const resetTokenExpiry = new Date();
-        resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // Token valid for 1 hour
-        
-        // Save token to user
-        await user.update({
-            resetToken,
-            resetTokenExpiry
-        });
-        
-        // Send password reset email
-        await sendPasswordResetEmail(user.email, user.name, resetToken);
-        
-        res.status(200).json({ message: 'If your email exists in our system, you will receive a password reset link shortly' });
-    } catch (error) {
-        console.error('Password reset request error:', error);
-        res.status(500).json({ message: 'Error processing password reset request' });
-    }
-});
-
-// Reset Password
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, password } = req.body;
-
-    if (!token || !password) {
-      return res.status(400).json({ message: 'Token and password are required' });
-    }
-
-    // Find user with this reset token and token not expired
-    const user = await User.findOne({
-      where: {
-        resetToken: token,
-        resetTokenExpiry: {
-          [Op.gt]: new Date() // Token expiry greater than current time
-        }
-      }
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired reset token' });
-    }
-
-    // Hash the new password (password will be hashed by model hooks)
-    // Update the user's password and clear the reset token
-    await user.update({
-      password,
-      resetToken: null,
-      resetTokenExpiry: null
-    });
-
-    res.status(200).json({ message: 'Password reset successful' });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Error resetting password' });
   }
 });
 
