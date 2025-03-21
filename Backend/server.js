@@ -64,7 +64,7 @@ import errorHandler from './middleware/errorHandler.js';
 import userRoutes from './routes/users.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
-import uploadRoutes from './routes/upload.routes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
