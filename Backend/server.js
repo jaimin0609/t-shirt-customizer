@@ -145,6 +145,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/admin/profile', adminProfileRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -152,7 +153,7 @@ app.use('/api/notifications', notificationsRoutes);
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Serve static files from the public/admin directory
+// Serve static files from the public/admin directory (CSS, JS, images, etc.)
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
 
 // Health check endpoint
@@ -228,12 +229,12 @@ app.get('/', (req, res) => {
     `);
 });
 
-// Admin panel route
+// Admin panel specific routes - ensure these come BEFORE the wildcard route
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
 });
 
-// Fallback route - handle React router for admin panel
+// Fallback route for client-side routing in the admin panel
 app.get('/admin/*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
 });
