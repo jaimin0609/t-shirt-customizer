@@ -553,6 +553,275 @@ router.get('/run-migration-temp', async (req, res) => {
     }
 });
 
+// Add a super simple admin creation endpoint (REMOVE AFTER USE FOR SECURITY)
+router.get('/create-simple-admin', async (req, res) => {
+    try {
+        // Delete existing admin users to ensure we don't get duplicates
+        try {
+            await User.destroy({ where: { role: 'admin' } });
+            console.log('Existing admin users removed');
+        } catch (err) {
+            console.log('Error removing existing admin users:', err.message);
+            // Continue even if delete fails
+        }
+        
+        // Create a very simple admin directly
+        const adminUser = {
+            username: 'admin',
+            name: 'Administrator',
+            email: 'admin@example.com',
+            password: bcrypt.hashSync('Admin123!', 10),
+            role: 'admin',
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        
+        // Try direct SQL insert to bypass model issues
+        const result = await sequelize.query(
+            `INSERT INTO "Users" ("username", "name", "email", "password", "role", "status", "createdAt", "updatedAt") 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            {
+                bind: [
+                    adminUser.username,
+                    adminUser.name,
+                    adminUser.email,
+                    adminUser.password,
+                    adminUser.role,
+                    adminUser.status,
+                    adminUser.createdAt,
+                    adminUser.updatedAt
+                ],
+                type: sequelize.QueryTypes.INSERT
+            }
+        );
+        
+        console.log('Admin created with ID:', result[0][0].id);
+        
+        res.json({
+            success: true,
+            message: 'Super simple admin created successfully',
+            credentials: {
+                email: 'admin@example.com',
+                password: 'Admin123!'
+            },
+            note: 'Please login with these credentials and immediately change the password'
+        });
+    } catch (error) {
+        console.error('Error creating simple admin:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating simple admin',
+            error: error.message,
+            detailedError: error.toString()
+        });
+    }
+});
+
+// Add a direct admin login endpoint (REMOVE AFTER USE FOR SECURITY)
+router.get('/direct-login', async (req, res) => {
+    try {
+        // Find admin user
+        const admin = await User.findOne({
+            where: { role: 'admin' }
+        });
+        
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: 'No admin user found. Please create an admin user first using /api/admin/create-simple-admin'
+            });
+        }
+        
+        // Generate JWT token directly
+        const token = jwt.sign(
+            { 
+                id: admin.id, 
+                email: admin.email, 
+                role: admin.role 
+            },
+            process.env.JWT_SECRET || 'your-default-jwt-secret-key-for-development',
+            { expiresIn: '1d' }
+        );
+        
+        // Return token and user info
+        res.json({
+            success: true,
+            message: 'Login successful',
+            token,
+            user: {
+                id: admin.id,
+                username: admin.username,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role
+            },
+            instructions: 'Copy this token and manually set it in your browser localStorage with key "token"'
+        });
+    } catch (error) {
+        console.error('Error with direct login:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating login token',
+            error: error.message
+        });
+    }
+});
+
+// Add a direct admin login helper page (REMOVE AFTER USE FOR SECURITY)
+router.get('/login-helper', (req, res) => {
+    const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Admin Login Helper</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                .container {
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                }
+                h1 {
+                    color: #333;
+                }
+                button {
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 10px 15px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin: 5px;
+                }
+                button:hover {
+                    background-color: #45a049;
+                }
+                pre {
+                    background-color: #f5f5f5;
+                    padding: 10px;
+                    border-radius: 5px;
+                    overflow-x: auto;
+                }
+                .response {
+                    margin-top: 20px;
+                    display: none;
+                }
+                .success {
+                    color: green;
+                }
+                .error {
+                    color: red;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Admin Login Helper</h1>
+            <p>This page helps you create an admin user and get logged in when other methods fail.</p>
+            
+            <div class="container">
+                <h2>Step 1: Create Admin User</h2>
+                <p>Click the button below to create a basic admin user:</p>
+                <button id="createAdmin">Create Admin User</button>
+                <div id="createResponse" class="response"></div>
+            </div>
+            
+            <div class="container">
+                <h2>Step 2: Get Login Token</h2>
+                <p>After creating an admin user, click here to get a login token:</p>
+                <button id="getToken">Get Login Token</button>
+                <div id="tokenResponse" class="response"></div>
+            </div>
+            
+            <div class="container">
+                <h2>Step 3: Set Token Manually</h2>
+                <div id="tokenInstructions" style="display: none;">
+                    <p>Copy the token below:</p>
+                    <pre id="tokenValue"></pre>
+                    <p>Then run this in your browser console when on the admin panel:</p>
+                    <pre>localStorage.setItem('token', 'PASTE_TOKEN_HERE');</pre>
+                    <p>Also set the user info:</p>
+                    <pre id="userValue"></pre>
+                    <pre>localStorage.setItem('user', 'PASTE_USER_JSON_HERE');</pre>
+                    <p>Then refresh the page to access the admin panel.</p>
+                    <a id="adminLink" href="/admin" target="_blank">Go to Admin Panel</a>
+                </div>
+            </div>
+            
+            <script>
+                document.getElementById('createAdmin').addEventListener('click', async () => {
+                    const response = document.getElementById('createResponse');
+                    response.style.display = 'block';
+                    response.innerHTML = 'Creating admin user...';
+                    
+                    try {
+                        const result = await fetch('/api/admin/create-simple-admin');
+                        const data = await result.json();
+                        
+                        if (data.success) {
+                            response.innerHTML = '<p class="success">Admin user created successfully!</p>' +
+                                '<p>Email: ' + data.credentials.email + '</p>' +
+                                '<p>Password: ' + data.credentials.password + '</p>';
+                        } else {
+                            response.innerHTML = '<p class="error">Error: ' + data.message + '</p>';
+                            if (data.error) {
+                                response.innerHTML += '<p>Details: ' + data.error + '</p>';
+                            }
+                        }
+                    } catch (error) {
+                        response.innerHTML = '<p class="error">Error: ' + error.message + '</p>';
+                    }
+                });
+                
+                document.getElementById('getToken').addEventListener('click', async () => {
+                    const response = document.getElementById('tokenResponse');
+                    response.style.display = 'block';
+                    response.innerHTML = 'Getting login token...';
+                    
+                    try {
+                        const result = await fetch('/api/admin/direct-login');
+                        const data = await result.json();
+                        
+                        if (data.success) {
+                            response.innerHTML = '<p class="success">Login token generated successfully!</p>';
+                            document.getElementById('tokenInstructions').style.display = 'block';
+                            document.getElementById('tokenValue').textContent = data.token;
+                            document.getElementById('userValue').textContent = JSON.stringify(data.user, null, 2);
+                            
+                            // Auto-set token if possible
+                            try {
+                                localStorage.setItem('token', data.token);
+                                localStorage.setItem('user', JSON.stringify(data.user));
+                                localStorage.setItem('isAdminSession', 'true');
+                                response.innerHTML += '<p class="success">Token has been automatically set in localStorage!</p>' +
+                                    '<p>You can now <a href="/admin" target="_blank">go to the admin panel</a>.</p>';
+                            } catch (e) {
+                                console.error('Could not auto-set token:', e);
+                            }
+                        } else {
+                            response.innerHTML = '<p class="error">Error: ' + data.message + '</p>';
+                        }
+                    } catch (error) {
+                        response.innerHTML = '<p class="error">Error: ' + error.message + '</p>';
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `;
+    
+    res.send(html);
+});
+
 // Add more admin routes as needed
 
 export default router; 
