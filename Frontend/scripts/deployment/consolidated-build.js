@@ -103,6 +103,14 @@ const runBuild = () => {
   // Ensure dependencies before building
   ensureTailwindDependencies();
 
+  // Install Vite explicitly with correct version
+  console.log('Installing Vite 5.4.14 explicitly...');
+  try {
+    execCommand('npm install vite@5.4.14 --save-dev --force --legacy-peer-deps');
+  } catch (error) {
+    console.warn('Warning: Could not install Vite 5.4.14:', error.message);
+  }
+
   // Ensure critical CSS is available
   ensureCriticalCss();
 
@@ -112,9 +120,9 @@ const runBuild = () => {
       console.log('Using local vite from node_modules/.bin');
       execCommand('./node_modules/.bin/vite build');
     } else {
-      // Try using npx vite
-      console.log('Using npx to run vite');
-      execCommand('npx vite build');
+      // Try using npx vite with specific version
+      console.log('Using npx to run vite with specific version');
+      execCommand('npx vite@5.4.14 build');
     }
 
     // Create SPA fallbacks
@@ -126,9 +134,9 @@ const runBuild = () => {
     console.error('Build failed:', error.message);
     console.log('Attempting emergency build with direct installation...');
     
-    // Try emergency build by installing vite directly
+    // Try emergency build by installing vite directly with specific version
     try {
-      execCommand('npm install --save-dev vite postcss tailwindcss autoprefixer --force --legacy-peer-deps');
+      execCommand('npm install --save-dev vite@5.4.14 postcss tailwindcss autoprefixer --force --legacy-peer-deps');
       execCommand('./node_modules/.bin/vite build');
       createSpaFallbacks();
       return verifyBuildOutput();

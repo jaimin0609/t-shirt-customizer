@@ -1,15 +1,22 @@
 {
-    "version": 2,
-    "buildCommand": "cd Frontend && npm install && npm run build:vercel",
+    "framework": "vite",
+    "buildCommand": "cd Frontend && npm install vite@5.4.14 @vitejs/plugin-react postcss tailwindcss autoprefixer --save-dev --force --legacy-peer-deps && sh scripts/deployment/frontend-vercel-build.sh",
     "outputDirectory": "Frontend/dist",
-    "rewrites": [
+    "routes": [
         {
-            "source": "/api/(.*)",
-            "destination": "https://t-shirt-customizer-backend.onrender.com/api/$1"
+            "handle": "filesystem"
         },
         {
-            "source": "/(.*)",
-            "destination": "/index.html"
+            "src": "/api/(.*)",
+            "dest": "https://t-shirt-customizer-backend.onrender.com/api/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
         }
-    ]
+    ],
+    "env": {
+        "VITE_FORCE_VERSION": "5.4.14",
+        "NODE_ENV": "production"
+    }
 }
