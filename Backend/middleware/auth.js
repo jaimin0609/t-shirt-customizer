@@ -13,7 +13,7 @@ const tokenBlacklist = new Set();
  * Stores IP address as key and count/timestamp as value
  */
 const rateLimitMap = new Map();
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = process.env.NODE_ENV === 'production' ? 5 : 20; // More lenient in development
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
