@@ -160,24 +160,43 @@
             const debugInfo = document.getElementById('loginDebug');
             const loginButton = document.querySelector('button[type="submit"]');
             
+            // Clear any previous errors
+            document.getElementById('loginError').style.display = 'none';
+            
+            // Show debug info
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML = '<p>Processing login request...</p>';
+            
             // Disable login button to prevent multiple submissions
             loginButton.disabled = true;
             loginButton.textContent = 'Logging in...';
             
             try {
-                console.log('Attempting login with:', email);
-                debugInfo.innerHTML = `<p>Attempting login for: ${email}</p>`;
-                debugInfo.style.display = 'block';
+                // Log environment information
+                const origin = window.location.origin;
+                const host = window.location.host;
+                const apiUrl = API_URL;
                 
-                // Add origin information to help debug CORS issues
-                const originInfo = {
-                    origin: window.location.origin,
-                    pathname: window.location.pathname
-                };
-                console.log('Request origin:', originInfo);
-                debugInfo.innerHTML += `<p>From: ${originInfo.origin}</p>`;
+                debugInfo.innerHTML += `<p>Request details:<br>
+                    Email: ${email}<br>
+                    Origin: ${origin}<br>
+                    Host: ${host}<br>
+                    API URL: ${apiUrl}
+                </p>`;
                 
-                const response = await fetch(`${API_URL}/auth/login`, {
+                console.log('Login request info:', {
+                    email,
+                    origin,
+                    host,
+                    apiUrl
+                });
+                
+                // Create a direct relative URL to avoid CORS issues
+                const loginUrl = `${API_URL}/auth/login`;
+                debugInfo.innerHTML += `<p>Sending request to: ${loginUrl}</p>`;
+                
+                // Try the fetch with standard credentials
+                const response = await fetch(loginUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -185,23 +204,35 @@
                     body: JSON.stringify({ 
                         email, 
                         password,
-                        isAdminLogin: true // Add this flag for admin login
+                        isAdminLogin: true
                     }),
-                    // Ensure credentials are included
                     credentials: 'include'
                 });
                 
-                const responseData = await response.json();
-                debugInfo.innerHTML += `<p>Server status: ${response.status}</p>`;
+                debugInfo.innerHTML += `<p>Response status: ${response.status}</p>`;
                 
+                // Try to parse the response as JSON
+                let responseData;
+                try {
+                    responseData = await response.json();
+                    debugInfo.innerHTML += `<p>Response data received</p>`;
+                } catch (parseError) {
+                    debugInfo.innerHTML += `<p>Error parsing response: ${parseError.message}</p>`;
+                    throw new Error('Could not parse server response');
+                }
+                
+                // Check for errors
                 if (!response.ok) {
-                    // Add debug information
-                    debugInfo.innerHTML += `<p>Error: ${responseData.message || 'Unknown error'}</p>`;
-                    
-                    // Special handling for CORS errors
-                    if (response.status === 403 && responseData.message && responseData.message.includes('untrusted origin')) {
-                        debugInfo.innerHTML += `<p class="text-danger">CORS Error: Your browser is blocking the request due to security settings.</p>`;
-                        debugInfo.innerHTML += `<p>Try accessing this page directly via the server URL instead of through a proxy.</p>`;
+                    // Handle specific error scenarios
+                    if (response.status === 403) {
+                        debugInfo.innerHTML += `<p class="text-danger">Access denied (403)</p>`;
+                        if (responseData.message && responseData.message.includes('untrusted origin')) {
+                            debugInfo.innerHTML += `<p>CORS issue detected. Try accessing via the direct server URL.</p>`;
+                        }
+                    } else if (response.status === 401) {
+                        debugInfo.innerHTML += `<p class="text-danger">Authentication failed (401)</p>`;
+                    } else {
+                        debugInfo.innerHTML += `<p class="text-danger">Error: ${responseData.message || 'Unknown error'}</p>`;
                     }
                     
                     // Re-enable login button
@@ -211,11 +242,12 @@
                     throw new Error(responseData.message || 'Login failed');
                 }
                 
-                const data = responseData;
+                // Login successful
+                debugInfo.innerHTML += `<p class="text-success">Login successful!</p>`;
                 
                 // Verify admin role
-                if (data.user.role !== 'admin') {
-                    debugInfo.innerHTML += '<p>Error: User is not an admin</p>';
+                if (responseData.user && responseData.user.role !== 'admin') {
+                    debugInfo.innerHTML += '<p class="text-danger">Error: User is not an admin</p>';
                     
                     // Re-enable login button
                     loginButton.disabled = false;
@@ -225,23 +257,23 @@
                 }
                 
                 // Store token and user data
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                localStorage.setItem('token', responseData.token);
+                localStorage.setItem('user', JSON.stringify(responseData.user));
                 localStorage.setItem('isAdminSession', 'true'); // Flag for admin session
                 
-                // Set token expiration for automatic logout
-                const jwt = parseJwt(data.token);
+                // Set token expiration if available
+                const jwt = parseJwt(responseData.token);
                 if (jwt && jwt.exp) {
                     localStorage.setItem('tokenExpiration', jwt.exp * 1000);
                 }
                 
                 // Redirect to dashboard
-                debugInfo.innerHTML += '<p>Login successful, redirecting...</p>';
+                debugInfo.innerHTML += '<p>Redirecting to dashboard...</p>';
                 window.location.href = '/admin/index.html';
             } catch (error) {
                 console.error('Login error:', error);
                 const errorElement = document.getElementById('loginError');
-                errorElement.textContent = error.message;
+                errorElement.textContent = error.message || 'An error occurred during login';
                 errorElement.style.display = 'block';
                 
                 // Re-enable login button

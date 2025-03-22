@@ -75,14 +75,43 @@ const app = express();
 // This fixes the "ERR_ERL_UNEXPECTED_X_FORWARDED_FOR" warning
 app.set('trust proxy', 1);
 
-// Security middleware initialization
+// Initialize security middleware
 const securityMiddleware = initializeSecurityMiddleware();
 
-// Apply basic security headers
-app.use(securityMiddleware.configureHelmet);
-
-// Configure CORS
+// IMPORTANT: Configure CORS first, before other middleware
 app.use(securityMiddleware.configureCors);
+
+// Configure Helmet with relaxed settings for the admin panel
+const helmetConfig = helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+            imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net', 'https://*.cloudinary.com'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
+            connectSrc: ["'self'", '*'], // Allow connecting to any origin
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"]
+        }
+    },
+    // Disable certain protections for admin panel functionality
+    xssFilter: true,
+    hsts: false, // Disable HSTS for now to prevent issues
+    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
+    noSniff: true,
+    dnsPrefetchControl: { allow: true },
+    frameguard: { action: 'sameorigin' }
+});
+
+// Apply relaxed helmet config to admin routes
+app.use('/admin', helmetConfig);
+app.use('/api/admin', helmetConfig);
+app.use('/api/auth', helmetConfig);
+
+// Configure Helmet with stricter settings for other routes
+app.use(securityMiddleware.configureHelmet);
 
 // Apply rate limiting to all requests
 const apiLimiter = rateLimit({

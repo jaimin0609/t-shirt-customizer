@@ -54,30 +54,39 @@ export const initializeSecurityMiddleware = () => {
 
     // CORS configuration middleware
     const configureCors = (req, res, next) => {
-        // List of allowed origins
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:3001',
-            'https://t-shirt-customizer-backend.onrender.com',
-            'https://t-shirt-customizer-frontend.onrender.com'
-        ];
-
+        // Get the origin from the request
         const origin = req.headers.origin;
         
-        // In development mode, allow all origins
-        if (process.env.NODE_ENV !== 'production') {
-            res.setHeader('Access-Control-Allow-Origin', origin || '*');
-        }
-        // In production, check against the allowlist
-        else if (origin) {
-            // Check if the origin is in our allowlist or contains onrender.com
-            if (allowedOrigins.includes(origin) || origin.includes('onrender.com')) {
+        // If there's an origin header (browser request), set the CORS header
+        if (origin) {
+            // In development or for specific endpoints (auth), we're permissive
+            if (process.env.NODE_ENV !== 'production' || 
+                req.path.includes('/auth/') || 
+                req.path.includes('/admin/')) {
                 res.setHeader('Access-Control-Allow-Origin', origin);
+            } 
+            // In production, we still allow our known domains
+            else {
+                // List of allowed origins
+                const allowedOrigins = [
+                    'http://localhost:3000',
+                    'http://localhost:5173',
+                    'http://localhost:3001',
+                    'https://t-shirt-customizer-backend.onrender.com',
+                    'https://t-shirt-customizer-frontend.onrender.com',
+                    'https://uniqverse-five.vercel.app'
+                ];
+                
+                // Allow requests from our known domains or onrender.com/vercel.app subdomains
+                if (allowedOrigins.includes(origin) || 
+                    origin.includes('onrender.com') || 
+                    origin.includes('vercel.app')) {
+                    res.setHeader('Access-Control-Allow-Origin', origin);
+                }
             }
         }
 
-        // Set other CORS headers
+        // Always set these headers
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -108,24 +117,30 @@ export const initializeSecurityMiddleware = () => {
 
     // Middleware to validate Origin header for CORS requests
     const validateOrigin = (req, res, next) => {
-        // Skip origin validation for GET, OPTIONS, and authentication endpoints
+        // Always allow:
+        // 1. GET and OPTIONS requests
+        // 2. Any auth-related endpoints
+        // 3. Admin-related endpoints
+        // 4. Login and logout paths
         if (req.method === 'GET' || 
             req.method === 'OPTIONS' || 
-            req.path.startsWith('/api/auth/') ||
-            req.path.includes('/login') ||
+            req.path.includes('/auth/') || 
+            req.path.includes('/admin/') ||
+            req.path.includes('/login') || 
             req.path.includes('/logout')) {
             return next();
         }
         
-        // For mutation requests (POST, PUT, DELETE), validate origin header
         // In development mode, allow all origins
         if (process.env.NODE_ENV !== 'production') {
             return next();
         }
         
+        // For other requests, validate the origin
         if (!isFromTrustedOrigin(req)) {
             console.warn(`CORS validation failed for: ${req.method} ${req.path}`);
             console.warn(`Origin: ${req.headers.origin || 'none'}`);
+            console.warn(`Host: ${req.headers.host || 'none'}`);
             console.warn(`Referer: ${req.headers.referer || 'none'}`);
             
             return res.status(403).json({

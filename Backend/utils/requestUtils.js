@@ -61,37 +61,62 @@ export const sanitizeInput = (input) => {
  * @returns {boolean} - Whether the request is from a trusted origin
  */
 export const isFromTrustedOrigin = (req) => {
-    const origin = req.headers.origin || req.headers.referer || '';
-    
-    // Define trusted origins
-    const trustedOrigins = [
-        // Local development
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://localhost:3001',
-        // Render deployment URLs
-        'https://t-shirt-customizer-backend.onrender.com',
-        'https://t-shirt-customizer-frontend.onrender.com',
-        // Include all subdomains of onrender.com
-        'onrender.com',
-        // Allow requests with no explicit origin for local testing
-        ''
-    ];
-    
-    // Check if we need to bypass this check during development
+    // Always bypass in development mode
     if (process.env.NODE_ENV !== 'production') {
-        return true; // Allow all origins in development mode
+        return true;
     }
     
-    // Check if origin exactly matches or starts with any trusted origin
-    return trustedOrigins.some(trusted => {
-        if (trusted === '') return origin === '';
-        // If it's a domain suffix (like onrender.com) without http/https
-        if (!trusted.startsWith('http')) {
-            return origin.includes(trusted);
+    // Get the origin and host from the request
+    const origin = req.headers.origin || '';
+    const referer = req.headers.referer || '';
+    const host = req.headers.host || '';
+    
+    console.log('Request details for CORS validation:');
+    console.log('Origin:', origin);
+    console.log('Referer:', referer);
+    console.log('Host:', host);
+    
+    // If there's no origin header, this is likely a same-origin request
+    // or a request from a non-browser client (like curl or Postman)
+    if (!origin) {
+        // For API endpoints, we'll trust requests without an origin
+        // since these could be server-to-server requests or direct API calls
+        return true;
+    }
+    
+    // Same-origin requests should always be allowed
+    // If the origin header matches the host, it's same-origin
+    try {
+        const originHostname = new URL(origin).hostname;
+        if (host === originHostname || host.includes(originHostname) || originHostname.includes(host)) {
+            console.log('Same-origin request detected, allowing');
+            return true;
         }
-        return origin === trusted || origin.startsWith(trusted);
-    });
+    } catch (e) {
+        console.error('Error parsing origin URL:', e);
+    }
+    
+    // Define trusted origins - keep it very permissive for now
+    const trustedDomains = [
+        'localhost',
+        '127.0.0.1',
+        'onrender.com',
+        't-shirt-customizer-backend.onrender.com',
+        't-shirt-customizer-frontend.onrender.com',
+        'uniqverse-five.vercel.app',
+        'vercel.app'
+    ];
+    
+    // Check if the origin contains any of our trusted domains
+    for (const domain of trustedDomains) {
+        if (origin.includes(domain)) {
+            console.log(`Trusted domain match: ${domain}`);
+            return true;
+        }
+    }
+    
+    console.log('Origin validation failed - untrusted origin');
+    return false;
 };
 
 export default {
