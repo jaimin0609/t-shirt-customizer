@@ -39,118 +39,170 @@ function debugLog(...args) {
  * Initialize notifications system
  */
 function initNotifications() {
-    debugLog('Initializing notifications system');
+    console.log('Initializing notifications module');
     
-    // Find notification elements
-    setupNotificationElements();
+    // Get or create notification bell container
+    ensureNotificationElements();
     
-    // Load notifications immediately
+    // Load notifications from the server
     loadNotifications();
     
-    // Setup refresh timer
-    setupRefreshTimer();
-    
-    // Listen for visibility changes to refresh when page becomes visible
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Expose global refresh method
-    window.refreshNotifications = loadNotifications;
-    
-    // Apply proper styling to notification badge
-    fixNotificationBadgeStyle();
-    
-    debugLog('Notification system initialized');
+    // Set up polling for new notifications (every 60 seconds)
+    setInterval(loadNotifications, 60000);
 }
 
 /**
- * Fix notification badge style to ensure it looks professional
+ * Ensure all notification UI elements exist and are properly structured
  */
-function fixNotificationBadgeStyle() {
-    // Target all notification badges
-    const badges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification, .position-absolute.badge');
+function ensureNotificationElements() {
+    const rightSideContainer = document.querySelector('.d-flex.align-items-center.gap-3.ms-auto');
     
-    badges.forEach(badge => {
-        // Ensure badge has proper position
-        badge.style.zIndex = "1001";
-        badge.style.transform = "translate(-50%, -50%)";
-        
-        // Make sure size is appropriate
-        badge.style.fontSize = "0.65rem";
-        badge.style.padding = "0.25rem 0.4rem";
-        
-        // Ensure it doesn't overlap with other elements
-        badge.style.top = "0";
-        badge.style.right = "0";
-        badge.style.margin = "0";
-        
-        // Add pill shape to ensure text fits
-        badge.classList.add('rounded-pill');
-        
-        // Ensure text doesn't overflow
-        badge.style.whiteSpace = "nowrap";
-        badge.style.overflow = "hidden";
-        badge.style.textOverflow = "ellipsis";
-        badge.style.maxWidth = "30px";
-    });
-    
-    // Fix container elements for notification dropdowns
-    const navItems = document.querySelectorAll('.nav-item.dropdown');
-    navItems.forEach(item => {
-        item.style.position = "relative";
-    });
-}
-
-/**
- * Find and setup notification elements in the DOM
- */
-function setupNotificationElements() {
-    // Find all notification badges
-    const badges = document.querySelectorAll('.badge[data-notification-badge], .notification-badge, .badge-notification, .position-absolute.badge');
-    debugLog(`Found ${badges.length} notification badge elements`);
-    
-    // Find all notification dropdown containers
-    const dropdowns = document.querySelectorAll('.dropdown-menu.notification-dropdown, .notifications-dropdown, [data-notification-container]');
-    debugLog(`Found ${dropdowns.length} notification dropdown elements`);
-    
-    // Set up click handlers for notification buttons if any
-    const buttons = document.querySelectorAll('[data-action="refresh-notifications"], .refresh-notifications');
-    buttons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadNotifications();
-        });
-    });
-    debugLog(`Set up ${buttons.length} notification refresh buttons`);
-}
-
-/**
- * Set up a timer to periodically refresh notifications
- */
-function setupRefreshTimer() {
-    // Clear any existing timer
-    if (notificationState.refreshTimer) {
-        clearInterval(notificationState.refreshTimer);
+    // If container doesn't exist, try to create one
+    if (!rightSideContainer) {
+        console.log('Right side container not found, creating notification elements in navbar');
+        createNotificationElements();
+        return;
     }
     
-    // Set up new timer
-    notificationState.refreshTimer = setInterval(() => {
-        debugLog('Automatic notification refresh triggered');
-        loadNotifications();
-    }, CONFIG.refreshInterval);
+    // Check if notification dropdown already exists
+    let notificationDropdown = document.querySelector('.notification-dropdown-container');
     
-    debugLog(`Refresh timer set for every ${CONFIG.refreshInterval / 1000} seconds`);
+    // If it doesn't exist, create and insert it
+    if (!notificationDropdown) {
+        console.log('Notification dropdown not found, adding it to the right side container');
+        
+        // Create notification element
+        notificationDropdown = document.createElement('div');
+        notificationDropdown.className = 'nav-item dropdown notification-dropdown-container me-3';
+        
+        notificationDropdown.innerHTML = `
+            <button class="btn btn-link text-dark p-0 position-relative" data-bs-toggle="dropdown" id="notificationBell">
+                <i class="bi bi-bell fs-5"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" style="display: none;">
+                    0
+                    <span class="visually-hidden" data-translate="unreadNotifications">unread notifications</span>
+                </span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end notification-dropdown pt-0" style="width: 320px; max-height: 500px; overflow-y: auto;">
+                <div class="notification-header p-3 border-bottom">
+                    <h6 class="m-0 d-flex justify-content-between align-items-center">
+                        <span data-translate="notifications">Notifications</span>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-translate="markAllRead" data-notification-action="mark-all-read">Mark all read</button>
+                    </h6>
+                </div>
+                <div class="notification-body" id="notificationDropdown">
+                    <!-- Notifications will be loaded here -->
+                </div>
+                <div class="notification-footer p-2 border-top text-center">
+                    <a href="/admin/notifications.html" class="text-decoration-none small">
+                        <span data-translate="viewAll">View all notifications</span>
+                    </a>
+                </div>
+            </div>
+        `;
+        
+        // Insert before the profile dropdown if it exists, otherwise just append to the container
+        const profileDropdown = rightSideContainer.querySelector('.dropdown');
+        if (profileDropdown) {
+            rightSideContainer.insertBefore(notificationDropdown, profileDropdown);
+        } else {
+            rightSideContainer.appendChild(notificationDropdown);
+        }
+    }
 }
 
 /**
- * Handle visibility change events to refresh notifications when tab becomes visible
+ * Create notification elements if the regular container doesn't exist
  */
-function handleVisibilityChange() {
-    if (document.visibilityState === 'visible') {
-        const lastLoadedTime = notificationState.lastLoaded ? new Date() - notificationState.lastLoaded : null;
+function createNotificationElements() {
+    // Find the navbar content container
+    const navbarContent = document.querySelector('.navbar .container-fluid');
+    if (!navbarContent) {
+        console.error('Cannot find navbar container to add notification elements');
+        return;
+    }
+    
+    // Look for an existing right side container or create one
+    let rightSide = navbarContent.querySelector('.ms-auto');
+    if (!rightSide) {
+        // Create the right side container
+        rightSide = document.createElement('div');
+        rightSide.className = 'd-flex align-items-center gap-3 ms-auto';
         
-        if (!lastLoadedTime || lastLoadedTime > 60000) { // Only reload if it's been more than a minute
-            debugLog('Page became visible, refreshing notifications');
-            loadNotifications();
+        // Add the notification dropdown to it
+        rightSide.innerHTML = `
+            <div class="nav-item dropdown notification-dropdown-container">
+                <button class="btn btn-link text-dark p-0 position-relative" data-bs-toggle="dropdown" id="notificationBell">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" style="display: none;">
+                        0
+                        <span class="visually-hidden" data-translate="unreadNotifications">unread notifications</span>
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end notification-dropdown pt-0" style="width: 320px; max-height: 500px; overflow-y: auto;">
+                    <div class="notification-header p-3 border-bottom">
+                        <h6 class="m-0 d-flex justify-content-between align-items-center">
+                            <span data-translate="notifications">Notifications</span>
+                            <button class="btn btn-sm btn-link text-decoration-none p-0" data-translate="markAllRead" data-notification-action="mark-all-read">Mark all read</button>
+                        </h6>
+                    </div>
+                    <div class="notification-body" id="notificationDropdown">
+                        <!-- Notifications will be loaded here -->
+                    </div>
+                    <div class="notification-footer p-2 border-top text-center">
+                        <a href="/admin/notifications.html" class="text-decoration-none small">
+                            <span data-translate="viewAll">View all notifications</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Find where to insert it - before search or at the end
+        const searchBar = navbarContent.querySelector('form');
+        if (searchBar) {
+            navbarContent.insertBefore(rightSide, searchBar.nextSibling);
+        } else {
+            navbarContent.appendChild(rightSide);
+        }
+    } else {
+        // If right side exists but doesn't have notifications, add them
+        if (!rightSide.querySelector('.notification-dropdown-container')) {
+            const notificationDropdown = document.createElement('div');
+            notificationDropdown.className = 'nav-item dropdown notification-dropdown-container me-3';
+            notificationDropdown.innerHTML = `
+                <button class="btn btn-link text-dark p-0 position-relative" data-bs-toggle="dropdown" id="notificationBell">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" style="display: none;">
+                        0
+                        <span class="visually-hidden" data-translate="unreadNotifications">unread notifications</span>
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end notification-dropdown pt-0" style="width: 320px; max-height: 500px; overflow-y: auto;">
+                    <div class="notification-header p-3 border-bottom">
+                        <h6 class="m-0 d-flex justify-content-between align-items-center">
+                            <span data-translate="notifications">Notifications</span>
+                            <button class="btn btn-sm btn-link text-decoration-none p-0" data-translate="markAllRead" data-notification-action="mark-all-read">Mark all read</button>
+                        </h6>
+                    </div>
+                    <div class="notification-body" id="notificationDropdown">
+                        <!-- Notifications will be loaded here -->
+                    </div>
+                    <div class="notification-footer p-2 border-top text-center">
+                        <a href="/admin/notifications.html" class="text-decoration-none small">
+                            <span data-translate="viewAll">View all notifications</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            // Add before profile dropdown if it exists
+            const profileDropdown = rightSide.querySelector('.dropdown');
+            if (profileDropdown) {
+                rightSide.insertBefore(notificationDropdown, profileDropdown);
+            } else {
+                rightSide.appendChild(notificationDropdown);
+            }
         }
     }
 }
@@ -571,10 +623,8 @@ function getTimeAgo(date) {
     return `${years} ${years === 1 ? 'year' : 'years'} ago`;
 }
 
-// Initialize notifications on DOM content loaded
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(initNotifications, 500); // Small delay to ensure DOM is ready
-});
+// Initialize notifications on page load
+document.addEventListener('DOMContentLoaded', initNotifications);
 
 // Re-initialize when document becomes visible (in case user switched tabs)
 document.addEventListener('visibilitychange', function() {

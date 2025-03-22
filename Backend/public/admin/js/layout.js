@@ -120,7 +120,25 @@ function initializeLayout() {
         }
     });
     
-    // Load user profile data for the navbar
+    // Set the user name from localStorage if exists (for consistency across pages)
+    const userNameElement = document.getElementById('userName');
+    if (userNameElement) {
+        const storedName = localStorage.getItem('userName');
+        if (storedName) {
+            userNameElement.textContent = storedName;
+        }
+    }
+    
+    // Set avatar from localStorage if exists
+    const avatarElement = document.getElementById('userAvatar');
+    if (avatarElement) {
+        const storedAvatar = localStorage.getItem('userAvatar');
+        if (storedAvatar) {
+            avatarElement.src = storedAvatar;
+        }
+    }
+    
+    // Then load fresh data from API
     loadUserProfileForNavbar();
     
     // Set up profile link
@@ -265,7 +283,11 @@ async function loadUserProfileForNavbar() {
         // Update navbar with user data
         const userNameElement = document.getElementById('userName');
         if (userNameElement) {
-            userNameElement.textContent = userData.name || 'Admin';
+            // Always use the consistent format - from name with fallback to role
+            userNameElement.textContent = userData.name || (userData.role === 'admin' ? 'Administrator' : 'User');
+            
+            // Also store in localStorage to ensure consistency across pages
+            localStorage.setItem('userName', userNameElement.textContent);
         }
         
         // If user has a profile image, update the avatar
@@ -278,6 +300,9 @@ async function loadUserProfileForNavbar() {
                     ? userData.profileImage 
                     : `${window.location.origin}${userData.profileImage}`;
                 console.log('Setting navbar avatar image to:', avatarImg.src);
+                
+                // Store the avatar URL in localStorage for consistency
+                localStorage.setItem('userAvatar', avatarImg.src);
             } else {
                 console.warn('Avatar image element not found in navbar: #userAvatar, .avatar, or .rounded-circle');
                 // Don't create a new image element as it could appear in unexpected places

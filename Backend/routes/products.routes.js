@@ -180,8 +180,35 @@ router.post('/',
     productImageService.getSingleUploadMiddleware('image'),
     async (req, res) => {
         try {
+            // Validate required fields
+            const { name, price, category } = req.body;
+            
+            if (!name || !price || !category) {
+                return res.status(400).json({ 
+                    message: 'Missing required fields', 
+                    requiredFields: ['name', 'price', 'category'],
+                    providedFields: Object.keys(req.body)
+                });
+            }
+            
+            // Validate price is a number
+            const numericPrice = parseFloat(price);
+            if (isNaN(numericPrice) || numericPrice < 0) {
+                return res.status(400).json({ 
+                    message: 'Price must be a positive number',
+                    field: 'price',
+                    value: price
+                });
+            }
+            
             // Process the uploaded file
-            const imageUrl = productImageService.processUploadedFile(req.file);
+            let imageUrl = null;
+            if (req.file) {
+                imageUrl = productImageService.processUploadedFile(req.file);
+                console.log('Processed product image:', imageUrl);
+            } else {
+                console.log('No image file uploaded');
+            }
             
             // Prepare data
             const productData = {
@@ -192,15 +219,120 @@ router.post('/',
                 sizes: formatArrayForPostgres(req.body.sizes),
                 tags: formatArrayForPostgres(req.body.tags),
                 additionalImages: formatArrayForPostgres(req.body.additionalImages),
+                // Ensure price is numeric
+                price: numericPrice,
+                // Ensure stock is numeric
+                stock: req.body.stock ? parseInt(req.body.stock, 10) : 0,
+                // Convert checkbox value to boolean
+                isCustomizable: req.body.isCustomizable === 'true' || req.body.isCustomizable === true,
+                status: req.body.status || 'active'
             };
+            
+            console.log('Creating product with data:', productData);
             
             // Create the product
             const product = await productService.createProduct(productData);
+            console.log('Product created successfully:', product.id);
             
             res.status(201).json(product);
         } catch (error) {
             console.error('Error creating product:', error);
-            res.status(500).json({ message: 'Error creating product', error: error.message });
+            
+            // Check for specific error types
+            if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+                return res.status(400).json({ 
+                    message: 'Validation error', 
+                    errors: error.errors.map(e => ({ field: e.path, message: e.message }))
+                });
+            }
+            
+            res.status(500).json({ 
+                message: 'Error creating product', 
+                error: error.message
+            });
+        }
+    }
+);
+
+/**
+ * @route   PUT /api/products/:id
+ * @desc    Update a product
+ * @access  Private (Admin only)
+ */
+router.put('/:id', 
+    auth, 
+    isAdmin,
+    productImageService.getSingleUploadMiddleware('image'),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            
+            // Check if product exists
+            const existingProduct = await productService.getProductById(id);
+            if (!existingProduct) {
+                return res.status(404).json({ message: 'Product not found' });
+            }
+            
+            // Process the uploaded file
+            let imageUrl = existingProduct.image;
+            if (req.file) {
+                imageUrl = productImageService.processUploadedFile(req.file);
+                console.log('Updated product image:', imageUrl);
+            }
+            
+            // Prepare price as numeric if provided
+            let numericPrice = existingProduct.price;
+            if (req.body.price) {
+                numericPrice = parseFloat(req.body.price);
+                if (isNaN(numericPrice) || numericPrice < 0) {
+                    return res.status(400).json({ 
+                        message: 'Price must be a positive number',
+                        field: 'price',
+                        value: req.body.price
+                    });
+                }
+            }
+            
+            // Prepare data
+            const productData = {
+                name: req.body.name || existingProduct.name,
+                description: req.body.description || existingProduct.description,
+                price: numericPrice,
+                category: req.body.category || existingProduct.category,
+                stock: req.body.stock ? parseInt(req.body.stock, 10) : existingProduct.stock,
+                image: imageUrl,
+                status: req.body.status || existingProduct.status,
+                // Convert checkbox value to boolean
+                isCustomizable: req.body.isCustomizable === 'true' || req.body.isCustomizable === true,
+                // Handle arrays properly for different database types
+                colors: req.body.colors ? formatArrayForPostgres(req.body.colors) : existingProduct.colors,
+                sizes: req.body.sizes ? formatArrayForPostgres(req.body.sizes) : existingProduct.sizes,
+                tags: req.body.tags ? formatArrayForPostgres(req.body.tags) : existingProduct.tags,
+                additionalImages: req.body.additionalImages ? formatArrayForPostgres(req.body.additionalImages) : existingProduct.additionalImages
+            };
+            
+            console.log('Updating product with data:', productData);
+            
+            // Update the product
+            const updatedProduct = await productService.updateProduct(id, productData);
+            console.log('Product updated successfully:', updatedProduct.id);
+            
+            res.json(updatedProduct);
+        } catch (error) {
+            console.error('Error updating product:', error);
+            
+            // Check for specific error types
+            if (error.name === 'SequelizeValidationError') {
+                return res.status(400).json({ 
+                    message: 'Validation error', 
+                    errors: error.errors.map(e => ({ field: e.path, message: e.message }))
+                });
+            }
+            
+            res.status(500).json({ 
+                message: 'Error updating product', 
+                error: error.message 
+            });
         }
     }
 );

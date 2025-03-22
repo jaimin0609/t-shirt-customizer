@@ -93,100 +93,67 @@ router.put('/profile', auth, isAdmin, upload.single('profileImage'), async (req,
         // Update password if provided
         if (req.body.newPassword && req.body.newPassword.trim() !== '') {
             updateData.password = await bcrypt.hash(req.body.newPassword, 12);
+            
+            // Add timestamp of password change
+            updateData.lastPasswordChange = new Date();
+            
+            // Reset token version to invalidate all existing sessions except current one
+            updateData.tokenVersion = (user.tokenVersion || 0) + 1;
+            
+            console.log('Password updated');
         }
         
-        // Update profile image if provided
+        // Process profile image if uploaded
         if (req.file) {
-            console.log('Processing new profile image');
-            
             try {
-                let imageUrl = '';
-                
-                // Use Cloudinary if enabled
-                if (cloudinaryEnabled) {
-                    console.log('Uploading profile image to Cloudinary');
-                    
-                    // Upload to Cloudinary with specific profile image settings
-                    const result = await uploadImage(req.file.path, {
-                        folder: 'profiles',
-                        transformation: [
-                            { width: 500, height: 500, crop: 'limit' },
-                            { quality: 'auto' }
-                        ],
-                        resource_type: 'auto' // This ensures proper handling of different image types
-                    });
-                    
-                    // Get the Cloudinary URL and ensure it's using HTTPS
-                    imageUrl = result.secure_url || result.url;
-                    if (imageUrl.startsWith('http://')) {
-                        imageUrl = imageUrl.replace('http://', 'https://');
-                    }
-                    console.log('Cloudinary upload successful:', imageUrl);
-                    
-                    // Clean up local file after Cloudinary upload
-                    try {
-                        fs.unlinkSync(req.file.path);
-                        console.log('Local temporary file cleaned up');
-                    } catch (unlinkError) {
-                        console.warn('Failed to delete local file:', unlinkError);
-                    }
-                } else {
-                    // Use local file storage
-                    imageUrl = `/uploads/profiles/${req.file.filename}`;
-                    console.log('Using local file storage:', imageUrl);
-                }
-                
-                // Delete old profile image if exists
-                if (user.profileImage) {
-                    try {
-                        // If it's a Cloudinary URL, try to delete from Cloudinary
-                        if (user.profileImage.includes('cloudinary.com')) {
-                            const publicId = user.profileImage.split('/').pop().split('.')[0];
-                            await cloudinary.v2.uploader.destroy(`profiles/${publicId}`);
-                            console.log('Deleted old Cloudinary image');
-                        } 
-                        // If it's a local file, delete from local storage
-                        else if (user.profileImage.startsWith('/uploads/profiles/')) {
-                            const oldImagePath = path.join(__dirname, '../public', user.profileImage);
-                            if (fs.existsSync(oldImagePath)) {
-                                fs.unlinkSync(oldImagePath);
-                                console.log('Deleted old local profile image:', oldImagePath);
-                            }
-                        }
-                    } catch (deleteError) {
-                        console.warn('Failed to delete old profile image:', deleteError);
-                    }
-                }
-                
-                // Update the profile image URL
-                updateData.profileImage = imageUrl;
-                console.log('New profile image path:', updateData.profileImage);
+                console.log('Processing uploaded profile image');
+                // Build public URL for the uploaded file
+                const imagePath = `/uploads/profile/${req.file.filename}`;
+                updateData.profileImage = imagePath;
+                console.log('Profile image updated:', imagePath);
             } catch (imageError) {
                 console.error('Error processing profile image:', imageError);
-                // Continue with update but without changing the profile image
-                console.log('Continuing update without changing profile image');
+                // Don't fail the entire update if just the image has an issue
             }
         }
         
-        console.log('Updating user with data:', updateData);
+        // Check for empty update
+        if (Object.keys(updateData).length === 0) {
+            console.log('No fields to update');
+            return res.status(400).json({ message: 'No valid fields to update' });
+        }
         
-        // Update the user
-        await user.update(updateData);
-        console.log('User updated successfully');
-        
-        // Fetch fresh user data
-        const updatedUser = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['password'] }
-        });
-        
-        console.log('Updated user data:', updatedUser.toJSON());
-        res.json(updatedUser);
+        // Update the user record
+        try {
+            console.log('Updating user with data:', updateData);
+            await user.update(updateData);
+            console.log('User updated successfully');
+            
+            // Get refreshed user data without password
+            const updatedUser = await User.findByPk(req.user.id, {
+                attributes: { exclude: ['password'] }
+            });
+            
+            return res.json(updatedUser);
+        } catch (updateError) {
+            console.error('Error updating user:', updateError);
+            
+            // Handle unique constraint errors specially
+            if (updateError.name === 'SequelizeUniqueConstraintError') {
+                const field = updateError.errors[0].path;
+                return res.status(400).json({ 
+                    message: `The ${field} is already in use by another account`,
+                    field
+                });
+            }
+            
+            throw updateError;
+        }
     } catch (error) {
-        console.error('Error updating admin profile:', error);
-        res.status(500).json({ 
-            message: 'Error updating profile',
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        console.error('Profile update error:', error);
+        return res.status(500).json({ 
+            message: 'Error updating profile', 
+            error: error.message 
         });
     }
 });
