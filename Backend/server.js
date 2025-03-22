@@ -65,6 +65,7 @@ import userRoutes from './routes/users.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import healthRoutes from './routes/health.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,13 +87,13 @@ const helmetConfig = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
-            imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net', 'https://*.cloudinary.com'],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
-            connectSrc: ["'self'", '*'], // Allow connecting to any origin
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.tiny.cloud'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://cdn.tiny.cloud'],
+            imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net', 'https://*.cloudinary.com', 'https://res.cloudinary.com'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net', 'https://cdn.tiny.cloud'],
+            connectSrc: ["'self'", process.env.API_URL || 'http://localhost:5000', 'https://*.cloudinary.com', 'https://res.cloudinary.com', 'https://api.cloudinary.com'],
             objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
+            mediaSrc: ["'self'", 'https://*.cloudinary.com'],
             frameSrc: ["'none'"]
         }
     },
@@ -189,6 +190,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/health', healthRoutes);
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
