@@ -361,22 +361,106 @@ router.get('/run-migration-temp', async (req, res) => {
         // instead of requiring the module again
         
         // Step 1: Update the role field to be a STRING instead of ENUM
-        await sequelize.getQueryInterface().changeColumn('Users', 'role', {
-            type: DataTypes.STRING,
-            allowNull: false,
-            defaultValue: 'user'
-        });
+        try {
+            await sequelize.getQueryInterface().changeColumn('Users', 'role', {
+                type: DataTypes.STRING,
+                allowNull: false,
+                defaultValue: 'user'
+            });
+            console.log('Column "role" modified successfully');
+        } catch (err) {
+            console.log('Error modifying role column:', err.message);
+        }
         
-        console.log('Column "role" modified successfully');
+        // Step 2: Add all missing columns
+        const columnsToAdd = [
+            {
+                name: 'permissions',
+                type: DataTypes.JSON,
+                allowNull: true,
+                defaultValue: null
+            },
+            {
+                name: 'tokenVersion',
+                type: DataTypes.INTEGER,
+                allowNull: true,
+                defaultValue: 0
+            },
+            {
+                name: 'lastPasswordChange',
+                type: DataTypes.DATE,
+                allowNull: true
+            },
+            {
+                name: 'failedLoginAttempts',
+                type: DataTypes.INTEGER,
+                allowNull: true,
+                defaultValue: 0
+            },
+            {
+                name: 'accountLockedUntil',
+                type: DataTypes.DATE,
+                allowNull: true
+            },
+            {
+                name: 'status',
+                type: DataTypes.STRING,
+                allowNull: true,
+                defaultValue: 'active'
+            },
+            {
+                name: 'resetToken',
+                type: DataTypes.STRING,
+                allowNull: true
+            },
+            {
+                name: 'resetTokenExpiry',
+                type: DataTypes.DATE,
+                allowNull: true
+            },
+            {
+                name: 'username',
+                type: DataTypes.STRING,
+                allowNull: true
+            }
+        ];
         
-        // Step 2: Add the permissions field
-        await sequelize.getQueryInterface().addColumn('Users', 'permissions', {
-            type: DataTypes.JSON,
-            allowNull: true,
-            defaultValue: null
-        });
+        // Add each column if it doesn't exist
+        for (const column of columnsToAdd) {
+            try {
+                // Check if column exists
+                const [results] = await sequelize.query(`
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'Users' 
+                    AND column_name = '${column.name}'
+                `);
+                
+                if (results.length === 0) {
+                    await sequelize.getQueryInterface().addColumn('Users', column.name, {
+                        type: column.type,
+                        allowNull: column.allowNull,
+                        defaultValue: column.defaultValue
+                    });
+                    console.log(`Column "${column.name}" added successfully`);
+                } else {
+                    console.log(`Column "${column.name}" already exists, skipping`);
+                }
+            } catch (err) {
+                console.log(`Error adding column ${column.name}:`, err.message);
+            }
+        }
         
-        console.log('Column "permissions" added successfully');
+        // Update Users table to use varchar for role if still using enum
+        try {
+            await sequelize.query(`
+                ALTER TABLE "Users"
+                ALTER COLUMN "role" TYPE VARCHAR(255)
+            `);
+            console.log('Changed role column type to VARCHAR');
+        } catch (err) {
+            console.log('Could not alter role column type:', err.message);
+        }
         
         res.json({ 
             message: 'Database migration completed successfully', 
@@ -387,7 +471,7 @@ router.get('/run-migration-temp', async (req, res) => {
         res.status(500).json({ 
             message: 'Error running migration', 
             error: error.message,
-            hint: 'If permissions column already exists, try the reset endpoint again'
+            hint: 'Check server logs for details on which columns failed'
         });
     }
 });
