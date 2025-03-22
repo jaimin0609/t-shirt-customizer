@@ -243,16 +243,28 @@ function loadNotifications() {
         showLoadingState(dropdown);
     });
     
-    // Decide which endpoint to use based on retry count
-    const endpoint = notificationState.retryCount > 0 ? 
-        CONFIG.ordersFallbackEndpoint : 
-        CONFIG.notificationsEndpoint;
+    // Make sure API_URL is properly prepended to the endpoint
+    const baseUrl = window.API_URL || '/api';
     
-    const fullEndpoint = window.API_URL ? `${window.API_URL}${endpoint}` : endpoint;
-    debugLog(`Fetching from endpoint: ${fullEndpoint}`);
+    // Decide which endpoint to use based on retry count
+    let endpoint;
+    if (notificationState.retryCount > 0) {
+        // Fallback to recent orders if notifications endpoint fails
+        endpoint = `${baseUrl}${CONFIG.ordersFallbackEndpoint}`;
+    } else {
+        // Primary endpoint with fixed path
+        endpoint = `${baseUrl}/notifications/unread`;
+        
+        // Use config path if it starts with slash (absolute path)
+        if (CONFIG.notificationsEndpoint.startsWith('/')) {
+            endpoint = `${baseUrl}${CONFIG.notificationsEndpoint}`;
+        }
+    }
+    
+    debugLog(`Fetching from endpoint: ${endpoint}`);
     
     // Fetch notifications
-    fetch(fullEndpoint, {
+    fetch(endpoint, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -262,7 +274,9 @@ function loadNotifications() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error(`Failed to load notifications: ${response.status}`);
+            const error = new Error(`Failed to load notifications: ${response.status}`);
+            error.status = response.status;
+            throw error;
         }
         return response.json();
     })
@@ -275,15 +289,8 @@ function loadNotifications() {
         notificationState.error = null;
         
         // Update all notification badges
-        const count = Array.isArray(data) ? data.length : (data.count || 0);
-        notificationBadges.forEach(badge => {
-            badge.textContent = count || '';
-            badge.classList.toggle('d-none', count === 0);
-            // Ensure the badge fits the text
-            if (count > 99) {
-                badge.textContent = '99+';
-            }
-        });
+        const count = Array.isArray(data) ? data.filter(item => !item.isRead).length : (data.count || 0);
+        updateNotificationBadges(notificationBadges, count);
         
         // Update all dropdowns
         notificationDropdowns.forEach(dropdown => {
@@ -294,25 +301,60 @@ function loadNotifications() {
         debugLog('Error loading notifications:', error);
         notificationState.error = error;
         
+        // Handle specific error cases
+        if (error.status === 401) {
+            // Unauthorized - token might be expired
+            debugLog('Unauthorized access, token might be expired');
+            // Don't automatically redirect to login, just show error
+            notificationDropdowns.forEach(dropdown => {
+                showErrorState(dropdown, 'Authentication error. Please log in again.');
+            });
+            return;
+        }
+        
         // Increment retry count
         notificationState.retryCount++;
         
-        // If we've already tried the fallback endpoint or max retries, show error state
+        // If we've already tried the fallback endpoint or max retries reached
         if (notificationState.retryCount >= CONFIG.maxRetries) {
             notificationDropdowns.forEach(dropdown => {
-                showErrorState(dropdown);
+                showErrorState(dropdown, 'Could not load notifications. Please try again later.');
             });
-            notificationState.retryCount = 0;
         } else {
-            // Retry with fallback endpoint
+            // Try again with fallback endpoint or after a delay
+            debugLog(`Retry attempt ${notificationState.retryCount} of ${CONFIG.maxRetries}`);
             setTimeout(() => {
                 notificationState.isLoading = false;
                 loadNotifications();
-            }, 1000); // Small delay before retry
+            }, 1000 * notificationState.retryCount); // Increasing delay with each retry
         }
     })
     .finally(() => {
         notificationState.isLoading = false;
+        
+        // Schedule next refresh if auto-refresh is enabled
+        if (CONFIG.refreshInterval > 0 && notificationState.refreshTimer === null) {
+            notificationState.refreshTimer = setTimeout(() => {
+                notificationState.refreshTimer = null;
+                loadNotifications();
+            }, CONFIG.refreshInterval);
+        }
+    });
+}
+
+/**
+ * Update all notification badges with the count
+ */
+function updateNotificationBadges(badges, count) {
+    badges.forEach(badge => {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = '';
+            badge.classList.remove('d-none');
+        } else {
+            badge.style.display = 'none';
+            badge.classList.add('d-none');
+        }
     });
 }
 
@@ -325,58 +367,70 @@ function showLoadingState(dropdown) {
         dropdown._originalContent = dropdown.innerHTML;
     }
     
-    dropdown.innerHTML = `
-        <div class="dropdown-item loading-item">
-            <div class="d-flex align-items-center">
-                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                    <span class="visually-hidden">Loading...</span>
+    // Clear existing content
+    if (dropdown.querySelector('.notification-body')) {
+        dropdown.querySelector('.notification-body').innerHTML = `
+            <div class="dropdown-item loading-item py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Loading notifications...</span>
                 </div>
-                <span>Loading notifications...</span>
             </div>
-        </div>
-    `;
+        `;
+    } else {
+        dropdown.innerHTML = `
+            <div class="dropdown-item loading-item py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Loading notifications...</span>
+                </div>
+            </div>
+        `;
+    }
 }
 
 /**
  * Show error state in notification dropdown
  */
-function showErrorState(dropdown) {
-    // Clear existing content first
-    dropdown.innerHTML = '';
+function showErrorState(dropdown, message = 'Failed to load notifications') {
+    // Find notification body or use the dropdown itself
+    const container = dropdown.querySelector('.notification-body') || dropdown;
+    
+    // Clear existing content
+    container.innerHTML = '';
 
-    // Add header
-    const header = document.createElement('h6');
-    header.className = 'dropdown-header';
-    header.textContent = 'Notifications';
-    dropdown.appendChild(header);
-
-    // Add divider
-    const divider = document.createElement('div');
-    divider.className = 'dropdown-divider';
-    dropdown.appendChild(divider);
-
-    // Add single error message
+    // Add error message
     const errorItem = document.createElement('div');
-    errorItem.className = 'dropdown-item text-center py-3';
+    errorItem.className = 'dropdown-item error-item text-center py-3';
     errorItem.innerHTML = `
-        <div class="d-flex flex-column align-items-center">
-            <i class="bi bi-exclamation-circle text-danger fs-4 mb-2"></i>
-            <p class="text-danger mb-2">Unable to load notifications</p>
-            <button class="btn btn-sm btn-outline-primary refresh-notifications">
-                <i class="bi bi-arrow-clockwise me-1"></i> Try Again
-            </button>
+        <div class="text-danger mb-2">
+            <i class="bi bi-exclamation-circle fs-4"></i>
         </div>
+        <p class="mb-2">${message}</p>
+        <button class="btn btn-sm btn-outline-primary retry-button">
+            <i class="bi bi-arrow-clockwise me-1"></i> Retry
+        </button>
     `;
-    dropdown.appendChild(errorItem);
-
-    // Add retry handler
-    const retryButton = dropdown.querySelector('.refresh-notifications');
+    
+    // Add retry button handler
+    const retryButton = errorItem.querySelector('.retry-button');
     if (retryButton) {
-        retryButton.addEventListener('click', (e) => {
+        retryButton.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset retry count and try again
+            notificationState.retryCount = 0;
+            notificationState.isLoading = false;
             loadNotifications();
         });
     }
+    
+    container.appendChild(errorItem);
 }
 
 /**

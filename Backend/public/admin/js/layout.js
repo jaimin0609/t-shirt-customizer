@@ -267,6 +267,15 @@ async function loadUserProfileForNavbar() {
             return;
         }
 
+        // Try to get cached user name from localStorage first
+        const cachedUserName = localStorage.getItem('userName');
+        
+        // Update UI with cached data immediately if available
+        if (cachedUserName) {
+            updateNavbarUserDisplay(cachedUserName);
+        }
+
+        // Attempt to fetch fresh data from API
         const response = await fetch(`${window.API_URL}/admin/profile`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -274,46 +283,70 @@ async function loadUserProfileForNavbar() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch profile');
+            // If we have cached data, don't treat this as a critical error
+            if (cachedUserName) {
+                console.warn('Using cached profile data due to API error');
+                return;
+            }
+            throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
         }
 
         const userData = await response.json();
         console.log('User profile data loaded for navbar:', userData);
         
+        // Format user name consistently
+        const displayName = userData.name || userData.username || (userData.role === 'admin' ? 'Administrator' : 'User');
+        
+        // Store in localStorage for future use
+        localStorage.setItem('userName', displayName);
+        
         // Update navbar with user data
-        const userNameElement = document.getElementById('userName');
-        if (userNameElement) {
-            // Always use the consistent format - from name with fallback to role
-            userNameElement.textContent = userData.name || (userData.role === 'admin' ? 'Administrator' : 'User');
-            
-            // Also store in localStorage to ensure consistency across pages
-            localStorage.setItem('userName', userNameElement.textContent);
-        }
+        updateNavbarUserDisplay(displayName);
         
         // If user has a profile image, update the avatar
         if (userData.profileImage) {
-            // Try multiple selectors to ensure we find the avatar element
-            const avatarImg = document.getElementById('userAvatar') || document.querySelector('.avatar') || document.querySelector('.rounded-circle');
-            if (avatarImg) {
-                // Make sure the path is absolute
-                avatarImg.src = userData.profileImage.startsWith('http') 
-                    ? userData.profileImage 
-                    : `${window.location.origin}${userData.profileImage}`;
-                console.log('Setting navbar avatar image to:', avatarImg.src);
-                
-                // Store the avatar URL in localStorage for consistency
-                localStorage.setItem('userAvatar', avatarImg.src);
-            } else {
-                console.warn('Avatar image element not found in navbar: #userAvatar, .avatar, or .rounded-circle');
-                // Don't create a new image element as it could appear in unexpected places
-            }
+            updateProfileImage(userData.profileImage);
         }
-        
-        return userData;
     } catch (error) {
-        console.error('Error loading user profile for navbar:', error);
-        return null;
+        console.error('Error loading profile for navbar:', error);
+        // Try to recover using cached data
+        const cachedUserName = localStorage.getItem('userName');
+        if (cachedUserName) {
+            console.warn('Using cached profile data due to error:', error.message);
+            updateNavbarUserDisplay(cachedUserName);
+        } else {
+            // Last resort fallback
+            updateNavbarUserDisplay('Admin User');
+        }
     }
+}
+
+// Helper function to update navbar user display
+function updateNavbarUserDisplay(displayName) {
+    // Update all user name elements in navbar
+    const userNameElements = document.querySelectorAll('#userName');
+    userNameElements.forEach(element => {
+        element.textContent = displayName;
+    });
+}
+
+// Helper function to update profile images
+function updateProfileImage(profileImageUrl) {
+    // Try multiple selectors to ensure we find all avatar elements
+    const avatarElements = document.querySelectorAll('#userAvatar, .avatar, .user-avatar, .rounded-circle');
+    avatarElements.forEach(avatarImg => {
+        if (avatarImg && avatarImg.tagName === 'IMG') {
+            // Make sure the path is absolute
+            avatarImg.src = profileImageUrl.startsWith('http') 
+                ? profileImageUrl 
+                : profileImageUrl.startsWith('/') 
+                    ? profileImageUrl 
+                    : `/${profileImageUrl}`;
+                    
+            // Remove default styling that might be applied for missing images
+            avatarImg.classList.remove('default-avatar');
+        }
+    });
 }
 
 // Show profile modal with user data

@@ -483,12 +483,113 @@ function hideLoading() {
 }
 
 /**
- * Handle form submission
+ * Validate form before submission
+ * @returns {Object} Validation result with isValid flag and any error messages
+ */
+function validateProductForm() {
+    console.group("🔍 Form Validation");
+    const errors = [];
+    const requiredFields = [
+        { id: 'productName', label: 'Product Name' },
+        { id: 'productPrice', label: 'Price' },
+        { id: 'productCategory', label: 'Category' },
+        { id: 'productGender', label: 'Gender' },
+        { id: 'productAgeGroup', label: 'Age Group' }
+    ];
+    
+    // Check required fields
+    requiredFields.forEach(field => {
+        const element = document.getElementById(field.id);
+        if (!element || !element.value.trim()) {
+            errors.push(`${field.label} is required`);
+            if (element) {
+                element.classList.add('is-invalid');
+                
+                // Add event listener to remove validation styling when field is updated
+                element.addEventListener('input', function() {
+                    if (this.value.trim()) {
+                        this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
+                    }
+                }, { once: true });
+            }
+        } else {
+            if (element) {
+                element.classList.remove('is-invalid');
+                element.classList.add('is-valid');
+            }
+        }
+    });
+    
+    // Validate price (must be a valid number > 0)
+    const priceElement = document.getElementById('productPrice');
+    if (priceElement && priceElement.value.trim()) {
+        const price = parseFloat(priceElement.value);
+        if (isNaN(price) || price <= 0) {
+            errors.push('Price must be a valid number greater than zero');
+            priceElement.classList.add('is-invalid');
+        }
+    }
+    
+    // Validate stock (must be a valid integer)
+    const stockElement = document.getElementById('productStock');
+    if (stockElement && stockElement.value.trim()) {
+        const stock = parseInt(stockElement.value);
+        if (isNaN(stock) || stock < 0) {
+            errors.push('Stock must be a valid number (0 or greater)');
+            stockElement.classList.add('is-invalid');
+        }
+    }
+    
+    // Validate description (at least some content)
+    let description = '';
+    if (tinymce.get('productDescription')) {
+        description = tinymce.get('productDescription').getContent();
+    } else {
+        const descElement = document.getElementById('productDescription');
+        if (descElement) {
+            description = descElement.value;
+        }
+    }
+    
+    if (!description.trim()) {
+        errors.push('Product description is required');
+        document.querySelector('.tox-tinymce') ? 
+            document.querySelector('.tox-tinymce').classList.add('border', 'border-danger') : 
+            document.getElementById('productDescription')?.classList.add('is-invalid');
+    }
+    
+    // Log validation results
+    if (errors.length > 0) {
+        console.warn('❌ Form validation failed:', errors);
+    } else {
+        console.log('✅ Form validation passed');
+    }
+    
+    console.groupEnd();
+    
+    return { 
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+/**
+ * Handle form submission with enhanced validation and error handling
  */
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     console.log("🚀 FORM SUBMISSION STARTED");
+    
+    // Validate form first
+    const validation = validateProductForm();
+    if (!validation.isValid) {
+        // Show validation errors
+        showValidationErrors(validation.errors);
+        console.warn('Form submission halted due to validation errors');
+        return;
+    }
     
     // Show loading state
     const submitBtn = document.querySelector('button[type="submit"]');
@@ -531,18 +632,8 @@ async function handleFormSubmit(e) {
         
         // Category - critical field that may have issues
         const categorySelect = document.getElementById('productCategory');
-        if (categorySelect && categorySelect.value) {
-            formData.append('category', categorySelect.value);
-            console.log('✅ Added category:', categorySelect.value);
-        } else {
-            console.warn('⚠️ No category selected!');
-            showNotification('Please select a product category', 'warning');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
-            hideLoading();
-            console.groupEnd();
-            return; // Stop the submission
-        }
+        formData.append('category', categorySelect.value);
+        console.log('✅ Added category:', categorySelect.value);
         
         // Other dropdowns
         formData.append('gender', document.getElementById('productGender').value);
@@ -553,6 +644,9 @@ async function handleFormSubmit(e) {
         
         // Add featured as boolean
         formData.append('featured', document.getElementById('productFeatured').checked ? 'true' : 'false');
+        
+        // Add customizable flag
+        formData.append('isCustomizable', document.getElementById('productCustomizable').checked ? 'true' : 'false');
         
         // STEP 1: CUSTOMIZATION OPTIONS - DEBUG SECTION
         console.group("🛠️ Customization Options");
@@ -915,6 +1009,82 @@ function showNotification(message, type = 'success') {
             notification.remove();
         }, 500);
     }, 5000);
+}
+
+/**
+ * Display validation errors to the user
+ * @param {Array} errors - Array of error messages
+ */
+function showValidationErrors(errors) {
+    if (!errors || errors.length === 0) return;
+    
+    // Clear any existing error alerts
+    const existingAlerts = document.querySelectorAll('.validation-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create a validation alert container
+    const alertContainer = document.createElement('div');
+    alertContainer.className = 'alert alert-danger validation-alert mt-3';
+    alertContainer.role = 'alert';
+    
+    // Create header
+    const header = document.createElement('h5');
+    header.className = 'alert-heading';
+    header.textContent = 'Please Fix the Following Errors:';
+    alertContainer.appendChild(header);
+    
+    // Create error list
+    const errorList = document.createElement('ul');
+    errorList.className = 'mb-0 ps-3';
+    
+    errors.forEach(error => {
+        const errorItem = document.createElement('li');
+        errorItem.textContent = error;
+        errorList.appendChild(errorItem);
+    });
+    
+    alertContainer.appendChild(errorList);
+    
+    // Add dismiss button
+    const dismissButton = document.createElement('button');
+    dismissButton.type = 'button';
+    dismissButton.className = 'btn-close';
+    dismissButton.setAttribute('data-bs-dismiss', 'alert');
+    dismissButton.setAttribute('aria-label', 'Close');
+    alertContainer.appendChild(dismissButton);
+    
+    // Insert at the top of the form
+    const form = document.getElementById('addProductForm');
+    if (form) {
+        form.insertBefore(alertContainer, form.firstChild);
+        
+        // Scroll to the top of the form
+        window.scrollTo({
+            top: form.offsetTop - 100,
+            behavior: 'smooth'
+        });
+    } else {
+        // Fallback if form not found
+        const contentArea = document.querySelector('.content-area, .main, main');
+        if (contentArea) {
+            contentArea.insertBefore(alertContainer, contentArea.firstChild);
+        } else {
+            // Last resort
+            document.body.insertBefore(alertContainer, document.body.firstChild);
+        }
+    }
+    
+    // Automatically dismiss after 10 seconds
+    setTimeout(() => {
+        if (alertContainer.parentNode) {
+            alertContainer.classList.add('fade');
+            setTimeout(() => {
+                if (alertContainer.parentNode) {
+                    alertContainer.remove();
+                }
+            }, 500);
+        }
+    }, 10000);
 }
 
 console.log('add-product.js loaded successfully!'); 
