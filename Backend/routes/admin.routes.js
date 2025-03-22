@@ -801,6 +801,82 @@ router.get('/check-jwt-secret', async (req, res) => {
     }
 });
 
+// Add a temporary endpoint to fix admin password (REMOVE AFTER USE FOR SECURITY)
+router.get('/fix-admin-password', async (req, res) => {
+    try {
+        // Use dynamic import instead of require for ES modules
+        const { DataTypes } = require('sequelize');
+        const bcrypt = require('bcryptjs');
+        
+        const adminEmail = 'admin@example.com';
+        const newPassword = 'Admin123!';
+        
+        // Find admin user
+        console.log(`Looking for admin user with email: ${adminEmail}`);
+        const adminUser = await User.findOne({ 
+            where: { 
+                email: adminEmail,
+                role: 'admin'
+            } 
+        });
+        
+        if (!adminUser) {
+            console.log('Admin user not found. Creating one...');
+            // Create a new admin
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            
+            const newAdmin = await User.create({
+                username: 'admin',
+                name: 'Administrator',
+                email: adminEmail,
+                password: hashedPassword,
+                role: 'admin',
+                status: 'active',
+                permissions: JSON.stringify({ all: true })
+            });
+            
+            return res.json({
+                message: 'Admin user created successfully',
+                loginCredentials: {
+                    email: adminEmail,
+                    password: newPassword
+                }
+            });
+        }
+        
+        console.log('Admin user found. Resetting password...');
+        
+        // Generate password hash
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        // Update directly using the query interface to bypass hooks
+        console.log('Updating password directly in database...');
+        await sequelize.query(
+            `UPDATE "Users" SET "password" = '${hashedPassword}', "updatedAt" = NOW() WHERE "id" = ${adminUser.id}`
+        );
+        
+        // Verify the update
+        const updatedAdmin = await User.findByPk(adminUser.id);
+        const passwordUpdated = updatedAdmin.password !== adminUser.password;
+        
+        return res.json({
+            message: 'Admin password reset successfully',
+            passwordUpdated: passwordUpdated,
+            loginCredentials: {
+                email: adminEmail,
+                password: newPassword
+            }
+        });
+    } catch (error) {
+        console.error('Error fixing admin password:', error);
+        res.status(500).json({ 
+            message: 'Error fixing admin password', 
+            error: error.message
+        });
+    }
+});
+
 // Add more admin routes as needed
 
 export default router; 
