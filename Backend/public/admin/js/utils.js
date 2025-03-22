@@ -917,4 +917,125 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add a global function to reload notifications manually
-window.reloadNotifications = loadNotifications; 
+window.reloadNotifications = loadNotifications;
+
+/**
+ * Save profile data from the profile modal form 
+ * This function is called from the onclick handler in multiple pages
+ */
+function saveProfile() {
+    console.log('saveProfile called from button click');
+    
+    // Find the profile form
+    const form = document.getElementById('profileForm');
+    if (!form) {
+        console.error('Profile form not found in the DOM');
+        showToast('error', 'Error: Profile form not found');
+        return;
+    }
+    
+    // Get form data
+    const formData = new FormData(form);
+    
+    // Add the profileImage file if it exists
+    const fileInput = document.getElementById('profileImage');
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formData.append('profileImage', fileInput.files[0]);
+    }
+    
+    // Validate form
+    const name = formData.get('name');
+    const email = formData.get('email');
+    
+    if (!name || !email) {
+        showToast('error', 'Name and email are required');
+        return;
+    }
+    
+    // Get the save button and show loading state
+    const saveButton = document.querySelector('#profileModal .modal-footer .btn-primary');
+    if (saveButton) {
+        const originalText = saveButton.innerText;
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    }
+    
+    // Make API request
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showToast('error', 'Authentication required. Please log in again.');
+        // Redirect to login page
+        window.location.href = '/admin/login.html';
+        return;
+    }
+    
+    // Get API URL
+    const apiUrl = window.API_URL || '/api';
+    
+    // Make the API request
+    fetch(`${apiUrl}/admin/profile`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Profile update failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Profile updated successfully:', data);
+        
+        // Close the modal
+        const profileModal = document.getElementById('profileModal');
+        if (profileModal && typeof bootstrap !== 'undefined') {
+            const modal = bootstrap.Modal.getInstance(profileModal);
+            if (modal) {
+                modal.hide();
+            }
+        }
+        
+        // Show success message
+        showToast('success', 'Profile updated successfully');
+        
+        // Update the UI with the new user data
+        if (data.name) {
+            const userNameElements = document.querySelectorAll('#userName');
+            userNameElements.forEach(el => {
+                el.textContent = data.name;
+            });
+            
+            // Store in localStorage for other pages
+            localStorage.setItem('userName', data.name);
+        }
+        
+        // Update profile image if returned
+        if (data.profileImage) {
+            const avatarElements = document.querySelectorAll('#userAvatar, .avatar, .user-avatar');
+            avatarElements.forEach(el => {
+                el.src = data.profileImage;
+            });
+            
+            // Store in localStorage for other pages
+            localStorage.setItem('userAvatar', data.profileImage);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating profile:', error);
+        showToast('error', `Failed to update profile: ${error.message}`);
+    })
+    .finally(() => {
+        // Reset save button
+        const saveButton = document.querySelector('#profileModal .modal-footer .btn-primary');
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerText = 'Save Changes';
+        }
+    });
+}
+
+// Make it available globally
+window.saveProfile = saveProfile; 

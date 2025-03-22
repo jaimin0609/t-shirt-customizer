@@ -1,468 +1,511 @@
-// Use global API_URL variable from window object instead of import
-// Remove the import line above
+/**
+ * Admin Profile Management
+ * Handles profile data loading and update functionality
+ */
 
-// Ensure API_URL is available
-if (typeof window.API_URL === 'undefined') {
-    console.warn('API_URL not found on window object, using default value');
-    window.API_URL = '/api'; // Fallback value
-}
+// Configuration
+const CONFIG = {
+    apiUrl: window.API_URL || '/api',
+    debug: true,
+    defaultProfileImage: '/admin/img/default-avatar.png'
+};
 
-let profileModal;
+// State
+let profileState = {
+    user: null,
+    isLoading: false,
+    isSaving: false,
+    error: null,
+    lastUpdated: null
+};
 
-// Expose functions globally for HTML onclick events
-window.saveProfile = saveProfile;
-window.logout = logout;
-
-document.addEventListener('DOMContentLoaded', function() {
-    profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
-    
-    // Load user profile data
-    loadUserProfile();
-    
-    // Set up image preview
-    const profileImageInput = document.getElementById('profileImage');
-    if (profileImageInput) {
-        profileImageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('profilePreview').src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    // Set up profile link
-    const profileLink = document.getElementById('profileLink');
-    if (profileLink) {
-        profileLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            showProfileModal();
-        });
-    }
-
-    // Check if we should show profile modal on page load (from URL parameter)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('showProfile') === 'true') {
-        // Remove the parameter from URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
-        // Show the profile modal
-        setTimeout(() => showProfileModal(), 500);
-    }
-
-    // Set up error handling for avatar images
-    setupAvatarErrorHandling();
-});
+// DOM elements - will be populated on init
+let elements = {
+    form: null,
+    avatar: null,
+    nameInput: null,
+    emailInput: null,
+    usernameInput: null,
+    passwordInput: null,
+    passwordConfirmInput: null,
+    saveButton: null,
+    cancelButton: null,
+    alertContainer: null
+};
 
 /**
- * Get the correctly formatted URL for an image
- * @param {string} imagePath - The image path from the server
- * @returns {string} - The formatted image URL
+ * Initialize profile functionality
  */
-function getImageUrl(imagePath) {
-    // If no image path provided, return default avatar
-    if (!imagePath) {
-        console.log("No profile image path provided, using default avatar");
-        return '/admin/img/default-avatar.png';
+async function initProfile() {
+    console.log('Initializing profile management...');
+    
+    // Check authentication
+    if (typeof requireAuth === 'function' && !requireAuth()) {
+        return;
     }
     
-    // Safety check for undefined or null
-    if (typeof imagePath !== 'string') {
-        console.warn("Invalid image path type:", typeof imagePath);
-        return '/admin/img/default-avatar.png';
+    // Map DOM elements
+    mapElements();
+    
+    // Add event listeners
+    addEventListeners();
+    
+    // Load profile data
+    await loadProfileData();
+    
+    // Set page title
+    if (typeof standardizePageTitle === 'function') {
+        standardizePageTitle('Profile Settings');
+    } else {
+        document.title = 'Profile Settings - Admin Dashboard';
     }
     
-    console.log('Processing image path:', imagePath);
+    // Make the profile submission handler available for all pages
+    window.handleProfileSubmit = handleProfileSubmit;
     
-    // Check if it's a Cloudinary URL - make sure it uses HTTPS
-    if (imagePath.includes('cloudinary.com')) {
-        console.log('Detected Cloudinary URL:', imagePath);
-        return imagePath.replace('http://', 'https://');
-    }
-    
-    // Check if it's already a full URL 
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        // Handle specifically the render.com domain
-        if (imagePath.includes('t-shirt-customizer-backend.onrender.com')) {
-            // Extract just the filename part
-            const parts = imagePath.split('/');
-            const filename = parts[parts.length - 1];
-            console.log("Converting remote render.com URL to local path, filename:", filename);
-            
-            // For profile images
-            if (imagePath.includes('/profiles/')) {
-                return `/uploads/profiles/${filename}`;
-            }
-            // For other uploads
-            return `/uploads/${filename}`;
-        }
-        // It's a full URL from another source, use as is
-        return imagePath;
-    }
-    
-    // If it starts with a slash, it's a relative path from the root
-    if (imagePath.startsWith('/')) {
-        // Make the URL absolute by appending the current origin
-        const localUrl = window.location.origin + imagePath;
-        console.log('Converting relative path to absolute URL:', localUrl);
-        return localUrl;
-    }
-    
-    // Otherwise, assume it's a relative path from the current directory
-    console.log('Using relative path as is:', imagePath);
-    return imagePath;
+    // Hook up profile modal buttons on all pages
+    setupProfileModals();
 }
 
 /**
- * Set up error handling for all avatar images
+ * Map DOM elements for easier access
  */
-function setupAvatarErrorHandling() {
-    console.log('Setting up avatar error handling');
+function mapElements() {
+    elements.form = document.getElementById('profileForm');
+    elements.avatar = document.getElementById('userAvatar');
+    elements.nameInput = document.getElementById('fullName');
+    elements.emailInput = document.getElementById('email');
+    elements.usernameInput = document.getElementById('username');
+    elements.passwordInput = document.getElementById('newPassword');
+    elements.passwordConfirmInput = document.getElementById('confirmPassword');
+    elements.saveButton = document.querySelector('button[type="submit"]');
+    elements.cancelButton = document.querySelector('button[type="reset"]');
+    elements.alertContainer = document.getElementById('alertContainer');
     
-    // Select all image elements that might be avatars
-    const avatarElements = document.querySelectorAll('img.avatar, #userAvatar, .rounded-circle, img.profile-img, .avatar-img');
-    console.log(`Found ${avatarElements.length} potential avatar images`);
+    // Create alert container if it doesn't exist
+    if (!elements.alertContainer) {
+        elements.alertContainer = document.createElement('div');
+        elements.alertContainer.id = 'alertContainer';
+        elements.alertContainer.className = 'mb-4';
+        
+        if (elements.form) {
+            elements.form.parentNode.insertBefore(elements.alertContainer, elements.form);
+        }
+    }
+}
+
+/**
+ * Add event listeners
+ */
+function addEventListeners() {
+    // Form submission
+    if (elements.form) {
+        elements.form.addEventListener('submit', handleProfileSubmit);
+    }
     
-    avatarElements.forEach((img, index) => {
-        if (img.hasAttribute('data-error-handled')) {
-            console.log(`Image #${index} already has error handling`);
-            return;
+    // Form reset/cancel
+    if (elements.cancelButton) {
+        elements.cancelButton.addEventListener('click', (e) => {
+            // If we've loaded profile data, reset the form to those values
+            if (profileState.user) {
+                populateFormWithUserData(profileState.user);
+                e.preventDefault(); // Prevent actual form reset
+            }
+        });
+    }
+    
+    // Password confirmation validation
+    if (elements.passwordInput && elements.passwordConfirmInput) {
+        elements.passwordConfirmInput.addEventListener('input', validatePasswordMatch);
+        elements.passwordInput.addEventListener('input', validatePasswordMatch);
+    }
+}
+
+/**
+ * Validate password and confirmation match
+ */
+function validatePasswordMatch() {
+    const password = elements.passwordInput.value;
+    const confirmPassword = elements.passwordConfirmInput.value;
+    
+    if (password || confirmPassword) {
+        if (password !== confirmPassword) {
+            elements.passwordConfirmInput.setCustomValidity('Passwords do not match');
+            elements.passwordConfirmInput.classList.add('is-invalid');
+        } else {
+            elements.passwordConfirmInput.setCustomValidity('');
+            elements.passwordConfirmInput.classList.remove('is-invalid');
+            elements.passwordConfirmInput.classList.add('is-valid');
+        }
+    } else {
+        elements.passwordConfirmInput.setCustomValidity('');
+        elements.passwordConfirmInput.classList.remove('is-invalid');
+        elements.passwordConfirmInput.classList.remove('is-valid');
+    }
+}
+
+/**
+ * Load profile data from API
+ */
+async function loadProfileData() {
+    try {
+        console.log('Loading profile data...');
+        profileState.isLoading = true;
+        showLoading();
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
         }
         
-        console.log(`Setting up error handling for image #${index}: ${img.id || 'unnamed'}`);
-        img.setAttribute('data-error-handled', 'true');
+        // Fetch profile data
+        const response = await fetch(`${CONFIG.apiUrl}/admin/profile`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
         
-        // Save original source as fallback chain starting point
-        const originalSrc = img.src;
-        img.setAttribute('data-original-src', originalSrc);
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Unauthorized - token may be expired
+                localStorage.removeItem('token');
+                window.location.href = '/admin/login.html';
+                return;
+            }
+            
+            throw new Error(`Failed to load profile: ${response.status} ${response.statusText}`);
+        }
         
-        // Set up error handler
-        img.onerror = function() {
-            const currentSrc = this.src;
-            console.warn(`Avatar image failed to load: ${currentSrc}`);
-            
-            // Guard against infinite loops
-            const fallbackCount = parseInt(this.getAttribute('data-fallback-count') || '0');
-            if (fallbackCount > 3) {
-                console.error('Too many fallback attempts, using default avatar');
-                this.src = '/admin/img/default-avatar.png';
-                this.onerror = null;
-                return;
-            }
-            
-            this.setAttribute('data-fallback-count', (fallbackCount + 1).toString());
-            
-            // Already using default, don't try to replace
-            if (currentSrc.includes('default-avatar') || currentSrc.endsWith('/admin/img/default-avatar.png')) {
-                console.log('Already using default avatar, not replacing');
-                this.onerror = null;
-                return;
-            }
-            
-            // Try different fallback strategies
-            
-            // 1. If it's a Cloudinary URL that failed, try a different format
-            if (currentSrc.includes('cloudinary.com')) {
-                console.log('Cloudinary URL failed, trying alternative format');
-                // Extract public ID from URL
-                const match = currentSrc.match(/\/upload\/(?:v\d+\/)?(.+?)$/);
-                if (match && match[1]) {
-                    const publicId = match[1];
-                    // Build a simpler URL without transformations
-                    this.src = `https://res.cloudinary.com/${window.CLOUDINARY_CLOUD_NAME || 'dopvs93sl'}/image/upload/${publicId}`;
-                    return;
-                }
-            }
-            
-            // 2. If from render.com, try local path
-            if (currentSrc.includes('t-shirt-customizer-backend.onrender.com')) {
-                const parts = currentSrc.split('/');
-                const filename = parts[parts.length - 1];
-                console.log(`Trying local path for render.com URL: ${filename}`);
-                
-                // Check if it's a profile image
-                if (currentSrc.includes('/profiles/')) {
-                    this.src = `/uploads/profiles/${filename}`;
-                } else {
-                    this.src = `/uploads/${filename}`;
-                }
-                return;
-            }
-            
-            // 3. If it was a local path that failed, try the API server path
-            if (currentSrc.includes('/uploads/') && !currentSrc.includes('http')) {
-                const filename = currentSrc.split('/').pop();
-                console.log(`Local path failed, trying API server for: ${filename}`);
-                
-                // Check if it's a profile image
-                if (currentSrc.includes('/profiles/')) {
-                    this.src = `https://t-shirt-customizer-backend.onrender.com/uploads/profiles/${filename}`;
-                } else {
-                    this.src = `https://t-shirt-customizer-backend.onrender.com/uploads/${filename}`;
-                }
-                return;
-            }
-            
-            // 4. As a last resort, use the default avatar
-            console.log('Using default avatar as final fallback');
-            this.src = '/admin/img/default-avatar.png';
-            this.onerror = null;
-        };
+        const userData = await response.json();
+        console.log('Profile data loaded successfully:', userData);
         
-        // Trigger a reload to apply the error handler if needed
-        if (img.complete) {
-            const currentSrc = img.src;
-            if (!img.naturalWidth) {
-                console.log(`Image already failed to load, applying fallback: ${currentSrc}`);
-                img.onerror();
+        // Update state
+        profileState.user = userData;
+        profileState.lastUpdated = new Date();
+        
+        // Populate form with user data
+        populateFormWithUserData(userData);
+        
+        // Update user name in header and sidebar
+        updateUIWithUserData(userData);
+        
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        profileState.error = error.message;
+        
+        showAlert('error', `Failed to load profile: ${error.message}`);
+    } finally {
+        profileState.isLoading = false;
+        hideLoading();
+    }
+}
+
+/**
+ * Populate form with user data
+ */
+function populateFormWithUserData(userData) {
+    if (!userData) return;
+    
+    // Populate profile avatar
+    if (elements.avatar && userData.profileImage) {
+        elements.avatar.src = userData.profileImage;
+    } else if (elements.avatar) {
+        elements.avatar.src = CONFIG.defaultProfileImage;
+    }
+    
+    // Populate text fields
+    if (elements.nameInput) elements.nameInput.value = userData.name || '';
+    if (elements.emailInput) elements.emailInput.value = userData.email || '';
+    if (elements.usernameInput) elements.usernameInput.value = userData.username || '';
+    
+    // Clear password fields
+    if (elements.passwordInput) elements.passwordInput.value = '';
+    if (elements.passwordConfirmInput) elements.passwordConfirmInput.value = '';
+}
+
+/**
+ * Update UI elements with user data
+ */
+function updateUIWithUserData(userData) {
+    // Update all header username elements
+    const userNameElements = document.querySelectorAll('#userName');
+    userNameElements.forEach(element => {
+        element.textContent = userData.name || userData.username || 'Admin';
+    });
+    
+    // Update all avatar elements
+    const avatarElements = document.querySelectorAll('.avatar');
+    avatarElements.forEach(element => {
+        if (userData.profileImage) {
+            element.src = userData.profileImage;
+        }
+    });
+    
+    // Store in localStorage for other pages
+    localStorage.setItem('userName', userData.name || userData.username || 'Admin');
+}
+
+/**
+ * Handle profile form submission
+ */
+async function handleProfileSubmit(e) {
+    e.preventDefault();
+    
+    try {
+        console.log('Submitting profile update...');
+        profileState.isSaving = true;
+        
+        // Get form data
+        const formData = new FormData(elements.form);
+        
+        // Validate password match if password is being changed
+        const password = formData.get('newPassword');
+        const confirmPassword = formData.get('confirmPassword');
+        
+        if (password || confirmPassword) {
+            if (password !== confirmPassword) {
+                throw new Error('Passwords do not match');
+            }
+            
+            // Simple password strength validation
+            if (password.length < 8) {
+                throw new Error('Password must be at least 8 characters long');
+            }
+        }
+        
+        // Show saving indicator
+        if (elements.saveButton) {
+            const originalText = elements.saveButton.innerHTML;
+            elements.saveButton.disabled = true;
+            elements.saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+        }
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+        
+        // Submit form data
+        const response = await fetch(`${CONFIG.apiUrl}/admin/profile`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Unauthorized - token may be expired
+                localStorage.removeItem('token');
+                window.location.href = '/admin/login.html';
+                return;
+            }
+            
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Failed to update profile: ${response.status} ${response.statusText}`);
+        }
+        
+        const updatedUserData = await response.json();
+        console.log('Profile updated successfully:', updatedUserData);
+        
+        // Update state
+        profileState.user = updatedUserData;
+        profileState.lastUpdated = new Date();
+        
+        // Update UI with new data
+        updateUIWithUserData(updatedUserData);
+        
+        // Show success message
+        showAlert('success', 'Profile updated successfully');
+        
+        // Clear password fields
+        if (elements.passwordInput) elements.passwordInput.value = '';
+        if (elements.passwordConfirmInput) elements.passwordConfirmInput.value = '';
+        
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        profileState.error = error.message;
+        
+        showAlert('error', `Failed to update profile: ${error.message}`);
+    } finally {
+        profileState.isSaving = false;
+        
+        // Reset save button
+        if (elements.saveButton) {
+            elements.saveButton.disabled = false;
+            elements.saveButton.innerHTML = 'Save Changes';
+        }
+    }
+}
+
+/**
+ * Show loading indicator
+ */
+function showLoading() {
+    if (elements.form) {
+        elements.form.classList.add('loading');
+    }
+}
+
+/**
+ * Hide loading indicator
+ */
+function hideLoading() {
+    if (elements.form) {
+        elements.form.classList.remove('loading');
+    }
+}
+
+/**
+ * Show alert message
+ */
+function showAlert(type, message) {
+    if (!elements.alertContainer) return;
+    
+    // Clear existing alerts
+    elements.alertContainer.innerHTML = '';
+    
+    // Create alert element
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    alert.role = 'alert';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add to container
+    elements.alertContainer.appendChild(alert);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }
+    }, 5000);
+}
+
+/**
+ * Set up profile modals across all pages
+ */
+function setupProfileModals() {
+    // Look for profile modals
+    const profileModals = document.querySelectorAll('#profileModal');
+    
+    profileModals.forEach(modal => {
+        // Find the save button
+        const saveButton = modal.querySelector('.modal-footer .btn-primary');
+        if (saveButton) {
+            console.log('Setting up profile modal save button');
+            
+            // Check if the button already has the correct handler
+            if (saveButton.getAttribute('onclick') !== 'saveProfile()') {
+                // Remove any existing onclick handler and add our own
+                saveButton.removeAttribute('onclick');
+                saveButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Get the form element
+                    const form = modal.querySelector('#profileForm');
+                    if (form) {
+                        // Create a FormData object from the form
+                        const formData = new FormData(form);
+                        
+                        // Call the save profile function
+                        if (typeof window.saveProfile === 'function') {
+                            window.saveProfile();
+                        } else {
+                            // Fallback to our own implementation
+                            handleProfileModalSubmit(form);
+                        }
+                    } else {
+                        console.error('Profile form not found in modal');
+                    }
+                });
             }
         }
     });
 }
 
 /**
- * Fetch user profile data from the server
- * @returns {Promise<Object>} User profile data
+ * Handle profile modal submission directly
  */
-async function fetchUserProfile() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        console.error('No token found');
-        window.location.href = '/admin/login.html';
-        throw new Error('Authentication required');
-    }
-
+async function handleProfileModalSubmit(form) {
     try {
-        const response = await fetch(`${window.API_URL}/admin/profile`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                // Clear authentication and redirect to login
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/admin/login.html';
-                throw new Error('Authentication expired');
-            }
-            throw new Error(`Failed to fetch profile: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Error in fetchUserProfile:', error);
-        
-        // If we have cached user data, use that instead of failing
-        const cachedUser = localStorage.getItem('user');
-        if (cachedUser) {
-            console.log('Using cached user data due to fetch error');
-            try {
-                return JSON.parse(cachedUser);
-            } catch (e) {
-                console.error('Error parsing cached user data:', e);
-            }
-        }
-        
-        throw error;
-    }
-}
-
-/**
- * Load user profile data
- */
-async function loadUserProfile() {
-    try {
-        const userData = await fetchUserProfile();
-        console.log('User profile data:', userData);
-        
-        // Update the profile form if it exists
-        const nameInput = document.getElementById('name');
-        if (nameInput) nameInput.value = userData.name || '';
-        
-        const emailInput = document.getElementById('email');
-        if (emailInput) emailInput.value = userData.email || '';
-        
-        // Update user name in the navbar
-        const userNameElement = document.getElementById('userName');
-        if (userNameElement) {
-            userNameElement.textContent = userData.name || 'User';
-        }
-        
-        // Update user email in the profile
-        const userEmailElement = document.getElementById('userEmail');
-        if (userEmailElement) {
-            userEmailElement.textContent = userData.email || '';
-        }
-        
-        // Update role in the profile
-        const userRoleElement = document.getElementById('userRole');
-        if (userRoleElement) {
-            userRoleElement.textContent = userData.role 
-                ? userData.role.charAt(0).toUpperCase() + userData.role.slice(1) 
-                : 'User';
-        }
-        
-        // Get the correct avatar URL
-        let avatarUrl = '';
-        if (userData.profileImage) {
-            console.log('Processing profile image:', userData.profileImage);
-            avatarUrl = getImageUrl(userData.profileImage);
-        } else {
-            console.log('No profile image found, using default');
-            avatarUrl = '/admin/img/default-avatar.png';
-        }
-        
-        console.log('Setting avatar image to:', avatarUrl);
-        
-        // Update all avatar images
-        const avatarElements = document.querySelectorAll('img.avatar, #userAvatar, .rounded-circle, img.profile-img, .avatar-img');
-        avatarElements.forEach(img => {
-            console.log(`Updating avatar image: ${img.id || 'unnamed'}`);
-            img.src = avatarUrl;
-        });
-        
-        // Set up error handling for all avatar images
-        setTimeout(() => {
-            setupAvatarErrorHandling();
-        }, 100);
-        
-        return userData;
-    } catch (error) {
-        console.error('Error loading user profile:', error);
-        
-        // Set up error handling anyway to fix any broken images
-        setTimeout(() => {
-            setupAvatarErrorHandling();
-        }, 100);
-        
-        return null;
-    }
-}
-
-// Show profile modal with user data
-async function showProfileModal() {
-    try {
-        const userData = await loadUserProfile();
-        if (!userData) {
-            throw new Error('Failed to fetch profile');
-        }
-        
-        // Fill form with user data
-        document.getElementById('name').value = userData.name || '';
-        document.getElementById('email').value = userData.email || '';
-        
-        // Clear password field
-        document.getElementById('newPassword').value = '';
-        
-        // Set profile image if exists
-        const profilePreview = document.getElementById('profilePreview');
-        if (profilePreview) {
-            profilePreview.src = getImageUrl(userData.profileImage);
-        }
-        
-        // Show modal
-        const profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
-        profileModal.show();
-    } catch (error) {
-        console.error('Error loading profile:', error);
-        showToast('error', 'Failed to load profile data');
-    }
-}
-
-// Save profile changes
-async function saveProfile() {
-    try {
-        const form = document.getElementById('profileForm');
+        // Get formData
         const formData = new FormData(form);
         
-        // Check if we have a file
-        const fileInput = document.getElementById('profileImage');
-        if (fileInput.files.length > 0) {
-            console.log('File selected for upload:', fileInput.files[0].name);
-        } else {
-            console.log('No file selected for upload');
+        // Get the save button and show loading state
+        const saveButton = form.closest('.modal').querySelector('.modal-footer .btn-primary');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
         }
         
+        // Get token
         const token = localStorage.getItem('token');
         if (!token) {
-            throw new Error('Not authenticated');
+            throw new Error('Authentication required');
         }
         
-        console.log('Sending profile update request');
+        // API URL 
+        const apiUrl = window.API_URL || '/api';
         
-        const response = await fetch(`${window.API_URL}/admin/profile`, {
+        // Submit form data
+        const response = await fetch(`${apiUrl}/admin/profile`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`
-                // Don't set Content-Type when sending FormData
             },
             body: formData
         });
         
         if (!response.ok) {
-            let errorMessage = 'Failed to update profile';
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-            } catch (e) {
-                console.error('Could not parse error response', e);
-            }
-            throw new Error(errorMessage);
+            throw new Error(`Failed to update profile: ${response.status}`);
         }
         
-        const updatedUser = await response.json();
-        console.log('Profile updated successfully:', updatedUser);
+        const data = await response.json();
         
-        // Update UI with new user data
-        document.getElementById('userName').textContent = updatedUser.name || 'Admin';
-        
-        // If user updated their profile image, update all avatar instances
-        if (updatedUser.profileImage) {
-            const avatarUrl = getImageUrl(updatedUser.profileImage);
-            console.log('Updated avatar image to:', avatarUrl);
-            
-            document.querySelectorAll('img.avatar-img, img.profile-img').forEach(img => {
-                img.src = avatarUrl;
-            });
+        // Show success message
+        if (typeof showToast === 'function') {
+            showToast('success', 'Profile updated successfully');
+        } else {
+            alert('Profile updated successfully');
         }
         
-        // Close modal
-        const profileModal = bootstrap.Modal.getInstance(document.getElementById('profileModal'));
-        profileModal.hide();
+        // Close the modal
+        const modal = form.closest('.modal');
+        if (modal && typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            modalInstance.hide();
+        }
         
-        showToast('success', 'Profile updated successfully');
-        
-        // Reload the page to ensure all UI elements are updated correctly
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        // Update UI with new data
+        if (data.name) {
+            const userNameElements = document.querySelectorAll('#userName');
+            userNameElements.forEach(el => el.textContent = data.name);
+            localStorage.setItem('userName', data.name);
+        }
     } catch (error) {
-        console.error('Error saving profile:', error);
-        showToast('error', error.message || 'Failed to update profile');
+        console.error('Error updating profile:', error);
+        if (typeof showToast === 'function') {
+            showToast('error', error.message);
+        } else {
+            alert(`Error: ${error.message}`);
+        }
+    } finally {
+        // Reset save button
+        const saveButton = form.closest('.modal').querySelector('.modal-footer .btn-primary');
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerText = 'Save Changes';
+        }
     }
 }
 
-// Show toast notification
-function showToast(type, message) {
-    // Check if showNotification function exists (from add-product.js)
-    if (typeof window.showNotification === 'function') {
-        window.showNotification(message, type === 'success' ? 'success' : 'danger');
-        return;
-    }
-    
-    // Fallback to alert if toast not available
-    alert(message);
-}
-
-// Logout function
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/admin/login.html';
-} 
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initProfile); 

@@ -1087,4 +1087,47 @@ function showValidationErrors(errors) {
     }, 10000);
 }
 
+// Make the handleFormSubmit function available in global scope for direct button calls
+window.handleFormSubmit = handleFormSubmit;
+
+// Make the show validation errors function available globally
+window.showValidationErrors = showValidationErrors;
+
+/**
+ * Initialize all event listeners and page functionality
+ */
+function initializeAddProductPage() {
+    console.log('Initializing Add Product page');
+    
+    // Get form element
+    const addProductForm = document.getElementById('addProductForm');
+    
+    // Add submit event listener
+    if (addProductForm) {
+        console.log('Adding submit event handler to product form');
+        addProductForm.addEventListener('submit', handleFormSubmit);
+        
+        // Also handle the submit button click directly in case the form event isn't firing
+        const submitButton = addProductForm.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.addEventListener('click', function(e) {
+                console.log('Submit button clicked, ensuring form submission');
+                // Only handle if not already part of a submit event
+                if (e.target.form && !e.target.form.classList.contains('submitting')) {
+                    e.preventDefault();
+                    handleFormSubmit(new Event('submit'));
+                }
+            });
+        }
+    } else {
+        console.error('Add Product form not found in the DOM');
+    }
+    
+    // Initialize form fields with default values
+    initializeForm();
+}
+
+// Run initialization when the DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeAddProductPage);
+
 console.log('add-product.js loaded successfully!'); 

@@ -880,3 +880,86 @@ window.formatCloudinaryUrl = function(url) {
     
     return url;
 };
+
+/**
+ * Initialize event listeners on page load to ensure buttons work
+ */
+function initializePage() {
+    console.log('Initializing Products page...');
+    
+    // Load products initially
+    loadProducts();
+    
+    // Hook up search input
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        // Debounce search to avoid too many requests
+        const debouncedSearch = debounce((event) => {
+            loadProducts(event.target.value);
+        }, 300);
+        
+        searchInput.addEventListener('input', debouncedSearch);
+    }
+    
+    // Hook up product form submission
+    const productForm = document.getElementById('productForm');
+    if (productForm) {
+        console.log('Adding submit event listener to product form');
+        productForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveProduct();
+        });
+    } else {
+        console.warn('Product form not found in the DOM');
+    }
+    
+    // Hook up add product button
+    const addProductBtn = document.getElementById('addProductBtn');
+    if (addProductBtn) {
+        addProductBtn.addEventListener('click', showAddProductModal);
+    }
+    
+    // Ensure product action buttons functionality (add, edit, delete) through event delegation
+    const productTable = document.getElementById('productsTable') || document.querySelector('.table-responsive');
+    if (productTable) {
+        productTable.addEventListener('click', function(e) {
+            // Edit product button
+            if (e.target.classList.contains('btn-edit') || e.target.closest('.btn-edit')) {
+                const row = e.target.closest('tr');
+                const productId = row.dataset.productId;
+                if (productId) {
+                    editProduct(productId);
+                }
+            }
+            
+            // Delete product button
+            if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete')) {
+                const row = e.target.closest('tr');
+                const productId = row.dataset.productId;
+                if (productId) {
+                    deleteProduct(productId);
+                }
+            }
+        });
+    }
+    
+    // Hook up save button in modal
+    const saveBtn = document.querySelector('#productModal .modal-footer .btn-primary');
+    if (saveBtn) {
+        console.log('Adding click event listener to save button in product modal');
+        saveBtn.addEventListener('click', function() {
+            const form = document.getElementById('productForm');
+            if (form) {
+                // Trigger form submission which will call saveProduct()
+                const submitEvent = new Event('submit', { cancelable: true });
+                form.dispatchEvent(submitEvent);
+            } else {
+                // Fallback if form not found
+                saveProduct();
+            }
+        });
+    }
+}
+
+// Call initialization when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initializePage);
