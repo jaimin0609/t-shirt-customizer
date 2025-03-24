@@ -4,9 +4,11 @@
  */
 import axios from 'axios';
 import { notifyError, formatErrorMessage, getErrorType, ErrorType, ErrorSeverity } from './errorHandler';
+import { API_URL as CONFIG_API_URL } from '../config/api';
 
-// Get API URL from environment variables with fallback
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+// Use API URL from config with fallback for consistency across the application
+const API_URL = CONFIG_API_URL;
+console.log('API Client using URL:', API_URL);
 const API_TIMEOUT = 30000; // 30 seconds timeout
 
 /**

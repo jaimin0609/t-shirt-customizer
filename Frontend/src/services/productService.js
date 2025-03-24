@@ -4,6 +4,7 @@
  */
 import apiClient from './apiClient';
 import { notifyError } from './errorHandler';
+import { API_URL } from '../config/api';
 
 // Constants
 const ENDPOINTS = {
@@ -16,6 +17,9 @@ const ENDPOINTS = {
   SIMILAR: (id) => `/products/${id}/similar`,
   VARIANTS: (id) => `/products/${id}/variants`
 };
+
+// Log the service configuration to help with debugging
+console.log('Product Service initialized with API URL:', API_URL);
 
 // Fallback image for products without images
 const FALLBACK_IMAGE = '/images/product-placeholder.jpg';

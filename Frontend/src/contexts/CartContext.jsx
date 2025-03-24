@@ -73,6 +73,7 @@ export const CartProvider = ({ children, initialState = null }) => {
 
     setLoading(true);
     try {
+      console.log('Fetching cart from API URL:', API_URL);
       const response = await axios.get(`${API_URL}/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -87,7 +88,17 @@ export const CartProvider = ({ children, initialState = null }) => {
       }
     } catch (err) {
       console.error('Failed to fetch user cart:', err);
-      setError('Failed to load your cart. Please try again.');
+      // Don't show error to user for this background operation
+      // Instead, fall back to local storage cart
+      const localCart = localStorage.getItem('cart');
+      if (localCart) {
+        try {
+          setCart(JSON.parse(localCart));
+        } catch (parseErr) {
+          console.error('Failed to parse local cart:', parseErr);
+          setCart([]);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -99,12 +110,14 @@ export const CartProvider = ({ children, initialState = null }) => {
       localStorage.setItem('cart', JSON.stringify(updatedCart));
 
       if (isAuthenticated && token) {
+        console.log('Saving cart to API URL:', API_URL);
         await axios.put(`${API_URL}/cart`, { items: updatedCart }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
     } catch (err) {
       console.error('Failed to save cart:', err);
+      // Still maintain local cart even if server update fails
     }
   };
 
@@ -297,6 +310,7 @@ export const CartProvider = ({ children, initialState = null }) => {
       setLoading(true);
       setError(null);
 
+      console.log('Applying coupon to API URL:', API_URL);
       const response = await axios.post(
         `${API_URL}/cart/apply-coupon`,
         { couponCode },
