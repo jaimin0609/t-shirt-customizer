@@ -31,13 +31,15 @@ if (window.location.origin.includes('127.0.0.1') || window.location.origin.inclu
     // If we're using the Node.js backend on the same machine but different port
     window.API_URL = `${window.location.protocol}//${window.location.hostname}:5002/api`;
     console.log('Using local API URL:', window.API_URL);
-} else if (window.location.origin.includes('render.com')) {
+} else if (window.location.origin.includes('render.com') || window.location.origin.includes('onrender.com')) {
     // If we're on Render.com
+    // For onrender.com deployment, API is on the same domain
     window.API_URL = `${window.location.origin}/api`;
     console.log('Using Render.com API URL:', window.API_URL);
 } else {
-    // In case we're in a different environment
-    console.log('Using default API URL:', window.API_URL);
+    // In case we're in a different environment, fallback to the origin
+    window.API_URL = `${window.location.origin}/api`;
+    console.log('Using origin-based API URL:', window.API_URL);
 }
 
 // Add more debugging
