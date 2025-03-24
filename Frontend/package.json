@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp dist/index.html dist/404.html && cp -r public/* dist/",
+    "build": "vite build",
     "build:vercel": "sh scripts/deployment/frontend-vercel-build.sh",
     "build:github": "sh scripts/deployment/frontend-github-pages-build.sh",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",

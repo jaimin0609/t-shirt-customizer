@@ -1,26 +1,23 @@
 {
     "version": 2,
-    "buildCommand": "npm install && npm run build:vercel",
-    "outputDirectory": "dist",
+    "builds": [
+        {
+            "src": "package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        }
+    ],
     "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "https://t-shirt-customizer-backend.onrender.com/api/$1"
-        },
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/products/[^/]+/?",
-            "dest": "/index.html"
-        },
-        {
-            "src": "/product/[^/]+/?",
-            "dest": "/index.html"
-        },
         {
             "src": "/(.*)",
             "dest": "/index.html"
         }
-    ]
+    ],
+    "build": {
+        "env": {
+            "NODE_ENV": "production"
+        }
+    }
 }
