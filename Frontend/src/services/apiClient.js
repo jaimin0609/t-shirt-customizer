@@ -5,6 +5,7 @@
 import axios from 'axios';
 import { notifyError, formatErrorMessage, getErrorType, ErrorType, ErrorSeverity } from './errorHandler';
 import { API_URL as CONFIG_API_URL } from '../config/api';
+import { decodeToken, isTokenExpiring, setAuthToken, clearAuthToken } from '../utils/tokenUtils';
 
 // Use API URL from config with fallback for consistency across the application
 const API_URL = CONFIG_API_URL;
@@ -25,35 +26,6 @@ const onTokenRefreshed = (newToken) => {
 // Add a callback to be invoked once token is refreshed
 const addRefreshSubscriber = (callback) => {
   refreshSubscribers.push(callback);
-};
-
-// Decode JWT token
-const decodeToken = (token) => {
-  try {
-    const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload));
-    return decoded;
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return null;
-  }
-};
-
-// Check if token is expired or about to expire
-const isTokenExpiredOrClose = (token, bufferTime = 5 * 60 * 1000) => {
-  if (!token) return true;
-  
-  try {
-    const decoded = decodeToken(token);
-    if (!decoded || !decoded.exp) return true;
-    
-    // Check if token is expired or will expire within buffer time
-    const expirationTime = decoded.exp * 1000;
-    return Date.now() + bufferTime > expirationTime;
-  } catch (error) {
-    console.error('Error checking token expiration:', error);
-    return true;
-  }
 };
 
 // Try to refresh token asynchronously
@@ -81,8 +53,7 @@ const refreshAuthToken = async () => {
     }
   } catch (error) {
     // Clear auth data on refresh failure
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuthToken();
     
     // Dispatch authentication expired event
     const authEvent = new CustomEvent('auth:expired', {
@@ -130,6 +101,26 @@ const axiosInstance = axios.create({
     'Accept': 'application/json'
   }
 });
+
+// Check if token is valid before sending requests
+async function getValidToken() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  
+  try {
+    // Check if token needs refresh
+    if (isTokenExpiring(token)) {
+      if (!isRefreshingToken) {
+        refreshPromise = refreshAuthToken();
+      }
+      return await refreshPromise;
+    }
+    return token;
+  } catch (error) {
+    console.error('Error getting valid token:', error);
+    return null;
+  }
+}
 
 /**
  * Handle request configuration
@@ -480,7 +471,7 @@ const api = {
       const token = localStorage.getItem('token');
       if (!token) return false;
       
-      if (isTokenExpiredOrClose(token)) {
+      if (isTokenExpiring(token)) {
         await refreshAuthToken();
       }
       

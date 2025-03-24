@@ -46,35 +46,6 @@ const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000;
 // Default session timeout (8 hours)
 const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
 
-// Function to decode JWT token
-const decodeToken = (token) => {
-  try {
-    const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload));
-    return decoded;
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return null;
-  }
-};
-
-// Function to check if token is expired or about to expire
-const isTokenExpiredOrClose = (token, bufferTime = 5 * 60 * 1000) => {
-  if (!token) return true;
-
-  try {
-    const decoded = decodeToken(token);
-    if (!decoded || !decoded.exp) return true;
-
-    // Check if token is expired or will expire within buffer time
-    const expirationTime = decoded.exp * 1000;
-    return Date.now() + bufferTime > expirationTime;
-  } catch (error) {
-    console.error('Error checking token expiration:', error);
-    return true;
-  }
-};
-
 // Global interceptors - defined outside component to avoid initialization issues
 axios.interceptors.request.use(
   config => {
@@ -216,7 +187,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
       // Setup token refresh interval if authenticated
       if (isAuthenticated && !tokenRefreshInterval) {
         const intervalId = setInterval(() => {
-          if (isTokenExpiredOrClose(token)) {
+          if (isTokenExpiring(token)) {
             refreshToken();
           }
         }, TOKEN_REFRESH_INTERVAL);
@@ -249,7 +220,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
     const validateToken = async () => {
       if (token) {
         // Check if token is expired or close to expiration
-        if (isTokenExpiredOrClose(token)) {
+        if (isTokenExpiring(token)) {
           try {
             await refreshToken();
           } catch (err) {
@@ -282,6 +253,10 @@ export const AuthProvider = ({ children, initialState = null }) => {
       });
 
       if (response.data && response.data.token) {
+        // Use the setAuthToken utility to update the token
+        setAuthToken(response.data.token, user);
+
+        // Update component state
         setToken(response.data.token);
         setIsAuthenticated(true);
 
@@ -299,7 +274,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   // Login handler
   const login = async (email, password) => {
