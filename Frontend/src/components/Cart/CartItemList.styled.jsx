@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiTrash2, FiPlusCircle, FiMinusCircle, FiHeart } from 'react-icons/fi';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import styleSystem from '../../styles/styleSystem';
 
 const CartItemListBase = ({

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getOrderById } from '../services/orderService';
+import orderService from '../services/orderService';
 import LoadingIndicator from '../components/Orders/LoadingIndicator.styled';
 import ErrorDisplay from '../components/Orders/ErrorDisplay.styled';
 import OrderItemsList from '../components/Orders/OrderItemsList.styled';
@@ -28,7 +28,7 @@ const OrderDetailPage = () => {
         try {
             setLoading(true);
             setError(null);
-            const orderData = await getOrderById(orderId);
+            const orderData = await orderService.getOrderById(orderId);
             setOrder(orderData);
         } catch (err) {
             console.error('Error loading order details:', err);
