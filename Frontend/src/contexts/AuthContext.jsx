@@ -139,28 +139,37 @@ export const AuthProvider = ({ children, initialState = null }) => {
     setError(null);
 
     try {
-      // Example API call - replace with your actual API call
-      const response = await fetch('/api/auth/login', {
+      console.log('Logging in with API URL:', API_URL);
+      // Use the full API URL instead of relative path
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        const errorText = await response.text();
+        console.error('Login error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          throw new Error('Invalid server response');
+        }
+        throw new Error(errorData.message || 'Login failed');
       }
 
+      const data = await response.json();
       setToken(data.token);
       setUser(data.user);
       setIsAuthenticated(true);
 
       navigate('/profile');
-      return true;
+      return { success: true };
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message);
-      return false;
+      return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
@@ -174,28 +183,36 @@ export const AuthProvider = ({ children, initialState = null }) => {
     setError(null);
 
     try {
-      // Example API call - replace with your actual API call
-      const response = await fetch('/api/auth/signup', {
+      console.log('Signing up with API URL:', API_URL);
+      // Use the full API URL instead of relative path
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Signup failed');
+        const errorText = await response.text();
+        console.error('Signup error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          throw new Error('Invalid server response');
+        }
+        throw new Error(errorData.message || 'Signup failed');
       }
 
+      const data = await response.json();
       setToken(data.token);
       setUser(data.user);
       setIsAuthenticated(true);
 
-      navigate('/profile');
-      return true;
+      return { success: true };
     } catch (err) {
+      console.error('Signup error:', err);
       setError(err.message);
-      return false;
+      return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
@@ -219,8 +236,9 @@ export const AuthProvider = ({ children, initialState = null }) => {
     setError(null);
 
     try {
-      // Example API call - replace with your actual API call
-      const response = await fetch('/api/users/profile', {
+      console.log('Updating profile with API URL:', API_URL);
+      // Use the full API URL instead of relative path
+      const response = await fetch(`${API_URL}/users/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -229,17 +247,25 @@ export const AuthProvider = ({ children, initialState = null }) => {
         body: JSON.stringify(userData)
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Profile update failed');
+        const errorText = await response.text();
+        console.error('Profile update error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          throw new Error('Invalid server response');
+        }
+        throw new Error(errorData.message || 'Profile update failed');
       }
 
+      const data = await response.json();
       setUser({ ...user, ...userData });
-      return true;
+      return { success: true };
     } catch (err) {
+      console.error('Profile update error:', err);
       setError(err.message);
-      return false;
+      return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }

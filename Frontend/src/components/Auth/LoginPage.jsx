@@ -72,22 +72,25 @@ const LoginPage = () => {
 
             if (isRegister) {
                 console.log('Registering with email:', data.email);
-                result = await register(data.firstName, data.lastName, data.email, data.password);
+                const userData = {
+                    name: `${data.firstName} ${data.lastName}`,
+                    email: data.email,
+                    password: data.password
+                };
+                result = await register(userData);
 
-                if (!result.success && result.error) {
-                    console.error('Registration failed:', result.error);
-                    setFormError(result.error);
-                    // Do not navigate if failed
+                if (!result || !result.success) {
+                    console.error('Registration failed:', result?.error || 'Unknown error');
+                    setFormError(result?.error || 'Registration failed');
                     return;
                 }
             } else {
                 console.log('Logging in with email:', data.email);
                 result = await login(data.email, data.password);
 
-                if (!result.success && result.error) {
-                    console.error('Login failed:', result.error);
-                    setFormError(result.error);
-                    // Do not navigate if failed
+                if (!result || !result.success) {
+                    console.error('Login failed:', result?.error || 'Unknown error');
+                    setFormError(result?.error || 'Login failed');
                     return;
                 }
             }
