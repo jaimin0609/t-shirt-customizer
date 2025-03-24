@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getOrders, cancelOrder } from '../services/orderService';
+import orderService from '../services/orderService';
 import LoadingIndicator from '../components/Orders/LoadingIndicator.styled';
 import ErrorDisplay from '../components/Orders/ErrorDisplay.styled';
 import EmptyOrders from '../components/Orders/EmptyOrders.styled';
@@ -28,7 +28,7 @@ const OrdersPage = () => {
         try {
             setLoading(true);
             setError(null);
-            const ordersData = await getOrders();
+            const ordersData = await orderService.getOrders();
             setOrders(ordersData);
         } catch (err) {
             console.error('Error loading orders:', err);
@@ -40,7 +40,7 @@ const OrdersPage = () => {
 
     const handleCancelOrder = async (orderId) => {
         try {
-            await cancelOrder(orderId);
+            await orderService.cancelOrder(orderId);
             // Refresh the orders list after cancellation
             loadOrders();
         } catch (err) {
