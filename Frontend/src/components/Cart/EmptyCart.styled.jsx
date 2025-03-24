@@ -42,7 +42,7 @@ const EmptyCartBase = () => {
                 <Text color="gray.600" mb={5}>
                     Looks like you haven't added any items to your cart yet.
                 </Text>
-                <Button as={Link} to="/" variant="primary">
+                <Button as={Link} to="/products" variant="primary">
                     Start Shopping
                 </Button>
             </EmptyCartBox>

@@ -124,6 +124,13 @@ const ProductDetailPage = () => {
 
                 // Fetch product and reviews data
                 const productData = await productService.getProductById(productId);
+
+                if (!productData) {
+                    setError("Product not found");
+                    setLoading(false);
+                    return;
+                }
+
                 setProduct(productData);
 
                 // Set default options based on variants if available
@@ -264,16 +271,20 @@ const ProductDetailPage = () => {
         });
 
         const itemToAdd = {
-            id: selectedVariant?.id || product.id,
-            productId: product.id,
+            id: product.id || product._id,
+            productId: product.id || product._id,
             name: product.name,
             price: priceInfo?.finalPrice || product.price,
             image: product.images && product.images.length > 0 ? product.images[0] : null,
-            options: selectedOptions,
+            size: selectedOptions.size || null,
+            color: selectedOptions.color || null,
             quantity: quantity
         };
 
         addToCart(itemToAdd);
+
+        // Show a confirmation message or notification
+        alert("Product added to cart!");
     };
 
     // Handle toggling wishlist status

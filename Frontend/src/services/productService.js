@@ -166,7 +166,19 @@ const productService = {
     
     try {
       const data = await apiClient.get(ENDPOINTS.DETAIL(productId));
-      return normalizeProduct(data.product || data);
+      
+      // Debug logging
+      console.log('Product data received:', data);
+      
+      // Handle different API response formats
+      const productData = data.product || data;
+      
+      if (!productData || Object.keys(productData).length === 0) {
+        console.error('Empty product data returned from API');
+        throw new Error('Product not found');
+      }
+      
+      return normalizeProduct(productData);
     } catch (error) {
       console.error(`Failed to fetch product ${productId}:`, error);
       throw error;

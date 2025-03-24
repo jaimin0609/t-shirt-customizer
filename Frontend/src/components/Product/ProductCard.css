@@ -87,6 +87,14 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    height: 120px;
+    /* Fixed height for product details */
+}
+
+.product-info {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .product-title {
@@ -101,6 +109,8 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    max-height: 2.6em;
+    /* Limit height to 2 lines */
 }
 
 /* Price Section Styles */
@@ -215,10 +225,82 @@
     margin-left: 4px;
 }
 
+/* Product Actions */
+.product-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 12px 12px;
+}
+
+.add-to-cart-btn {
+    flex-grow: 1;
+    margin-right: 10px;
+    padding: 8px 16px;
+    background-color: #3B82F6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.add-to-cart-btn:hover {
+    background-color: #2563EB;
+}
+
+.wishlist-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #F3F4F6;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.wishlist-btn:hover {
+    background-color: #E5E7EB;
+}
+
+.wishlist-btn.active {
+    color: #EF4444;
+}
+
+.wishlist-btn.active svg {
+    fill: #EF4444;
+}
+
+/* Condition Text */
+.condition-text {
+    color: #666;
+    font-size: 11px;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Ensure no awkward stretching */
+a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 /* Responsive Styles */
 @media (max-width: 640px) {
+    .product-details {
+        height: 110px;
+    }
+
     .product-title {
         font-size: 13px;
+        -webkit-line-clamp: 2;
     }
 
     .product-details {
@@ -280,68 +362,4 @@
     min-width: 40px;
     text-align: center;
     font-size: 0.9rem;
-}
-
-.add-to-cart-btn {
-    background: #4a55a2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-    margin-top: 12px;
-    width: 100%;
-}
-
-.add-to-cart-btn:hover {
-    background: #374785;
-}
-
-.wishlist-btn {
-    width: 44px;
-    height: 44px;
-    border: 1px solid #ddd;
-    background: #fff;
-    color: #222;
-    font-size: 1.25rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.wishlist-btn:hover {
-    border-color: #666;
-}
-
-.description {
-    color: #666;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    margin: 0.5rem 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* Condition Text */
-.condition-text {
-    color: #666;
-    font-size: 11px;
-    margin-top: 4px;
-    font-style: italic;
-}
-
-/* Ensure no awkward stretching */
-a {
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
 }

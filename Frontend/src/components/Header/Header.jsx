@@ -24,8 +24,8 @@ const Header = () => {
     const [scrolled, setScrolled] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const { user, isAuthenticated, authError } = useAuth();
-    const { cartCount } = useCart();
-    const { wishlistCount } = useWishlist ? useWishlist() : { wishlistCount: 0 };
+    const { cart, cartCount } = useCart();
+    const { wishlist, wishlistCount } = useWishlist();
     const navigate = useNavigate();
     const location = useLocation();
     const headerRef = useRef(null);

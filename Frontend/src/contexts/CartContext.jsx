@@ -11,6 +11,7 @@ const CartContext = createContext({
   appliedCoupon: null,
   loading: false,
   error: null,
+  cartCount: 0,
   addToCart: () => { },
   removeFromCart: () => { },
   updateQuantity: () => { },
@@ -45,6 +46,7 @@ export const CartProvider = ({ children, initialState = null }) => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
 
   // Load cart from localStorage on mount and when user changes
   useEffect(() => {
@@ -66,6 +68,12 @@ export const CartProvider = ({ children, initialState = null }) => {
       fetchUserCart();
     }
   }, [isAuthenticated, user]);
+
+  // Update cartCount when cart changes
+  useEffect(() => {
+    const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+    setCartCount(count);
+  }, [cart]);
 
   // Fetch user's cart from server
   const fetchUserCart = async () => {
@@ -122,86 +130,74 @@ export const CartProvider = ({ children, initialState = null }) => {
   };
 
   // Add item to cart
-  const addToCart = useCallback(async (product, quantity = 1, options = {}) => {
-    if (isServer) return;
+  const addToCart = useCallback((product, quantity = 1, options = {}) => {
+    console.log('Adding to cart:', product, 'quantity:', quantity, 'options:', options);
 
     if (!product) {
-      setError('Cannot add product to cart: Product information is missing');
+      console.error('Cannot add undefined product to cart');
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
+    setError(null);
 
-      // Ensure we have a valid image path
-      const processedProduct = {
-        ...product,
-        // Ensure image is properly set
-        image: product.image ||
-          (product.images && Array.isArray(product.images) && product.images.length > 0
-            ? product.images[0]
-            : '/assets/placeholder-product.jpg')
+    try {
+      // Ensure product has valid ID
+      const productId = product.id || product._id || product.productId;
+
+      if (!productId) {
+        throw new Error('Product ID is missing');
+      }
+
+      // Create a standardized item object
+      const newItem = {
+        productId: productId,
+        name: product.name || 'Unknown Product',
+        price: parseFloat(product.price) || 0,
+        image: product.image || product.images?.[0] || null,
+        quantity: parseInt(quantity) || 1,
+        ...options
       };
 
-      // Ensure price is a valid number
-      if (typeof processedProduct.price === 'string') {
-        processedProduct.price = parseFloat(processedProduct.price);
-        if (isNaN(processedProduct.price)) {
-          processedProduct.price = 0;
+      setCart(prevCart => {
+        // Check if product already exists in cart
+        const existingItemIndex = prevCart.findIndex(item =>
+          item.productId === newItem.productId &&
+          // If we have options like size/color, check those too
+          (!newItem.size || item.size === newItem.size) &&
+          (!newItem.color || item.color === newItem.color)
+        );
+
+        let updatedCart;
+
+        if (existingItemIndex >= 0) {
+          // Update existing item quantity
+          updatedCart = [...prevCart];
+          updatedCart[existingItemIndex].quantity += newItem.quantity;
+        } else {
+          // Add new item to cart
+          updatedCart = [...prevCart, newItem];
         }
-      }
 
-      const existingItemIndex = cart.findIndex(
-        item => {
-          const itemProductId = item.product?.id || item.productId;
-          const productId = processedProduct.id;
-
-          return itemProductId === productId &&
-            JSON.stringify(item.options || {}) === JSON.stringify(options);
+        // Save to localStorage
+        if (!isServer) {
+          localStorage.setItem('cart', JSON.stringify(updatedCart));
         }
-      );
 
-      let updatedCart;
+        // If user is authenticated, sync with server
+        if (isAuthenticated && token) {
+          syncCartWithServer(updatedCart);
+        }
 
-      if (existingItemIndex !== -1) {
-        // Update existing item quantity
-        updatedCart = [...cart];
-        updatedCart[existingItemIndex].quantity += quantity;
-        console.log(`Updated quantity of existing item in cart: ${processedProduct.name}`);
-      } else {
-        // Add new item
-        const cartItem = {
-          product: processedProduct,
-          productId: processedProduct.id,
-          name: processedProduct.name,
-          price: processedProduct.price || 0,
-          image: processedProduct.image,
-          quantity,
-          options,
-          addedAt: new Date().toISOString()
-        };
-
-        updatedCart = [...cart, cartItem];
-        console.log(`Added new item to cart: ${processedProduct.name}`);
-      }
-
-      setCart(updatedCart);
-      await saveCart(updatedCart);
-
-      // Clear applied coupon when cart changes
-      if (appliedCoupon) {
-        setAppliedCoupon(null);
-      }
-
-      return true;
+        return updatedCart;
+      });
     } catch (err) {
-      console.error('Failed to add to cart:', err);
-      setError('Failed to add item to cart. Please try again.');
-      return false;
+      console.error('Failed to add item to cart:', err);
+      setError(err.message || 'Failed to add item to cart');
     } finally {
       setLoading(false);
     }
-  }, [cart, saveCart, appliedCoupon]);
+  }, [isAuthenticated, token]);
 
   // Remove item from cart
   const removeFromCart = useCallback(async (itemId, options = {}) => {
@@ -473,11 +469,11 @@ export const CartProvider = ({ children, initialState = null }) => {
 
   // Get total number of items in cart
   const getCartCount = useCallback(() => {
-    return cart.reduce((count, item) => count + item.quantity, 0);
+    return cart.reduce((count, item) => count + (item.quantity || 1), 0);
   }, [cart]);
 
   // Sync cart with the server for logged-in users
-  const syncCartWithServer = useCallback(async () => {
+  const syncCartWithServer = useCallback(async (updatedCart) => {
     if (isServer || !isAuthenticated || !token) return;
 
     setLoading(true);
@@ -486,7 +482,7 @@ export const CartProvider = ({ children, initialState = null }) => {
     try {
       console.log('Syncing cart with server, API URL:', API_URL);
       const response = await axios.post(`${API_URL}/cart`,
-        { items: cart },
+        { items: updatedCart },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -502,7 +498,7 @@ export const CartProvider = ({ children, initialState = null }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, token, cart]);
+  }, [isAuthenticated, token]);
 
   // Load cart from server when user logs in
   useEffect(() => {
@@ -548,6 +544,7 @@ export const CartProvider = ({ children, initialState = null }) => {
     appliedCoupon,
     loading,
     error,
+    cartCount,
     addToCart,
     removeFromCart,
     updateQuantity,
