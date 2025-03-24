@@ -4,7 +4,7 @@ import { categories as staticCategories, genders as staticGenders, ageGroups as 
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import CustomizationModal from './CustomizationModal';
-import { productService } from '../../services/productService';
+import productService from '../../services/productService';
 import { Link } from 'react-router-dom';
 import { getBatchProductPromotions, calculateProductPrice, calculateDiscountedPrice } from '../../services/discountService';
 import { API_URL } from '../../config/api';
