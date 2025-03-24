@@ -550,64 +550,62 @@ function determinePageTitle() {
 // Load user profile data specifically for the navbar 
 async function loadUserProfileForNavbar() {
     try {
+        // First try to use cached data
+        const cachedUserName = localStorage.getItem('userName');
+        const cachedUserEmail = localStorage.getItem('userEmail');
+        const cachedUserAvatar = localStorage.getItem('userAvatar');
+        
+        // Create default user data object with cached values
+        const defaultUserData = {
+            name: cachedUserName || 'Admin User',
+            email: cachedUserEmail || '',
+            profileImage: cachedUserAvatar || '/admin/images/man.png'
+        };
+        
+        // Try to fetch from API
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('No token found');
-            window.location.href = '/admin/login.html';
-            return;
+            console.log('No token available, using default data');
+            return defaultUserData;
         }
-
-        // Try to get cached user name from localStorage first
-        const cachedUserName = localStorage.getItem('userName');
         
-        // Update UI with cached data immediately if available
-        if (cachedUserName) {
-            updateNavbarUserDisplay(cachedUserName);
-        }
-
-        // Attempt to fetch fresh data from API
-        const response = await fetch(`${window.API_URL}/admin/profile`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        // Get API URL from global config
+        const apiUrl = window.API_URL || '/api';
+        
+        try {
+            const response = await fetch(`${apiUrl}/admin/profile`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.warn(`API returned status ${response.status}, using default data`);
+                return defaultUserData;
             }
-        });
-
-        if (!response.ok) {
-            // If we have cached data, don't treat this as a critical error
-            if (cachedUserName) {
-                console.warn('Using cached profile data due to API error');
-                return;
-            }
-            throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
-        }
-
-        const userData = await response.json();
-        console.log('User profile data loaded for navbar:', userData);
-        
-        // Format user name consistently - always use "Admin User" for consistency
-        const displayName = 'Admin User';
-        
-        // Store in localStorage for future use
-        localStorage.setItem('userName', displayName);
-        
-        // Update navbar with user data
-        updateNavbarUserDisplay(displayName);
-        
-        // If user has a profile image, update the avatar
-        if (userData.profileImage) {
-            updateProfileImage(userData.profileImage);
+            
+            const userData = await response.json();
+            console.log('Fetched user profile data:', userData);
+            
+            // Update localStorage with fetched data
+            if (userData.name) localStorage.setItem('userName', userData.name);
+            if (userData.email) localStorage.setItem('userEmail', userData.email);
+            if (userData.profileImage) localStorage.setItem('userAvatar', userData.profileImage);
+            
+            return userData;
+        } catch (apiError) {
+            console.error('Error fetching profile from API:', apiError);
+            return defaultUserData;
         }
     } catch (error) {
-        console.error('Error loading profile for navbar:', error);
-        // Try to recover using cached data
-        const cachedUserName = localStorage.getItem('userName');
-        if (cachedUserName) {
-            console.warn('Using cached profile data due to error:', error.message);
-            updateNavbarUserDisplay(cachedUserName);
-        } else {
-            // Last resort fallback
-            updateNavbarUserDisplay('Admin User');
-        }
+        console.error('Error in loadUserProfileForNavbar:', error);
+        return {
+            name: 'Admin User',
+            email: '',
+            profileImage: '/admin/images/man.png'
+        };
     }
 }
 
@@ -678,7 +676,52 @@ async function showProfileModal() {
         console.error('Error loading profile:', error);
         showToast('error', 'Failed to load profile data');
     }
-} 
+}
 
-// Run initialization when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeLayout); 
+// Initialize navbar user profile
+async function initNavbarUserProfile() {
+    try {
+        const userData = await loadUserProfileForNavbar();
+        if (userData) {
+            // Update navbar display
+            const userNameElement = document.getElementById('navbarUserName');
+            if (userNameElement) {
+                userNameElement.textContent = userData.name || 'Admin User';
+            }
+            
+            // Update avatar
+            const userAvatarElement = document.getElementById('navbarUserAvatar');
+            if (userAvatarElement && userData.profileImage) {
+                userAvatarElement.src = userData.profileImage.startsWith('http') 
+                    ? userData.profileImage 
+                    : `${window.location.origin}${userData.profileImage}`;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to initialize navbar user profile:', error);
+    }
+}
+
+// Run initialization when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize navbar user profile
+    initNavbarUserProfile();
+    
+    // Set up profile link again in case the first binding failed
+    const profileLink = document.getElementById('profileLink');
+    if (profileLink) {
+        profileLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Profile link clicked');
+            showProfileModal();
+        });
+    } else {
+        console.warn('Profile link element not found');
+    }
+    
+    // Ensure all sidebar links work properly
+    fixSidebarLinks();
+    
+    // Add app grid button if missing
+    ensureAppGridExists();
+}); 

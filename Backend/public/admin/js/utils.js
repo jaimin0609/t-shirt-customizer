@@ -920,124 +920,104 @@ document.addEventListener('DOMContentLoaded', function() {
 window.reloadNotifications = loadNotifications;
 
 /**
- * Save profile data from the profile modal form 
- * This function is called from the onclick handler in multiple pages
+ * Save profile information
  */
 function saveProfile() {
-    console.log('saveProfile called from button click');
-    
-    // Find the profile form
-    const form = document.getElementById('profileForm');
-    if (!form) {
-        console.error('Profile form not found in the DOM');
-        showToast('error', 'Error: Profile form not found');
-        return;
-    }
-    
-    // Get form data
-    const formData = new FormData(form);
-    
-    // Add the profileImage file if it exists
-    const fileInput = document.getElementById('profileImage');
-    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        formData.append('profileImage', fileInput.files[0]);
-    }
-    
-    // Validate form
-    const name = formData.get('name');
-    const email = formData.get('email');
+    // Basic validation
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('newPassword').value.trim();
+    const profileImage = document.getElementById('profileImage').files[0];
     
     if (!name || !email) {
-        showToast('error', 'Name and email are required');
+        showToast('error', 'Please fill in all required fields.');
         return;
     }
     
-    // Get the save button and show loading state
-    const saveButton = document.querySelector('#profileModal .modal-footer .btn-primary');
-    if (saveButton) {
-        const originalText = saveButton.innerText;
-        saveButton.disabled = true;
-        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    // Create form data to handle file upload
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('email', email);
+    
+    if (password) {
+        formData.append('password', password);
     }
     
-    // Make API request
+    if (profileImage) {
+        formData.append('profileImage', profileImage);
+    }
+    
+    // Get token for authentication
     const token = localStorage.getItem('token');
     if (!token) {
-        showToast('error', 'Authentication required. Please log in again.');
-        // Redirect to login page
+        showToast('error', 'Authentication error. Please log in again.');
         window.location.href = '/admin/login.html';
         return;
     }
     
-    // Get API URL
+    // Show loading spinner
+    showLoading();
+    
+    // API URL from global config
     const apiUrl = window.API_URL || '/api';
     
-    // Make the API request
+    // Make API request
     fetch(`${apiUrl}/admin/profile`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`
+            // Note: Don't set Content-Type with FormData
         },
         body: formData
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error(`Profile update failed: ${response.status} ${response.statusText}`);
+            throw new Error(`Error: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('Profile updated successfully:', data);
+        // Update localStorage with new user data
+        localStorage.setItem('userName', name);
+        localStorage.setItem('userEmail', email);
         
-        // Close the modal
-        const profileModal = document.getElementById('profileModal');
-        if (profileModal && typeof bootstrap !== 'undefined') {
-            const modal = bootstrap.Modal.getInstance(profileModal);
-            if (modal) {
-                modal.hide();
+        // If a new profile image was uploaded and returned
+        if (data.profileImage) {
+            localStorage.setItem('userAvatar', data.profileImage);
+            
+            // Update navbar avatar if it exists
+            const navbarAvatar = document.getElementById('navbarUserAvatar');
+            if (navbarAvatar) {
+                navbarAvatar.src = data.profileImage.startsWith('http') 
+                    ? data.profileImage 
+                    : `${window.location.origin}${data.profileImage}`;
             }
         }
         
-        // Show success message
-        showToast('success', 'Profile updated successfully');
-        
-        // Update the UI with the new user data
-        if (data.name) {
-            const userNameElements = document.querySelectorAll('#userName');
-            userNameElements.forEach(el => {
-                el.textContent = data.name;
-            });
-            
-            // Store in localStorage for other pages
-            localStorage.setItem('userName', data.name);
+        // Update navbar user name if it exists
+        const navbarUserName = document.getElementById('navbarUserName');
+        if (navbarUserName) {
+            navbarUserName.textContent = name;
         }
         
-        // Update profile image if returned
-        if (data.profileImage) {
-            const avatarElements = document.querySelectorAll('#userAvatar, .avatar, .user-avatar');
-            avatarElements.forEach(el => {
-                el.src = data.profileImage;
-            });
-            
-            // Store in localStorage for other pages
-            localStorage.setItem('userAvatar', data.profileImage);
+        // Hide modal
+        const profileModal = bootstrap.Modal.getInstance(document.getElementById('profileModal'));
+        if (profileModal) {
+            profileModal.hide();
         }
+        
+        showToast('success', 'Profile updated successfully.');
     })
     .catch(error => {
         console.error('Error updating profile:', error);
-        showToast('error', `Failed to update profile: ${error.message}`);
+        showToast('error', 'Failed to update profile. Please try again.');
     })
     .finally(() => {
-        // Reset save button
-        const saveButton = document.querySelector('#profileModal .modal-footer .btn-primary');
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.innerText = 'Save Changes';
-        }
+        hideLoading();
     });
 }
 
-// Initialize profile image preview when the modal is shown
+// Add profile image preview functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Set up profile image preview
     const profileImageInput = document.getElementById('profileImage');
@@ -1045,48 +1025,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (profileImageInput && profilePreview) {
         profileImageInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
+            if (this.files && this.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     profilePreview.src = e.target.result;
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(this.files[0]);
             }
         });
     }
     
-    // Set up profile modal event handlers
+    // Set up profile modal
     const profileModal = document.getElementById('profileModal');
     if (profileModal) {
+        // Initialize profile data when modal is shown
         profileModal.addEventListener('show.bs.modal', function() {
-            // Load user data when modal is about to be shown
-            const userName = localStorage.getItem('userName');
-            const userAvatar = localStorage.getItem('userAvatar');
+            const name = localStorage.getItem('userName');
+            const email = localStorage.getItem('userEmail');
+            const avatar = localStorage.getItem('userAvatar');
             
-            // Populate name field
-            const nameInput = document.getElementById('name');
-            if (nameInput && userName) {
-                nameInput.value = userName;
-            }
-            
-            // Set avatar preview
-            if (profilePreview && userAvatar) {
-                profilePreview.src = userAvatar;
-            }
-            
-            // Ensure email field has a value
-            const emailInput = document.getElementById('email');
-            if (emailInput && !emailInput.value) {
-                // Try to fetch from API or localStorage
-                const userEmail = localStorage.getItem('userEmail');
-                if (userEmail) {
-                    emailInput.value = userEmail;
-                }
-            }
+            if (name) document.getElementById('name').value = name;
+            if (email) document.getElementById('email').value = email;
+            if (avatar && profilePreview) profilePreview.src = avatar;
         });
     }
-});
-
-// Make it available globally
-window.saveProfile = saveProfile; 
+}); 
