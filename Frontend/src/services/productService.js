@@ -112,13 +112,11 @@ export const getImageUrl = (imagePath) => {
   
   // If path starts with slash, append to API URL
   if (imagePath.startsWith('/')) {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-    return `${baseUrl}${imagePath}`;
+    return `${API_URL}${imagePath}`;
   }
   
   // Otherwise assume it's a relative path to uploads
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-  return `${baseUrl}/uploads/${imagePath}`;
+  return `${API_URL}/uploads/${imagePath}`;
 };
 
 /**

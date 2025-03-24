@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import productService from '../../services/productService';
+import { API_URL } from '../../config/api';
 import {
     MagnifyingGlassIcon,
     XMarkIcon
@@ -22,10 +23,8 @@ const SearchBar = ({
 
     // Helper function to get the correct image URL for a product
     const getImageUrl = (product) => {
-        if (!product) return '/assets/placeholder-product.jpg';
-
-        // Try different image properties
-        const imagePath = product.image || product.imageUrl || product.images?.[0]?.front || product.thumbnail;
+        // Extract the image path from the product
+        const imagePath = product.image || (product.images && product.images[0]);
 
         if (!imagePath) return '/assets/placeholder-product.jpg';
 
@@ -37,7 +36,8 @@ const SearchBar = ({
         // If it's a backend image path (starts with /uploads)
         if (imagePath.startsWith('/uploads')) {
             // Use the backend URL to create a full image path
-            return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://t-shirt-customizer-backend.onrender.com'}${imagePath}`;
+            const baseUrl = API_URL.replace('/api', '');
+            return `${baseUrl}${imagePath}`;
         }
 
         // Otherwise, assume it's a local asset

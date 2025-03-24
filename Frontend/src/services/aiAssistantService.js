@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { API_URL } from '../config/api';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// Log the service initialization
+console.log('AI Assistant Service initialized with API URL:', API_URL);
 
 // For now we'll use a mock service that simulates AI responses
 // In a production app, you would connect to an actual AI API endpoint

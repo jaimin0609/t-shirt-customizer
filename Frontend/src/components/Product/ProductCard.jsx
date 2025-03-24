@@ -9,6 +9,8 @@ import { useCart } from '../../contexts/CartContext';
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { promotionLogger } from '../../services/promotionLogger';
+import productService from '../../services/productService';
+import { API_URL } from '../../config/api';
 
 /**
  * ProductCard component displays product information in a SHEIN-like style
@@ -251,15 +253,9 @@ const ProductCard = ({ product }) => {
                 // Handle relative paths
                 if (mainImage.startsWith('/uploads/')) {
                     console.log(`Using backend upload path: ${mainImage}`);
-                    // Use the proper API URL to build the full image URL
-                    const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
-                    // Extract base URL (domain)
-                    const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
-                    if (baseUrlMatch && baseUrlMatch[1]) {
-                        return `${baseUrlMatch[1]}${mainImage}`;
-                    }
-                    console.log('Could not extract base URL, returning path as is:', mainImage);
-                    return mainImage;
+                    // Use the API_URL from config
+                    const baseUrl = API_URL.replace(/\/api$/, ''); // Remove /api suffix if present
+                    return `${baseUrl}${mainImage}`;
                 }
             }
 
@@ -290,14 +286,9 @@ const ProductCard = ({ product }) => {
                 // Handle relative paths
                 if (product.image.startsWith('/uploads/')) {
                     console.log(`Using backend upload path from image field: ${product.image}`);
-                    const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
-                    if (backendUrl) {
-                        const baseUrlMatch = backendUrl.match(/^(https?:\/\/[^\/]+)/);
-                        if (baseUrlMatch && baseUrlMatch[1]) {
-                            return `${baseUrlMatch[1]}${product.image}`;
-                        }
-                    }
-                    return product.image;
+                    // Use the API_URL from config
+                    const baseUrl = API_URL.replace(/\/api$/, ''); // Remove /api suffix if present
+                    return `${baseUrl}${product.image}`;
                 }
             }
             return product.image;

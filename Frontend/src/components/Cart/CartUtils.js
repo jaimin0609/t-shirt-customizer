@@ -1,4 +1,9 @@
 /**
+ * Utility functions for the cart
+ */
+import { API_URL } from '../../config/api';
+
+/**
  * Format price display with proper currency
  * 
  * @param {number|string} price - The price to format
@@ -30,13 +35,16 @@ export const getImageUrl = (imageSource) => {
 
   // Handle relative image paths
   if (typeof imageSource === 'string' && imageSource.startsWith('/')) {
+    if (imageSource.startsWith('/uploads/')) {
+      // For backend uploads, use the API URL
+      return `${API_URL.replace(/\/api$/, '')}${imageSource}`;
+    }
     // For absolute paths within the app
     return imageSource;
   }
 
-  // Handle backend paths (assuming backend URL is available)
-  const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
-  return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
+  // Handle other backend paths
+  return `${API_URL}/${imageSource.replace(/^\//, '')}`;
 };
 
 /**

@@ -1,6 +1,7 @@
 /**
  * Utility functions for orders
  */
+import { API_URL } from '../../config/api';
 
 /**
  * Get the image URL, handling both backend and frontend image paths
@@ -12,9 +13,8 @@ export const getImageUrl = (imagePath) => {
 
   // If it's a backend image path (starts with /uploads)
   if (imagePath.startsWith('/uploads')) {
-    // Use environment variable for API URL if available
-    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
-    const baseUrl = apiBaseUrl.replace(/\/api$/, ''); // Remove /api suffix if present
+    // Use API_URL from config
+    const baseUrl = API_URL.replace(/\/api$/, ''); // Remove /api suffix if present
     return `${baseUrl}${imagePath}`;
   }
 

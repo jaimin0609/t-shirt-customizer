@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiTrash2, FiPlusCircle, FiMinusCircle, FiHeart, FiX } from 'react-icons/fi';
+import { API_URL } from '../../config/api';
 
 const CartPage = () => {
     const { cart, removeFromCart, updateQuantity, cartCount, appliedCoupon, applyCoupon: contextApplyCoupon, removeCoupon: contextRemoveCoupon } = useCart();
@@ -101,7 +102,6 @@ const CartPage = () => {
 
         try {
             // Apply coupon using the backend API
-            const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
             const result = await contextApplyCoupon(couponCode, subtotal);
 
             if (!result.success) {
@@ -147,13 +147,16 @@ const CartPage = () => {
 
         // Handle relative image paths
         if (typeof imageSource === 'string' && imageSource.startsWith('/')) {
+            if (imageSource.startsWith('/uploads/')) {
+                // For backend uploads, use the API URL from config
+                return `${API_URL.replace(/\/api$/, '')}${imageSource}`;
+            }
             // For absolute paths within the app
             return imageSource;
         }
 
-        // Handle backend paths (assuming backend URL is available)
-        const backendUrl = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
-        return `${backendUrl}/${imageSource.replace(/^\//, '')}`;
+        // Handle backend paths using API_URL from config
+        return `${API_URL}/${imageSource.replace(/^\//, '')}`;
     };
 
     if (isLoading) {

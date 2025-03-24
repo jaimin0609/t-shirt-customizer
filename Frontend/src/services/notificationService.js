@@ -5,8 +5,10 @@
 import axios from 'axios';
 // Removing dependency on authService for build compatibility
 // import { getAuthHeaders, isTokenExpired, refreshToken } from './authService';
+import { API_URL } from '../config/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
+// Log the service initialization
+console.log('Notification Service initialized with API URL:', API_URL);
 
 // Helper functions moved locally from authService to avoid import errors
 const getAuthHeaders = () => {
