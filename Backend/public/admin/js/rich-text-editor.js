@@ -1,385 +1,291 @@
 /**
- * Rich Text Editor Configuration
- * Implements TinyMCE for product descriptions in the admin panel
+ * Custom Rich Text Editor
+ * A lightweight rich text editor implementation without any external dependencies
  */
 
-// Wait for document to fully load before initializing TinyMCE
+// Wait for document to fully load before initializing
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Rich Text Editor: Document ready, initializing TinyMCE...');
-    
-    // Force remove any existing TinyMCE instances to prevent conflicts
-    if (typeof tinymce !== 'undefined') {
-        tinymce.remove('#productDescription');
-        console.log('Rich Text Editor: Removed any existing TinyMCE instances');
-    }
+    console.log('Rich Text Editor: Document ready, initializing custom editor...');
     
     // Main product description in add-product.html
     const productDescription = document.getElementById('productDescription');
     if (productDescription) {
         console.log('Rich Text Editor: Found productDescription element, initializing editor');
-        
-        // Ensure TinyMCE is available
-        if (typeof tinymce === 'undefined') {
-            console.error('Rich Text Editor: TinyMCE not loaded! Adding script dynamically');
-            loadTinyMCEScript();
-            return;
-        }
-        
-        // Simplify TinyMCE configuration for maximum compatibility
-        tinymce.init({
-            selector: '#productDescription',
-            base_url: 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6',
-            plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-            toolbar: 'undo redo | bold italic | bullist numlist | link image',
-            height: 400,
-            menubar: false, // Disable menu to simplify
-            inline: false,
-            branding: false,
-            promotion: false,
-            statusbar: false, // Disable status bar to simplify
-            resize: false,
-            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 16px; }',
-            setup: function(editor) {
-                console.log('Rich Text Editor: Editor setup phase');
-                
-                // Log when editor is initialized
-                editor.on('init', function() {
-                    console.log('Rich Text Editor: TinyMCE initialized successfully');
-                    
-                    // Force a check for UI visibility after initialization
-                    setTimeout(function() {
-                        checkForToolbar();
-                    }, 500);
-                });
-                
-                // Save content back to textarea on change
-                editor.on('change', function() {
-                    editor.save();
-                    console.log('Rich Text Editor: Content updated');
-                });
-            }
-        }).then(function(editors) {
-            console.log('Rich Text Editor: Editor initialization promise resolved', editors);
-        }).catch(function(error) {
-            console.error('Rich Text Editor: Failed to initialize editor', error);
-            createFallbackToolbar();
-        });
+        createCustomRichEditor(productDescription);
     } else {
         console.warn('Rich Text Editor: #productDescription element not found');
     }
-    
-    // Set timeout to check if TinyMCE is working properly
-    setTimeout(function() {
-        checkForToolbar();
-    }, 2000);
     
     // Handle modal editors
     setupModalEditors();
 });
 
 /**
- * Check if toolbar is visible, if not, create a fallback
+ * Create a custom rich text editor
+ * @param {HTMLTextAreaElement} textarea - The textarea to replace with rich editor
  */
-function checkForToolbar() {
-    console.log('Rich Text Editor: Checking if toolbar is visible');
-    const toolbar = document.querySelector('.tox-toolbar__primary');
-    const editorArea = document.querySelector('.tox-edit-area');
-    
-    if (!toolbar && editorArea) {
-        console.warn('Rich Text Editor: Toolbar not found but editor area exists - toolbar might be hidden');
-        // Try setting style directly
-        applyForcedStyles();
-        
-        // Show the fix button if issues persist
-        const fixButton = document.getElementById('fixRichEditorBtn');
-        if (fixButton) {
-            fixButton.style.display = 'inline-block';
-        }
-    } else if (!toolbar && !editorArea) {
-        console.error('Rich Text Editor: No TinyMCE UI elements found at all - initialization might have failed');
-        createFallbackToolbar();
-    } else {
-        console.log('Rich Text Editor: Toolbar found and appears to be working');
-    }
-}
-
-/**
- * Apply forced styles directly to TinyMCE elements
- */
-function applyForcedStyles() {
-    console.log('Rich Text Editor: Applying forced styles');
-    
-    // Get header element
-    const header = document.querySelector('.tox-editor-header');
-    if (header) {
-        header.style.display = 'block';
-        header.style.visibility = 'visible';
-        header.style.opacity = '1';
-    }
-    
-    // Get toolbar element
-    const toolbar = document.querySelector('.tox-toolbar__primary');
-    if (toolbar) {
-        toolbar.style.display = 'flex';
-        toolbar.style.visibility = 'visible';
-        toolbar.style.opacity = '1';
-        toolbar.style.position = 'relative';
-        toolbar.style.zIndex = '100';
-    }
-    
-    // Toolbar overflow
-    const toolbarOverlord = document.querySelector('.tox-toolbar-overlord');
-    if (toolbarOverlord) {
-        toolbarOverlord.style.visibility = 'visible';
-        toolbarOverlord.style.display = 'block';
-    }
-    
-    // Find all button groups
-    const buttonGroups = document.querySelectorAll('.tox-toolbar__group');
-    buttonGroups.forEach(group => {
-        group.style.visibility = 'visible';
-        group.style.display = 'flex';
-        group.style.opacity = '1';
-    });
-    
-    // Find all buttons
-    const buttons = document.querySelectorAll('.tox-tbtn');
-    buttons.forEach(button => {
-        button.style.visibility = 'visible';
-        button.style.display = 'block';
-        button.style.opacity = '1';
-    });
-}
-
-/**
- * Create a simple fallback toolbar when TinyMCE fails
- */
-function createFallbackToolbar() {
-    console.log('Rich Text Editor: Creating fallback toolbar');
-    
-    // Find the textarea
-    const textarea = document.getElementById('productDescription');
-    if (!textarea) return;
-    
-    // Create a container for our fallback editor
+function createCustomRichEditor(textarea) {
+    // Create a container for our editor
     const container = document.createElement('div');
-    container.id = 'fallback-editor-container';
+    container.id = 'custom-editor-container-' + textarea.id;
+    container.className = 'custom-rich-editor';
     container.style.border = '1px solid #ced4da';
     container.style.borderRadius = '0.25rem';
     container.style.marginBottom = '1rem';
     
     // Create toolbar
     const toolbar = document.createElement('div');
-    toolbar.className = 'fallback-toolbar';
+    toolbar.className = 'editor-toolbar';
     toolbar.style.display = 'flex';
+    toolbar.style.flexWrap = 'wrap';
     toolbar.style.padding = '8px';
     toolbar.style.backgroundColor = '#f8f9fa';
     toolbar.style.borderBottom = '1px solid #dee2e6';
     
-    // Add some basic formatting buttons
-    const buttonStyles = 'display:inline-block; margin-right:5px; padding:5px 10px; background:#fff; border:1px solid #dee2e6; border-radius:3px; cursor:pointer;';
+    // Add basic formatting buttons
+    const buttonStyles = 'display:inline-block; margin-right:5px; margin-bottom:5px; padding:6px 12px; background:#fff; border:1px solid #dee2e6; border-radius:3px; cursor:pointer; font-size: 14px;';
     
-    const boldBtn = document.createElement('button');
-    boldBtn.type = 'button';
-    boldBtn.innerHTML = '<strong>B</strong>';
-    boldBtn.style.cssText = buttonStyles;
-    boldBtn.title = 'Bold';
-    boldBtn.onclick = function() { insertFormatting('<strong>', '</strong>'); };
+    // Button configurations
+    const buttons = [
+        { html: '<strong>B</strong>', title: 'Bold', action: () => execFormatCommand('bold') },
+        { html: '<em>I</em>', title: 'Italic', action: () => execFormatCommand('italic') },
+        { html: '<u>U</u>', title: 'Underline', action: () => execFormatCommand('underline') },
+        { html: 'H1', title: 'Heading 1', action: () => execFormatCommand('formatBlock', '<h1>') },
+        { html: 'H2', title: 'Heading 2', action: () => execFormatCommand('formatBlock', '<h2>') },
+        { html: 'P', title: 'Paragraph', action: () => execFormatCommand('formatBlock', '<p>') },
+        { html: '&#x1F5CE;', title: 'Ordered List', action: () => execFormatCommand('insertOrderedList') },
+        { html: '&#x1F5CB;', title: 'Unordered List', action: () => execFormatCommand('insertUnorderedList') },
+        { html: '&#x1F517;', title: 'Insert Link', action: () => insertLink() },
+        { html: '&#x21E4;', title: 'Undo', action: () => execFormatCommand('undo') },
+        { html: '&#x21E5;', title: 'Redo', action: () => execFormatCommand('redo') }
+    ];
     
-    const italicBtn = document.createElement('button');
-    italicBtn.type = 'button';
-    italicBtn.innerHTML = '<em>I</em>';
-    italicBtn.style.cssText = buttonStyles;
-    italicBtn.title = 'Italic';
-    italicBtn.onclick = function() { insertFormatting('<em>', '</em>'); };
-    
-    const linkBtn = document.createElement('button');
-    linkBtn.type = 'button';
-    linkBtn.innerHTML = 'Link';
-    linkBtn.style.cssText = buttonStyles;
-    linkBtn.title = 'Insert Link';
-    linkBtn.onclick = function() { 
-        const url = prompt('Enter URL:');
-        if (url) insertFormatting(`<a href="${url}">`, '</a>'); 
-    };
-    
-    const ulBtn = document.createElement('button');
-    ulBtn.type = 'button';
-    ulBtn.innerHTML = 'List';
-    ulBtn.style.cssText = buttonStyles;
-    ulBtn.title = 'Insert List';
-    ulBtn.onclick = function() { insertFormatting('<ul><li>', '</li></ul>'); };
-    
-    // Add all buttons to the toolbar
-    toolbar.appendChild(boldBtn);
-    toolbar.appendChild(italicBtn);
-    toolbar.appendChild(linkBtn);
-    toolbar.appendChild(ulBtn);
-    
-    // Create a message for the user
-    const message = document.createElement('div');
-    message.style.padding = '5px 10px';
-    message.style.backgroundColor = '#fff3cd';
-    message.style.color = '#856404';
-    message.style.fontSize = '0.9rem';
-    message.innerHTML = 'Basic editor mode: Rich text editor failed to load properly. <button type="button" onclick="window.location.reload()">Try Again</button>';
-    
-    // Add elements to the container
-    container.appendChild(toolbar);
-    container.appendChild(message);
-    
-    // Add a content editable div
-    const editableDiv = document.createElement('div');
-    editableDiv.id = 'fallback-editor-content';
-    editableDiv.contentEditable = true;
-    editableDiv.style.minHeight = '250px';
-    editableDiv.style.padding = '10px';
-    editableDiv.style.backgroundColor = '#fff';
-    editableDiv.style.overflowY = 'auto';
-    editableDiv.innerHTML = textarea.value || '';
-    
-    // Sync editable div with textarea
-    editableDiv.addEventListener('input', function() {
-        textarea.value = this.innerHTML;
+    // Create and add all buttons to the toolbar
+    buttons.forEach(button => {
+        const btnElement = document.createElement('button');
+        btnElement.type = 'button';
+        btnElement.innerHTML = button.html;
+        btnElement.style.cssText = buttonStyles;
+        btnElement.title = button.title;
+        btnElement.onclick = button.action;
+        toolbar.appendChild(btnElement);
     });
     
+    // Add content editable div
+    const editableDiv = document.createElement('div');
+    editableDiv.id = 'editor-content-' + textarea.id;
+    editableDiv.className = 'editor-content';
+    editableDiv.contentEditable = true;
+    editableDiv.style.minHeight = '300px';
+    editableDiv.style.padding = '15px';
+    editableDiv.style.backgroundColor = '#fff';
+    editableDiv.style.overflowY = 'auto';
+    editableDiv.style.lineHeight = '1.5';
+    editableDiv.style.outline = 'none';
+    
+    // Set initial content from textarea
+    editableDiv.innerHTML = textarea.value || '';
+    
+    // Sync content back to textarea on edit
+    editableDiv.addEventListener('input', function() {
+        textarea.value = this.innerHTML;
+        // Trigger change event on the textarea for form validations
+        const event = new Event('change', { bubbles: true });
+        textarea.dispatchEvent(event);
+    });
+    
+    // Build editor
+    container.appendChild(toolbar);
     container.appendChild(editableDiv);
     
-    // Insert the fallback editor before the textarea
+    // Replace textarea with custom editor
     textarea.style.display = 'none';
     textarea.parentNode.insertBefore(container, textarea);
     
-    // Helper function to insert formatting
-    function insertFormatting(openTag, closeTag) {
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        const selectedText = range.toString();
-        
-        if (selectedText) {
-            // Replace selected text with formatted version
-            const formattedText = openTag + selectedText + closeTag;
-            range.deleteContents();
-            range.insertNode(document.createTextNode(formattedText));
-        } else {
-            // No selection, just insert tags
-            range.insertNode(document.createTextNode(openTag + closeTag));
+    // Initialize focus events
+    editableDiv.addEventListener('focus', function() {
+        container.style.boxShadow = '0 0 0 0.2rem rgba(0, 123, 255, 0.25)';
+    });
+    
+    editableDiv.addEventListener('blur', function() {
+        container.style.boxShadow = 'none';
+    });
+    
+    // Ensure we can tab out of the editor
+    editableDiv.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            // Allow default behavior (tab out of editor)
+            container.style.boxShadow = 'none';
         }
-        
-        // Update textarea value
-        textarea.value = editableDiv.innerHTML;
+    });
+    
+    // Return the editor instance
+    return {
+        container,
+        toolbar,
+        editor: editableDiv,
+        textarea: textarea,
+        getContent: function() {
+            return editableDiv.innerHTML;
+        },
+        setContent: function(content) {
+            editableDiv.innerHTML = content;
+            textarea.value = content;
+        }
+    };
+}
+
+/**
+ * Execute a formatting command on the current editor
+ * @param {string} command - The document.execCommand command to execute
+ * @param {string} [value] - Optional value for the command
+ */
+function execFormatCommand(command, value = null) {
+    // Save current selection
+    saveSelection();
+    
+    // Focus back to the editor before executing command
+    restoreSelection();
+    
+    // Execute the command
+    document.execCommand(command, false, value);
+    
+    // Update the original textarea with new content
+    const activeEditor = document.activeElement;
+    if (activeEditor && activeEditor.classList.contains('editor-content')) {
+        const textareaId = activeEditor.id.replace('editor-content-', '');
+        const textarea = document.getElementById(textareaId);
+        if (textarea) {
+            textarea.value = activeEditor.innerHTML;
+            
+            // Trigger change event
+            const event = new Event('change', { bubbles: true });
+            textarea.dispatchEvent(event);
+        }
+    }
+}
+
+// Store the current selection range
+let savedSelection = null;
+
+/**
+ * Save the current selection (for restoring after dialogs)
+ */
+function saveSelection() {
+    if (window.getSelection) {
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            savedSelection = sel.getRangeAt(0);
+        }
     }
 }
 
 /**
- * Setup TinyMCE for modal editors (for product edit popups)
+ * Restore the previously saved selection
+ */
+function restoreSelection() {
+    const activeEditor = document.querySelector('.editor-content:focus') || 
+                          document.querySelector('.editor-content');
+    
+    if (activeEditor && savedSelection) {
+        activeEditor.focus();
+        
+        if (window.getSelection) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedSelection);
+        }
+    }
+}
+
+/**
+ * Insert a link at the current cursor position
+ */
+function insertLink() {
+    // Save current selection
+    saveSelection();
+    
+    // Get selected text
+    const selection = window.getSelection();
+    const selectedText = selection.toString();
+    
+    // Prompt for URL
+    const url = prompt('Enter the URL:', 'https://');
+    if (url && url !== 'https://') {
+        // Restore selection
+        restoreSelection();
+        
+        // If text was selected, create link with that text
+        if (selectedText) {
+            document.execCommand('createLink', false, url);
+        } else {
+            // If no text selected, create link with URL as text
+            const linkText = prompt('Enter link text:', url);
+            const link = `<a href="${url}">${linkText || url}</a>`;
+            document.execCommand('insertHTML', false, link);
+        }
+    }
+}
+
+/**
+ * Set up rich text editors in modal dialogs
  */
 function setupModalEditors() {
-    console.log('Rich Text Editor: Setting up modal editors');
-    
-    // Handle product modal initialization for editing products
+    // Look for product modals that might contain editors
     const productModal = document.getElementById('productModal');
     if (productModal) {
-        productModal.addEventListener('shown.bs.modal', function() {
-            console.log('Rich Text Editor: Product modal shown, initializing editor');
-            
-            // Remove existing instances to prevent duplication
-            if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
-                tinymce.remove('#productDescription');
-                console.log('Rich Text Editor: Removed existing editor in modal');
-            }
-            
-            // Ensure TinyMCE is available
-            if (typeof tinymce === 'undefined') {
-                console.error('Rich Text Editor: TinyMCE not loaded for modal!');
-                return;
-            }
-            
-            // Initialize TinyMCE on the modal's textarea with simplified configuration
-            setTimeout(function() {
-                tinymce.init({
-                    selector: '#productDescription',
-                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-                    toolbar: 'undo redo | bold italic | bullist numlist | link image',
-                    height: 300,
-                    menubar: false,
-                    branding: false,
-                    promotion: false,
-                    setup: function(editor) {
-                        editor.on('init', function() {
-                            console.log('Rich Text Editor: Modal editor initialized');
-                        });
-                        
-                        editor.on('change', function() {
-                            editor.save();
-                        });
-                    }
-                });
-            }, 100); // Short delay to ensure modal is fully rendered
-        });
+        console.log('Rich Text Editor: Found product modal, setting up editor');
+        
+        // Find the description field in the modal
+        const modalDescription = productModal.querySelector('#modalProductDescription');
+        if (modalDescription) {
+            // Create editor when modal is shown
+            productModal.addEventListener('shown.bs.modal', function() {
+                console.log('Rich Text Editor: Modal shown, initializing editor');
+                
+                // Check if editor already exists
+                const existingEditor = productModal.querySelector('.custom-rich-editor');
+                if (!existingEditor) {
+                    createCustomRichEditor(modalDescription);
+                }
+            });
+        }
     } else {
         console.log('Rich Text Editor: Product modal element not found');
     }
 }
 
 /**
- * Dynamically load TinyMCE script if not available
- */
-function loadTinyMCEScript() {
-    console.log('Rich Text Editor: Attempting to load TinyMCE script dynamically');
-    
-    const script = document.createElement('script');
-    script.src = 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js';
-    script.referrerPolicy = 'origin';
-    script.onload = function() {
-        console.log('Rich Text Editor: TinyMCE script loaded dynamically');
-        // Re-initialize once loaded
-        setTimeout(function() {
-            if (typeof tinymce !== 'undefined') {
-                document.dispatchEvent(new Event('DOMContentLoaded'));
-            }
-        }, 500);
-    };
-    script.onerror = function() {
-        console.error('Rich Text Editor: Failed to load TinyMCE script dynamically');
-        createFallbackToolbar();
-    };
-    
-    document.head.appendChild(script);
-}
-
-/**
- * Patch the product save functions to handle rich text content
+ * Patch global functions to make sure they get content from the editor
  */
 window.addEventListener('load', function() {
     console.log('Rich Text Editor: Window loaded, patching save functions');
     
-    // Patch the saveProduct function in products.js if it exists
+    // Patch saveProduct function if it exists
     if (typeof window.saveProduct === 'function') {
         const originalSaveProduct = window.saveProduct;
         window.saveProduct = function() {
             console.log('Rich Text Editor: Patched saveProduct function called');
             
-            // Get content from TinyMCE if it exists
-            if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
-                const content = tinymce.get('productDescription').getContent();
-                console.log('Rich Text Editor: Getting content from TinyMCE for saveProduct');
-                document.getElementById('productDescription').value = content;
-            } else {
-                // Check for fallback editor
-                const fallbackEditor = document.getElementById('fallback-editor-content');
-                if (fallbackEditor) {
-                    document.getElementById('productDescription').value = fallbackEditor.innerHTML;
+            // Get content from editor before saving
+            const editor = document.querySelector('.editor-content');
+            if (editor) {
+                console.log('Rich Text Editor: Getting content from editor for saveProduct');
+                const textarea = document.getElementById('productDescription');
+                if (textarea) {
+                    textarea.value = editor.innerHTML;
                 }
-                console.warn('Rich Text Editor: TinyMCE not found when saving, using fallback or default');
+            } else {
+                console.warn('Rich Text Editor: Editor not found when saving, using fallback');
             }
             
-            // Call the original function
+            // Call original function
             return originalSaveProduct.apply(this, arguments);
         };
         console.log('Rich Text Editor: Patched window.saveProduct function');
     }
     
-    // Patch the form submission in add-product.html
+    // Patch form submission
     const addProductForm = document.getElementById('addProductForm');
     if (addProductForm) {
         console.log('Rich Text Editor: Found addProductForm, patching submission');
@@ -387,59 +293,20 @@ window.addEventListener('load', function() {
         addProductForm.addEventListener('submit', function(e) {
             console.log('Rich Text Editor: Form submission intercepted');
             
-            // Get content from TinyMCE if it exists
-            if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
-                const content = tinymce.get('productDescription').getContent();
-                console.log('Rich Text Editor: Getting content from TinyMCE for form submission');
-                document.getElementById('productDescription').value = content;
-            } else {
-                // Check for fallback editor
-                const fallbackEditor = document.getElementById('fallback-editor-content');
-                if (fallbackEditor) {
-                    document.getElementById('productDescription').value = fallbackEditor.innerHTML;
+            // Get content from editor before submitting
+            const editor = document.querySelector('.editor-content');
+            if (editor) {
+                console.log('Rich Text Editor: Getting content from editor for form submission');
+                const textarea = document.getElementById('productDescription');
+                if (textarea) {
+                    textarea.value = editor.innerHTML;
                 }
-                console.warn('Rich Text Editor: TinyMCE not found during form submission, using fallback or default');
+            } else {
+                console.warn('Rich Text Editor: Editor not found during form submission, using fallback');
             }
-        }, true); // Use capturing to ensure this runs before other handlers
-        
+        });
         console.log('Rich Text Editor: Added submit event listener to addProductForm');
     } else {
         console.log('Rich Text Editor: addProductForm not found');
     }
-});
-
-// Debug function - can be called from console to check the status
-window.checkTinyMCEStatus = function() {
-    console.log('Rich Text Editor Status Check:');
-    console.log('- TinyMCE loaded:', typeof tinymce !== 'undefined');
-    
-    if (typeof tinymce !== 'undefined') {
-        console.log('- Active editors:', tinymce.editors);
-        console.log('- productDescription editor instance:', tinymce.get('productDescription'));
-        
-        const editorInstance = tinymce.get('productDescription');
-        if (editorInstance) {
-            console.log('- Editor initialized:', editorInstance.initialized);
-            console.log('- Editor content:', editorInstance.getContent());
-        }
-    }
-    
-    console.log('- productDescription element:', document.getElementById('productDescription'));
-    
-    // Check for visible TinyMCE elements
-    const editorContainer = document.querySelector('.tox-tinymce');
-    console.log('- Editor container:', editorContainer);
-    
-    const toolbar = document.querySelector('.tox-toolbar__primary');
-    console.log('- Toolbar element:', toolbar);
-    
-    if (editorContainer && window.getComputedStyle) {
-        const style = window.getComputedStyle(editorContainer);
-        console.log('- Container visibility:', style.visibility);
-        console.log('- Container display:', style.display);
-        console.log('- Container opacity:', style.opacity);
-        console.log('- Container z-index:', style.zIndex);
-    }
-    
-    return 'TinyMCE status check complete - see console for details';
-}; 
+}); 

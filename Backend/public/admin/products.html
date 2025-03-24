@@ -9,8 +9,6 @@
     <link href="/admin/css/style.css" rel="stylesheet">
     <!-- Rich Text Editor CSS -->
     <link href="/css/rich-editor.css" rel="stylesheet">
-    <!-- TinyMCE Rich Text Editor -->
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 </head>
 <body>
     <div class="wrapper">
@@ -407,41 +405,39 @@
             }
         });
 
-        // Initialize TinyMCE on modal shown
+        // Initialize custom rich text editor on modal shown
         document.addEventListener('DOMContentLoaded', function() {
             const productModal = document.getElementById('productModal');
             if (productModal) {
                 productModal.addEventListener('shown.bs.modal', function() {
-                    if (tinymce.get('productDescription')) {
-                        tinymce.remove('#productDescription');
+                    const textareaElement = document.getElementById('productDescription');
+                    if (textareaElement) {
+                        // Check if editor already exists and remove if needed
+                        const existingEditor = document.querySelector('.custom-rich-editor');
+                        if (existingEditor) {
+                            existingEditor.remove();
+                        }
+                        
+                        // Initialize our custom rich text editor
+                        createCustomRichEditor(textareaElement);
                     }
-                    
-                    tinymce.init({
-                        selector: '#productDescription',
-                        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-                        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-                        height: 200,
-                        menubar: false,
-                        branding: false,
-                        promotion: false,
-                    });
                 });
             }
         });
         
-        // Update saveProduct function to get content from TinyMCE
+        // Update saveProduct function to get content from custom editor
         const originalSaveProduct = window.saveProduct;
         window.saveProduct = function() {
-            // Get content from TinyMCE before submitting form
-            if (tinymce.get('productDescription')) {
-                document.getElementById('productDescription').value = tinymce.get('productDescription').getContent();
+            // Get content from the custom editor before submitting form
+            const editor = document.querySelector('.editor-content');
+            if (editor) {
+                document.getElementById('productDescription').value = editor.innerHTML;
             }
             
             // Call the original function
             originalSaveProduct();
         };
     </script>
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script src="/admin/js/rich-text-editor.js"></script>
 </body>
 </html> 

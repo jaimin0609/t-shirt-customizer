@@ -12,141 +12,60 @@
     <!-- Font Awesome for the basic editor -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- TinyMCE Complete Bundle  -->
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" integrity="sha256-Q5efEJ9LbVH8Ky/6iBQZ1PmVyQdT7QP7pVWa0ukIo1c=" crossorigin="anonymous"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM loaded, initializing TinyMCE...");
+            console.log("DOM loaded, initializing rich text editor...");
             
-            // Initialize TinyMCE with the complete bundle
-            if (typeof tinymce !== 'undefined') {
-                console.log("TinyMCE found, initializing...");
-                
-                // Simple initialization with minimal dependencies
-                tinymce.init({
-                    selector: '#productDescription',
-                    height: 300,
-                    base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2',
-                    suffix: '.min',
-                    promotion: false,
-                    branding: false,
-                    menubar: false,
-                    plugins: [
-                        'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
-                        'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                        'insertdatetime', 'table', 'wordcount'
-                    ],
-                    toolbar: 'undo redo | formatselect | ' +
-                        'bold italic | alignleft aligncenter alignright | ' +
-                        'bullist numlist | link',
-                    setup: function(editor) {
-                        editor.on('init', function() {
-                            console.log("TinyMCE initialized successfully");
-                        });
-                    }
-                }).then(function(editors) {
-                    console.log("TinyMCE promise resolved successfully", editors);
-                }).catch(function(error) {
-                    console.error("TinyMCE initialization failed:", error);
-                    console.log("Falling back to basic editor...");
-                    createBasicEditor();
-                });
-                
-                // Set a timeout to check if editor initialized properly
-                setTimeout(function() {
-                    const toolbar = document.querySelector('.tox-toolbar__primary');
-                    const editor = tinymce.get('productDescription');
-                    
-                    if (!toolbar || !editor) {
-                        console.warn("TinyMCE toolbar not found after timeout");
-                        document.getElementById('fixRichEditorBtn').style.display = 'inline-block';
-                        
-                        // If we have no editor at all, create a basic one
-                        if (!editor && !document.getElementById('basicEditor')) {
-                            console.log("No TinyMCE editor found, creating basic editor");
-                            createBasicEditor();
-                        }
-                    }
-                }, 3000);
-            } else {
-                console.error("TinyMCE not available, falling back to basic editor");
-                // Wait a moment to ensure DOM is fully loaded
-                setTimeout(createBasicEditor, 500);
-            }
+            // Any rich text editor initialization will be handled by rich-text-editor.js
+            
+            // Show the fix rich editor button in case there are any issues
+            setTimeout(function() {
+                const fixBtn = document.getElementById('fixRichEditorBtn');
+                if (fixBtn) {
+                    fixBtn.style.display = 'inline-block';
+                }
+            }, 2000);
         });
         
-        // Force TinyMCE initialization function (simplified)
-        function forceTinyMCE() {
-            console.log("Forcing TinyMCE reinitialization...");
+        // Fix the rich text editor if needed
+        function fixRichEditor() {
+            console.log("Fixing rich text editor...");
             
-            // Check if we're using the basic editor
-            const basicEditor = document.getElementById('basicEditor');
-            if (basicEditor) {
-                console.log("Basic editor already active, removing it first");
-                basicEditor.remove();
+            // Get the original textarea
+            const originalTextarea = document.getElementById('productDescription');
+            const existingValue = originalTextarea ? originalTextarea.value : '';
+            
+            // Show a loading message
+            const loadingText = document.createElement('div');
+            loadingText.textContent = 'Reloading rich text editor...';
+            loadingText.style.padding = '10px';
+            loadingText.style.color = 'blue';
+            
+            // Remove any existing custom editors
+            const existingEditor = document.querySelector('.custom-rich-editor');
+            if (existingEditor) {
+                existingEditor.parentNode.insertBefore(loadingText, existingEditor);
+                existingEditor.remove();
             }
             
-            // If TinyMCE is available, remove any instances first
-            if (typeof tinymce !== 'undefined') {
-                tinymce.remove('#productDescription');
+            // Show the original textarea temporarily
+            if (originalTextarea) {
+                originalTextarea.style.display = 'block';
+                originalTextarea.value = existingValue;
+            }
+            
+            // Reinitialize editor
+            setTimeout(function() {
+                createCustomRichEditor(originalTextarea);
                 
-                // Recreate textarea if needed
-                const textarea = document.getElementById('productDescription');
-                if (!textarea) {
-                    const newTextarea = document.createElement('textarea');
-                    newTextarea.id = 'productDescription';
-                    newTextarea.className = 'form-control';
-                    newTextarea.name = 'description';
-                    newTextarea.rows = '8';
-                    newTextarea.placeholder = 'Enter product description';
-                    newTextarea.required = true;
-                    
-                    // Find where to insert it
-                    const container = document.querySelector('.mb-4:has(label[for="productDescription"])');
-                    if (container) {
-                        // Insert after the label
-                        const label = container.querySelector('label');
-                        if (label) {
-                            label.after(newTextarea);
-                        } else {
-                            container.appendChild(newTextarea);
-                        }
-                    }
+                // Remove the loading text
+                if (loadingText.parentNode) {
+                    loadingText.parentNode.removeChild(loadingText);
                 }
                 
-                // Try to initialize with core features only
-                tinymce.init({
-                    selector: '#productDescription',
-                    height: 300, 
-                    base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.2',
-                    suffix: '.min',
-                    menubar: false,
-                    statusbar: false,
-                    branding: false,
-                    promotion: false,
-                    plugins: 'lists',
-                    toolbar: 'bold italic | bullist numlist',
-                    setup: function(editor) {
-                        editor.on('init', function() {
-                            console.log("TinyMCE reinitialized!");
-                        });
-                    }
-                }).then(function() {
-                    console.log("TinyMCE reinit successful");
-                    alert('Rich text editor successfully loaded!');
-                    // Hide the fix button
-                    document.getElementById('fixRichEditorBtn').style.display = 'none';
-                }).catch(function(error) {
-                    console.error("TinyMCE reinit failed:", error);
-                    createBasicEditor();
-                    alert('Could not initialize TinyMCE. Using basic editor instead.');
-                });
-            } else {
-                console.error("TinyMCE not available for forced initialization");
-                createBasicEditor();
-                alert('TinyMCE is not available. Using basic editor mode instead.');
-            }
+                console.log("Rich text editor reinitialized");
+                alert('Rich text editor successfully reloaded!');
+            }, 300);
         }
     </script>
 </head>
@@ -420,7 +339,7 @@
                                 <label for="productDescription" class="form-label fw-bold">Description</label>
                                 <textarea class="form-control" id="productDescription" name="description" rows="8" placeholder="Enter product description" required></textarea>
                                 <small class="text-muted">Use the formatting toolbar to style your product description with rich text features</small>
-                                <button type="button" id="fixRichEditorBtn" class="btn btn-sm btn-outline-secondary mt-2" onclick="forceTinyMCE()" style="display:none;">
+                                <button type="button" id="fixRichEditorBtn" class="btn btn-sm btn-outline-secondary mt-2" onclick="fixRichEditor()" style="display:none;">
                                     <i class="bi bi-tools"></i> Fix Rich Text Editor
                                 </button>
                             </div>
@@ -721,7 +640,7 @@
     <script src="/admin/js/language.js"></script>
     <script src="/admin/js/add-product.js"></script>
     <!-- Debug scripts for development - remove in production -->
-    <script src="/admin/js/debug-tinymce.js"></script>
+    <!-- script src="/admin/js/debug-tinymce.js"></script -->
 
     <script>
         function debugCategoryDropdown() {
@@ -827,28 +746,18 @@
             showToast('success', 'This is a test toast message');
         }
         
-        // Form submission handler to ensure we capture content from any editor type
+        // Form submission handler to ensure we capture content from the editor
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('addProductForm');
             if (form) {
                 form.addEventListener('submit', function(e) {
                     console.log("Form submit event triggered, capturing editor content");
                     
-                    // Handle TinyMCE content
-                    if (typeof tinymce !== 'undefined' && tinymce.get('productDescription')) {
-                        const content = tinymce.get('productDescription').getContent();
-                        document.getElementById('productDescription').value = content;
-                        console.log("Captured content from TinyMCE editor");
-                    }
-                    
-                    // Handle basic editor content
-                    const basicEditor = document.getElementById('basicEditor');
-                    if (basicEditor) {
-                        const contentArea = basicEditor.querySelector('[contenteditable=true]');
-                        if (contentArea) {
-                            document.getElementById('productDescription').value = contentArea.innerHTML;
-                            console.log("Captured content from basic editor");
-                        }
+                    // Handle custom editor content
+                    const editor = document.querySelector('.editor-content');
+                    if (editor) {
+                        document.getElementById('productDescription').value = editor.innerHTML;
+                        console.log("Captured content from custom rich text editor");
                     }
                 });
             }
@@ -917,112 +826,25 @@
     </script>
 
     <!-- Add these scripts right before the closing </body> tag, after other script imports -->
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script src="/admin/js/rich-text-editor.js"></script>
 
     <script>
-        // Create a basic editor if TinyMCE fails
-        function createBasicEditor() {
-            console.log("Creating basic editor fallback...");
-            
-            // Don't create multiple basic editors
-            if (document.getElementById('basicEditor')) {
-                return;
+        // Form submission handler to ensure we capture content from the editor
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('addProductForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log("Form submit event triggered, capturing editor content");
+                    
+                    // Handle custom editor content
+                    const editor = document.querySelector('.editor-content');
+                    if (editor) {
+                        document.getElementById('productDescription').value = editor.innerHTML;
+                        console.log("Captured content from custom rich text editor");
+                    }
+                });
             }
-            
-            const textarea = document.getElementById('productDescription');
-            if (!textarea) {
-                console.error("Product description textarea not found");
-                return;
-            }
-            
-            // Hide the textarea (keep it in DOM for form submission)
-            textarea.style.display = 'none';
-            
-            // Create a container for our basic editor
-            const editorContainer = document.createElement('div');
-            editorContainer.id = 'basicEditor';
-            editorContainer.className = 'basic-editor-container';
-            editorContainer.style.border = '1px solid #ced4da';
-            editorContainer.style.borderRadius = '0.25rem';
-            editorContainer.style.marginBottom = '1rem';
-            
-            // Create toolbar for basic formatting
-            const toolbar = document.createElement('div');
-            toolbar.className = 'basic-editor-toolbar';
-            toolbar.style.backgroundColor = '#f1f1f1';
-            toolbar.style.padding = '8px';
-            toolbar.style.borderBottom = '1px solid #ddd';
-            
-            // Add basic formatting buttons
-            const boldBtn = createToolbarButton('Bold', '<i class="fa fa-bold"></i>');
-            boldBtn.addEventListener('click', () => document.execCommand('bold', false, null));
-            
-            const italicBtn = createToolbarButton('Italic', '<i class="fa fa-italic"></i>');
-            italicBtn.addEventListener('click', () => document.execCommand('italic', false, null));
-            
-            const linkBtn = createToolbarButton('Link', '<i class="fa fa-link"></i>');
-            linkBtn.addEventListener('click', () => {
-                const url = prompt('Enter URL:', 'http://');
-                if (url) document.execCommand('createLink', false, url);
-            });
-            
-            const ulBtn = createToolbarButton('Bullet List', '<i class="fa fa-list-ul"></i>');
-            ulBtn.addEventListener('click', () => document.execCommand('insertUnorderedList', false, null));
-            
-            const olBtn = createToolbarButton('Numbered List', '<i class="fa fa-list-ol"></i>');
-            olBtn.addEventListener('click', () => document.execCommand('insertOrderedList', false, null));
-            
-            // Add notice about using basic editor
-            const notice = document.createElement('div');
-            notice.style.fontSize = '12px';
-            notice.style.color = '#666';
-            notice.style.float = 'right';
-            notice.style.padding = '5px';
-            notice.innerHTML = 'Basic Editor Mode';
-            
-            // Add all buttons to toolbar
-            toolbar.appendChild(boldBtn);
-            toolbar.appendChild(italicBtn);
-            toolbar.appendChild(linkBtn);
-            toolbar.appendChild(ulBtn);
-            toolbar.appendChild(olBtn);
-            toolbar.appendChild(notice);
-            
-            // Create editable content area
-            const contentArea = document.createElement('div');
-            contentArea.className = 'basic-editor-content';
-            contentArea.setAttribute('contenteditable', 'true');
-            contentArea.style.padding = '10px';
-            contentArea.style.minHeight = '300px';
-            contentArea.style.outline = 'none';
-            contentArea.innerHTML = textarea.value; // Copy existing content
-            
-            // Keep textarea in sync with editable div
-            contentArea.addEventListener('input', function() {
-                textarea.value = contentArea.innerHTML;
-            });
-            
-            // Add toolbar and content area to container
-            editorContainer.appendChild(toolbar);
-            editorContainer.appendChild(contentArea);
-            
-            // Insert the basic editor after the textarea
-            textarea.parentNode.insertBefore(editorContainer, textarea.nextSibling);
-            
-            console.log("Basic editor created successfully!");
-        }
-        
-        // Helper function to create toolbar buttons
-        function createToolbarButton(title, icon) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-sm btn-outline-secondary mr-1';
-            button.title = title;
-            button.innerHTML = icon;
-            button.style.marginRight = '5px';
-            return button;
-        }
+        });
     </script>
 </body>
 </html>

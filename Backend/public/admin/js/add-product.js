@@ -49,14 +49,21 @@ function initializeForm() {
     document.getElementById('productStatus').checked = true;
     document.getElementById('productFeatured').checked = false;
     
-    // Reset form handler - to properly reset TinyMCE when form is reset
+    // Reset form handler - to reset the rich text editor when form is reset
     const form = document.getElementById('addProductForm');
     if (form) {
         form.addEventListener('reset', function() {
-            // Give time for the form to reset, then reset TinyMCE
+            // Reset the custom rich text editor if it exists
             setTimeout(() => {
-                if (tinymce.get('productDescription')) {
-                    tinymce.get('productDescription').setContent('');
+                const editorContent = document.querySelector('.editor-content');
+                if (editorContent) {
+                    editorContent.innerHTML = '';
+                    
+                    // Also reset the textarea
+                    const textarea = document.getElementById('productDescription');
+                    if (textarea) {
+                        textarea.value = '';
+                    }
                 }
             }, 100);
         });
@@ -543,20 +550,26 @@ function validateProductForm() {
     
     // Validate description (at least some content)
     let description = '';
-    if (tinymce.get('productDescription')) {
-        description = tinymce.get('productDescription').getContent();
+    const editorContent = document.querySelector('.editor-content');
+    if (editorContent) {
+        description = editorContent.innerHTML;
+        console.log("Got description from custom editor:", description.substring(0, 50) + "...");
     } else {
         const descElement = document.getElementById('productDescription');
         if (descElement) {
             description = descElement.value;
+            console.log("Got description from textarea:", description.substring(0, 50) + "...");
         }
     }
     
     if (!description.trim()) {
         errors.push('Product description is required');
-        document.querySelector('.tox-tinymce') ? 
-            document.querySelector('.tox-tinymce').classList.add('border', 'border-danger') : 
+        const editorContainer = document.querySelector('.custom-rich-editor');
+        if (editorContainer) {
+            editorContainer.classList.add('border', 'border-danger');
+        } else {
             document.getElementById('productDescription')?.classList.add('is-invalid');
+        }
     }
     
     // Log validation results
@@ -624,8 +637,19 @@ async function handleFormSubmit(e) {
         // This avoids issues with disabled fields, checkboxes, etc.
         formData.append('name', document.getElementById('productName').value);
         
-        // Get content from TinyMCE editor instead of directly from textarea
-        formData.append('description', tinymce.get('productDescription') ? tinymce.get('productDescription').getContent() : document.getElementById('productDescription').value);
+        // Get the description from the custom rich text editor
+        let description = '';
+        const editorContent = document.querySelector('.editor-content');
+        if (editorContent) {
+            description = editorContent.innerHTML;
+            console.log("Got description from custom editor:", description.substring(0, 50) + "...");
+        } else {
+            description = document.getElementById('productDescription').value;
+            console.log("Got description from textarea:", description.substring(0, 50) + "...");
+        }
+        
+        // Add description to form data
+        formData.append('description', description);
         
         formData.append('price', document.getElementById('productPrice').value);
         formData.append('stock', document.getElementById('productStock').value);

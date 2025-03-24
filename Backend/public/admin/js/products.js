@@ -132,17 +132,10 @@ function editProduct(id) {
     document.getElementById('productStatus').value = product.status || 'active';
     document.getElementById('productCustomizable').checked = product.isCustomizable || false;
     
-    // Set description in the textarea
-    const descriptionTextarea = document.getElementById('productDescription');
-    if (descriptionTextarea) {
-        descriptionTextarea.value = product.description || '';
-        
-        // Also update TinyMCE content if initialized
-        setTimeout(() => {
-            if (tinymce.get('productDescription')) {
-                tinymce.get('productDescription').setContent(product.description || '');
-            }
-        }, 300); // Delay slightly to ensure TinyMCE has initialized
+    // Set description value directly (the modal's shown.bs.modal event will initialize the editor)
+    const descriptionElement = document.getElementById('productDescription');
+    if (descriptionElement && product.description) {
+        descriptionElement.value = product.description;
     }
     
     // Show image preview if available
@@ -172,9 +165,10 @@ async function saveProduct() {
         const form = document.getElementById('productForm');
         const formData = new FormData(form);
         
-        // Get TinyMCE content if editor is initialized
-        if (tinymce.get('productDescription')) {
-            formData.set('description', tinymce.get('productDescription').getContent());
+        // Get content from custom editor if it exists
+        const editorContent = document.querySelector('.editor-content');
+        if (editorContent) {
+            formData.set('description', editorContent.innerHTML);
         }
         
         // Check if customizable is checked and add it to formData
