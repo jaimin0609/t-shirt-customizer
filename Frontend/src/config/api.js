@@ -5,14 +5,14 @@
 
 // Get the base API URL from environment variables or use fallback for Vercel deployment
 export const API_URL = import.meta.env.VITE_API_URL || 
-                       'https://t-shirt-customizer-backend.onrender.com/api';
+                       'https://t-shirt-customizer-backend.onrender.com';
 
 // Log the API URL being used
 console.log('Using API URL:', API_URL); 
 
 // Fallback URL in case the main one is not available
 export const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL || 
-                                'https://t-shirt-customizer-backend.onrender.com/api';
+                                'https://t-shirt-customizer-backend.onrender.com';
 
 // Log configuration in development only
 if (import.meta.env.DEV) {
@@ -61,7 +61,7 @@ export const getWorkingApiUrl = async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       
-      const response = await fetch(`${url}/health`, {
+      const response = await fetch(`${url}/api/health`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

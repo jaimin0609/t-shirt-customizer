@@ -254,7 +254,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
       setLoading(true);
       console.log('Refreshing auth token...');
 
-      const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
+      const response = await axios.post(`${API_URL}/api/auth/refresh-token`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -293,7 +293,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
 
     try {
       console.log('Logging in with API URL:', API_URL);
-      const response = await axios.post(`${API_URL}/auth/login`,
+      const response = await axios.post(`${API_URL}/api/auth/login`,
         { email, password },
         {
           headers: {
@@ -360,7 +360,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
     try {
       console.log('Signing up with API URL:', API_URL);
       // Use the full API URL instead of relative path
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
@@ -408,7 +408,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
     if (token) {
       try {
         // Use fire-and-forget approach to avoid blocking logout on API errors
-        fetch(`${API_URL}/auth/logout`, {
+        fetch(`${API_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -455,7 +455,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
     try {
       console.log('Updating profile with API URL:', API_URL);
       // Use the full API URL instead of relative path
-      const response = await fetch(`${API_URL}/users/profile`, {
+      const response = await fetch(`${API_URL}/api/users/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
