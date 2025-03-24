@@ -1,20 +1,9 @@
-// Simple static config to avoid import issues
-const config = {
-  plugins: [
-    // React plugin (simplified)
-    {
-      name: 'vite:react',
-      config: () => ({
-        jsx: {
-          runtime: 'automatic'
-        }
-      }),
-      transform(code, id) {
-        // Basic pass-through transformer
-        return code;
-      }
-    }
-  ],
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
   
   build: {
     outDir: 'dist',
@@ -25,7 +14,8 @@ const config = {
           vendor: [
             'react',
             'react-dom',
-            'react-router-dom'
+            'react-router-dom',
+            'react-toastify'
           ]
         }
       }
@@ -34,7 +24,7 @@ const config = {
   
   resolve: {
     alias: {
-      '@': '/src'
+      '@': path.resolve(__dirname, './src')
     }
   },
   
@@ -42,7 +32,4 @@ const config = {
     port: 3000,
     cors: true
   }
-};
-
-// Export the config directly
-export default config;
+});
