@@ -434,6 +434,19 @@ export const mixins = {
 };
 
 // =============================================================================
+// Style System
+// =============================================================================
+
+export const styleSystem = {
+  createStyles: (styles) => {
+    return Object.entries(styles).reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+  }
+};
+
+// =============================================================================
 // Export All Styles
 // =============================================================================
 
@@ -460,6 +473,8 @@ const styleSystem = {
   getTheme,
   initializeTheme,
   toggleTheme,
+  // Style System
+  createStyles,
 };
 
 export default styleSystem; 
