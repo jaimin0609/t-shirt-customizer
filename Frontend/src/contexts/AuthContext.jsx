@@ -296,8 +296,11 @@ export const AuthProvider = ({ children, initialState = null }) => {
       const response = await axios.post(`${API_URL}/auth/login`,
         { email, password },
         {
-          headers: { 'Content-Type': 'application/json' },
-          withCredentials: false
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          withCredentials: true // Enable sending cookies for CORS
         }
       );
 
@@ -331,7 +334,7 @@ export const AuthProvider = ({ children, initialState = null }) => {
       return { success: true };
     } catch (err) {
       console.error('Login error:', err);
-      let errorMessage = 'Login failed';
+      let errorMessage = 'Something went wrong';
 
       // Try to extract error message from response
       if (err.response && err.response.data) {
