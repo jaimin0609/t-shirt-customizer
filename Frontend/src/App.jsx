@@ -33,7 +33,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
-import ProtectedRoute from './components/Auth/ProtectedRoute';
+import ProtectedRoute from './components/Router/ProtectedRoute';
 
 // Loading spinner for Suspense fallback
 const LoadingSpinner = () => (
