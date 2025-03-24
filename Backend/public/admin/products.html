@@ -369,7 +369,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                    <button type="button" class="btn btn-primary" id="saveProductBtn" onclick="saveProduct()">Save Product</button>
                 </div>
             </div>
         </div>
@@ -398,18 +398,43 @@
     <script src="/admin/js/products.js"></script>
     <script src="/admin/js/auth.js"></script>
     <script>
+        // Debugging script to verify loading of components
+        console.log('====== PRODUCTS PAGE DEBUG ======');
+        console.log('API_URL:', window.API_URL);
+        console.log('editProduct function exists:', typeof window.editProduct === 'function');
+        console.log('deleteProduct function exists:', typeof window.deleteProduct === 'function');
+        
         // Wait for the module to load and initialize
         window.addEventListener('load', function() {
+            console.log('Window loaded, checking if product functions exist');
+            console.log('editProduct function:', typeof window.editProduct === 'function');
+            console.log('deleteProduct function:', typeof window.deleteProduct === 'function');
+            
             if (!window.editProduct || !window.deleteProduct) {
                 console.error('Product management functions not loaded properly');
+                
+                // Try to restore functions if available in scope but not on window
+                if (typeof editProduct === 'function' && typeof deleteProduct === 'function') {
+                    console.log('Functions found in scope, adding to window object');
+                    window.editProduct = editProduct;
+                    window.deleteProduct = deleteProduct;
+                }
             }
+            
+            // Verify DOM elements
+            console.log('productsTableBody exists:', !!document.getElementById('productsTableBody'));
+            console.log('productModal exists:', !!document.getElementById('productModal'));
+            console.log('saveProductBtn exists:', !!document.getElementById('saveProductBtn'));
         });
 
         // Initialize custom rich text editor on modal shown
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            
             const productModal = document.getElementById('productModal');
             if (productModal) {
                 productModal.addEventListener('shown.bs.modal', function() {
+                    console.log('Product modal shown, initializing rich text editor');
                     const textareaElement = document.getElementById('productDescription');
                     if (textareaElement) {
                         // Check if editor already exists and remove if needed
@@ -422,20 +447,36 @@
                         createCustomRichEditor(textareaElement);
                     }
                 });
+            } else {
+                console.error('Product modal not found in DOM');
             }
         });
         
         // Update saveProduct function to get content from custom editor
         const originalSaveProduct = window.saveProduct;
         window.saveProduct = function() {
+            console.log('Save product called');
+            
             // Get content from the custom editor before submitting form
             const editor = document.querySelector('.editor-content');
             if (editor) {
                 document.getElementById('productDescription').value = editor.innerHTML;
+                console.log('Editor content copied to textarea');
+            } else {
+                console.log('No editor content found');
             }
             
             // Call the original function
-            originalSaveProduct();
+            if (typeof originalSaveProduct === 'function') {
+                console.log('Calling original saveProduct function');
+                originalSaveProduct();
+            } else {
+                console.error('Original saveProduct function not found');
+                // Fallback implementation
+                console.log('Using fallback implementation');
+                const form = document.getElementById('productForm');
+                if (form) form.submit();
+            }
         };
     </script>
     <script src="/admin/js/rich-text-editor.js"></script>

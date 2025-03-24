@@ -17,37 +17,40 @@ if (typeof window.CLOUDINARY_CLOUD_NAME === 'undefined') {
 let products = [];
 let editingProductId = null;
 
-// Make functions globally available
-window.showAddProductModal = showAddProductModal;
+// Make necessary functions available globally
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
+window.showAddProductModal = showAddProductModal;
 window.saveProduct = saveProduct;
 
 // Load Products
 async function loadProducts(searchTerm = '') {
     try {
         console.log('Loading products...');
+        
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('No authentication token found');
-            showToast('error', 'Authentication required');
-            window.location.href = '/admin/login.html';
+            showToast('error', 'Authentication required. Please log in.');
             return;
         }
         
-        // Build query string
-        let url = `${window.API_URL}/products`;
-        if (searchTerm) {
-            url += `?search=${encodeURIComponent(searchTerm)}`;
-        }
+        // Show loading indicator
+        document.getElementById('productsTableBody').innerHTML = '<tr><td colspan="8" class="text-center">Loading products...</td></tr>';
+        
+        // Get API URL from config
+        const apiUrl = window.API_URL || '/api';
+        const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+        const url = `${apiUrl}/products${searchParam}`;
         
         console.log('Fetching products from:', url);
-        console.log('Using token:', token.substring(0, 10) + '...');
+        console.log('Using token (first 10 chars):', token.substring(0, 10) + '...');
         
         // Fetch products
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
             }
         });
         
@@ -55,49 +58,46 @@ async function loadProducts(searchTerm = '') {
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error(`Failed to load products: ${response.status} ${response.statusText} - ${errorText}`);
+            throw new Error(`Failed to load products: ${response.status} ${response.statusText}`);
         }
         
-        // Parse response
         const data = await response.json();
-        console.log('Received data:', data);
+        console.log('Products data received:', typeof data, Array.isArray(data) ? data.length : (data.products ? data.products.length : 'No products array'));
         
-        // Handle both array and pagination object formats
-        const products = Array.isArray(data) ? data : (data.products || []);
-        console.log(`Processing ${products.length} products:`, products);
+        // Handle different API response formats
+        products = data.products || data; 
+        
+        if (!Array.isArray(products)) {
+            console.error('Products is not an array:', products);
+            products = [];
+        }
         
         // Display products
         displayProducts(products);
+        
+        // Debug info
+        console.log(`Loaded ${products.length} products`);
     } catch (error) {
         console.error('Error loading products:', error);
-        showToast('error', 'Failed to load products: ' + error.message);
-        
-        // Display error message in the table
-        const tableBody = document.getElementById('productsTableBody');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center text-danger">
-                        Error loading products: ${error.message}
-                    </td>
-                </tr>
-            `;
-        }
+        document.getElementById('productsTableBody').innerHTML = 
+            `<tr><td colspan="8" class="text-center text-danger">Error loading products: ${error.message}</td></tr>`;
+        showToast('error', 'Failed to load products. ' + error.message);
     }
 }
 
 // Show Add Product Modal
 function showAddProductModal() {
+    // Reset form and editing state
     editingProductId = null;
-    const form = document.getElementById('productForm');
-    const imagePreview = document.getElementById('imagePreview');
-    const imagePreviewElement = document.getElementById('imagePreviewElement');
     
-    // Reset form and clear image preview
+    const form = document.getElementById('productForm');
     if (form) {
         form.reset();
+        
+        // Reset image preview
+        const imagePreview = document.getElementById('imagePreview');
+        const imagePreviewElement = document.getElementById('imagePreviewElement');
+        
         if (imagePreview && imagePreviewElement) {
             imagePreview.style.display = 'none';
             imagePreviewElement.src = '';
@@ -106,43 +106,65 @@ function showAddProductModal() {
     
     document.getElementById('productModalTitle').textContent = 'Add Product';
     
+    // Show modal
     const modal = new bootstrap.Modal(document.getElementById('productModal'));
     modal.show();
 }
 
 // Edit Product
 function editProduct(id) {
+    console.log(`Edit product called with ID: ${id}`);
+    
+    // Set editing state
     editingProductId = id;
     document.getElementById('productModalTitle').textContent = 'Edit Product';
     
     // Find the product in the products array
-    const product = products.find(p => p.id === id);
+    const product = products.find(p => p.id == id || p.id == parseInt(id)); // Handle string/int ID
     if (!product) {
         console.error(`Product with ID ${id} not found!`);
+        showToast('error', `Product with ID ${id} not found!`);
         return;
     }
+    
+    console.log('Product being edited:', product);
     
     // Populate the form fields
     document.getElementById('productName').value = product.name || '';
     document.getElementById('productPrice').value = product.price || '';
     document.getElementById('productStock').value = product.stock || '';
     document.getElementById('productCategory').value = product.category || '';
-    document.getElementById('productGender').value = product.gender || 'unisex';
-    document.getElementById('productAgeGroup').value = product.ageGroup || 'adult';
-    document.getElementById('productStatus').value = product.status || 'active';
-    document.getElementById('productCustomizable').checked = product.isCustomizable || false;
     
-    // Set description value directly (the modal's shown.bs.modal event will initialize the editor)
+    // Populate optional fields if they exist
+    const genderElement = document.getElementById('productGender');
+    if (genderElement) genderElement.value = product.gender || 'unisex';
+    
+    const ageGroupElement = document.getElementById('productAgeGroup');
+    if (ageGroupElement) ageGroupElement.value = product.ageGroup || 'adult';
+    
+    const statusElement = document.getElementById('productStatus');
+    if (statusElement) statusElement.value = product.status || 'active';
+    
+    const customizableElement = document.getElementById('productCustomizable');
+    if (customizableElement) customizableElement.checked = product.isCustomizable || false;
+    
+    // Set description value
     const descriptionElement = document.getElementById('productDescription');
     if (descriptionElement && product.description) {
         descriptionElement.value = product.description;
+        
+        // If rich text editor is being used, we need to update its content
+        const editorContent = document.querySelector('.editor-content');
+        if (editorContent) {
+            editorContent.innerHTML = product.description;
+        }
     }
     
     // Show image preview if available
     const imagePreview = document.getElementById('imagePreview');
     const imagePreviewElement = document.getElementById('imagePreviewElement');
     if (imagePreview && imagePreviewElement && product.image) {
-        imagePreviewElement.src = product.image;
+        imagePreviewElement.src = product.image.startsWith('http') ? product.image : `/${product.image.replace(/^\//g, '')}`;
         imagePreview.style.display = 'block';
     } else if (imagePreview) {
         imagePreview.style.display = 'none';
@@ -162,31 +184,39 @@ async function saveProduct() {
             return;
         }
         
+        // Get form data
         const form = document.getElementById('productForm');
         const formData = new FormData(form);
         
-        // Get content from custom editor if it exists
+        // Get content from rich text editor if it exists
         const editorContent = document.querySelector('.editor-content');
         if (editorContent) {
             formData.set('description', editorContent.innerHTML);
         }
         
         // Check if customizable is checked and add it to formData
-        const isCustomizable = document.getElementById('productCustomizable').checked;
-        formData.set('isCustomizable', isCustomizable);
-        
-        // Add or remove the isCustomizable field
-        if (!formData.has('isCustomizable')) {
-            formData.append('isCustomizable', false);
+        const customizableElement = document.getElementById('productCustomizable');
+        if (customizableElement) {
+            formData.set('isCustomizable', customizableElement.checked);
         }
         
         // Prepare URL and method based on whether we're editing or adding
-        let url = `${window.API_URL}/products`;
+        const apiUrl = window.API_URL || '/api';
+        let url = `${apiUrl}/products`;
         let method = 'POST';
         
         if (editingProductId) {
-            url = `${window.API_URL}/products/${editingProductId}`;
+            url = `${apiUrl}/products/${editingProductId}`;
             method = 'PUT';
+        }
+        
+        console.log(`${method} request to ${url}`);
+        
+        // Show saving state
+        const saveButton = document.getElementById('saveProductBtn');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
         }
         
         // Send request
@@ -199,7 +229,7 @@ async function saveProduct() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to save product');
+            throw new Error(`Failed to save product: ${response.statusText}`);
         }
         
         // Show success message
@@ -210,13 +240,22 @@ async function saveProduct() {
         loadProducts();
     } catch (error) {
         console.error('Error saving product:', error);
-        showToast('error', 'Failed to save product');
+        showToast('error', error.message || 'Failed to save product');
+    } finally {
+        // Reset save button
+        const saveButton = document.getElementById('saveProductBtn');
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Product';
+        }
     }
 }
 
 // Delete Product
 async function deleteProduct(productId) {
     try {
+        console.log(`Delete product called with ID: ${productId}`);
+        
         if (!confirm('Are you sure you want to delete this product?')) {
             return;
         }
@@ -227,124 +266,44 @@ async function deleteProduct(productId) {
             return;
         }
         
-        console.log(`Deleting product ${productId}...`);
-        
-        // Debug: Log the full URL and headers being sent
-        const deleteUrl = `${window.API_URL}/products/${productId}`;
-        console.log('DELETE request to:', deleteUrl);
-        console.log('Authorization token (first 10 chars):', token.substring(0, 10) + '...');
-        
-        // First try to fetch the product to confirm it exists
-        try {
-            const checkResponse = await fetch(`${window.API_URL}/products/${productId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (!checkResponse.ok) {
-                console.error(`Product ${productId} not found or not accessible`);
-                throw new Error(`Product not found or not accessible. Status: ${checkResponse.status}`);
-            }
-            
-            const productData = await checkResponse.json();
-            console.log(`Product ${productId} exists:`, productData.name || 'Unknown name');
-            
-            // Check if product has variants
-            if (productData.hasVariants) {
-                console.log('Product has variants that will be deleted');
-            }
-        } catch (checkError) {
-            console.error('Error checking product existence:', checkError);
-            // Continue with delete anyway
-        }
-        
-        // Show loading state
-        const deleteButton = document.querySelector(`button[onclick*="deleteProduct(${productId})"]`);
+        // Show loading state on the button
+        const deleteButton = document.querySelector(`.delete-btn[data-id="${productId}"]`);
         if (deleteButton) {
             deleteButton.disabled = true;
-            deleteButton.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         }
         
-        // Attempt to delete the product
-        const response = await fetch(deleteUrl, {
+        // Prepare request
+        const apiUrl = window.API_URL || '/api';
+        const url = `${apiUrl}/products/${productId}`;
+        
+        console.log(`DELETE request to ${url}`);
+        
+        // Send delete request
+        const response = await fetch(url, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
             }
         });
         
-        // Check response status
-        console.log('Delete response status:', response.status);
-        console.log('Delete response headers:', Object.fromEntries(response.headers.entries()));
-        
-        // Try to parse error message from response when available
-        let errorMessage = 'Failed to delete product';
-        let responseData = null;
-        
-        // Handle different error cases
         if (!response.ok) {
-            // Try to get detailed error from JSON response
-            try {
-                const errorData = await response.json();
-                responseData = errorData;
-                errorMessage = errorData.message || errorMessage;
-                console.error('Server error details:', errorData);
-                
-                // Format user-friendly error messages
-                if (errorData.table === 'ProductVariants') {
-                    errorMessage = 'Cannot delete product because it still has variants. Please delete all variants first.';
-                } else if (errorData.table === 'OrderItems') {
-                    errorMessage = 'Cannot delete product because it appears in customer orders.';
-                }
-                
-                // Add more detailed context if available
-                if (errorData.error && typeof errorData.error === 'string' && errorData.error.includes('Key')) {
-                    console.log('Detailed error information available');
-                }
-            } catch (parseError) {
-                // If not JSON, try to get text
-                try {
-                    const errorText = await response.text();
-                    console.error('Server response (text):', errorText);
-                } catch (textError) {
-                    console.error('Could not parse error response:', textError);
-                }
-            }
-            
-            // Handle specific HTTP status codes
-            if (response.status === 401 || response.status === 403) {
-                errorMessage = 'You do not have permission to delete this product';
-            } else if (response.status === 404) {
-                errorMessage = 'Product not found. It may have been already deleted.';
-            } else if (response.status === 500) {
-                errorMessage = 'Server error while deleting product. Try again later.';
-            }
-            
-            throw new Error(errorMessage);
-        } else {
-            // Successfully deleted
-            try {
-                // Try to parse success response
-                responseData = await response.json();
-                console.log('Success response:', responseData);
-            } catch (e) {
-                console.log('No JSON in success response (expected for 204 No Content)');
-            }
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to delete product: ${response.statusText}`);
         }
         
-        console.log('Product deleted successfully');
+        // Show success message
         showToast('success', 'Product deleted successfully');
-        loadProducts(); // Reload the table
+        
+        // Refresh product list
+        loadProducts();
     } catch (error) {
         console.error('Error deleting product:', error);
         showToast('error', error.message || 'Failed to delete product');
-    } finally {
-        // Reset any UI elements that were changed
-        const deleteButton = document.querySelector(`button[onclick*="deleteProduct(${productId})"]`);
+        
+        // Reset button state
+        const deleteButton = document.querySelector(`.delete-btn[data-id="${productId}"]`);
         if (deleteButton) {
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
@@ -352,10 +311,90 @@ async function deleteProduct(productId) {
     }
 }
 
+// Display Products
+function displayProducts(productsToDisplay) {
+    const tableBody = document.getElementById('productsTableBody');
+    if (!tableBody) return;
+    
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
+    // Check if we have products
+    if (!productsToDisplay || productsToDisplay.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No products found</td></tr>';
+        return;
+    }
+    
+    console.log('Displaying products:', productsToDisplay.length);
+    
+    // Create rows for each product
+    productsToDisplay.forEach(product => {
+        const row = document.createElement('tr');
+        
+        // Format image URL properly
+        let imageUrl = product.image || '/admin/img/placeholder.png';
+        if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+            imageUrl = '/' + imageUrl;
+        }
+        
+        // Create row content
+        row.innerHTML = `
+            <td>${product.id}</td>
+            <td>
+                <img src="${imageUrl}" alt="${product.name}" class="thumbnail" 
+                    style="width: 50px; height: 50px; object-fit: cover;">
+            </td>
+            <td>${product.name}</td>
+            <td>${product.category || 'Uncategorized'}</td>
+            <td>$${parseFloat(product.price).toFixed(2)}</td>
+            <td>${product.stock}</td>
+            <td>
+                <span class="badge bg-${product.status === 'active' ? 'success' : 'secondary'}">
+                    ${product.status || 'active'}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-primary me-1 edit-btn" data-id="${product.id}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-danger delete-btn" data-id="${product.id}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Attach event listeners to edit and delete buttons after adding to DOM
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-id');
+            editProduct(productId);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-id');
+            deleteProduct(productId);
+        });
+    });
+    
+    console.log('Product display complete, attached event listeners');
+}
+
 // Show Toast Notification
 function showToast(type, message) {
-    const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+    // Create toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
     
+    // Create toast
     const toast = document.createElement('div');
     toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
     toast.setAttribute('role', 'alert');
@@ -367,12 +406,14 @@ function showToast(type, message) {
             <div class="toast-body">
                 ${message}
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
     
     toastContainer.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
+    
+    // Initialize and show toast
+    const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
     bsToast.show();
     
     // Remove toast after it's hidden
@@ -381,579 +422,50 @@ function showToast(type, message) {
     });
 }
 
-function createToastContainer() {
-    const container = document.createElement('div');
-    container.id = 'toastContainer';
-    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    document.body.appendChild(container);
-    return container;
+// Handle Search Input
+function handleSearch() {
+    const searchTerm = document.getElementById('navbarSearch').value.trim();
+    loadProducts(searchTerm);
 }
 
-// Initialize when document is ready
+// Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Loading products.js...');
+    console.log('Initializing products page...');
+    
+    // Load products
     loadProducts();
     
-    // Set up event listeners for search and filters if needed
+    // Set up search input
     const searchInput = document.getElementById('navbarSearch');
     if (searchInput) {
-        searchInput.addEventListener('input', debounce(function() {
-            loadProducts(this.value);
-        }, 500));
-    }
-
-    const productImage = document.getElementById('productImage');
-    const imagePreview = document.getElementById('imagePreview');
-    const imagePreviewElement = document.getElementById('imagePreviewElement');
-
-    if (productImage) {
-        productImage.addEventListener('change', function(e) {
-            console.log('Image file selected:', e.target.files[0]);
-            const file = e.target.files[0];
-            
-            if (file) {
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    console.error('Selected file is not an image');
-                    showToast('error', 'Please select an image file');
-                    productImage.value = '';
-                    imagePreview.style.display = 'none';
-                    return;
-                }
-                
-                // Validate file size (5MB limit)
-                if (file.size > 5 * 1024 * 1024) {
-                    console.error('File size exceeds 5MB limit');
-                    showToast('error', 'Image size should be less than 5MB');
-                    productImage.value = '';
-                    imagePreview.style.display = 'none';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    console.log('Image loaded successfully');
-                    imagePreviewElement.src = e.target.result;
-                    imagePreview.style.display = 'block';
-                };
-                
-                reader.onerror = function(e) {
-                    console.error('Error reading file:', e);
-                    showToast('error', 'Error reading image file');
-                    imagePreview.style.display = 'none';
-                };
-                
-                reader.readAsDataURL(file);
-            } else {
-                imagePreview.style.display = 'none';
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                handleSearch();
             }
         });
-    } else {
-        console.error('Product image input not found');
-    }
-});
-
-// Display Products
-function displayProducts(products) {
-    const tableBody = document.getElementById('productsTableBody');
-    if (!tableBody) {
-        console.error('Products table body not found!');
-        return;
     }
     
-    if (!products || products.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center">No products found</td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tableBody.innerHTML = '';
-    products.forEach(product => {
-        // Get the main image from either images array or legacy image field
-        let mainImage = '/admin/assets/placeholder.png';
-        let originalImagePath = null; // Store original for debugging
-        
-        try {
-            // Store all information about available images for debugging
-            const imageInfo = {
-                hasImagesArray: !!product.images,
-                imagesType: typeof product.images,
-                imagesContent: product.images,
-                legacyImage: product.image,
-                productId: product.id
-            };
-            console.log(`📷 Product ${product.id} image info:`, imageInfo);
-            
-            // Handle different image data formats
-            if (product.images) {
-                let imagesArray = product.images;
-                
-                // If it's a string, try to parse it as JSON
-                if (typeof imagesArray === 'string') {
-                    try {
-                        imagesArray = JSON.parse(imagesArray);
-                        console.log(`Parsed images JSON for product ${product.id}:`, imagesArray);
-                    } catch (e) {
-                        console.warn(`Failed to parse images JSON for product ${product.id}:`, e);
-                    }
-                }
-                
-                // If we now have an array with contents, use the first image
-                if (Array.isArray(imagesArray) && imagesArray.length > 0) {
-                    // Filter out any null/undefined/empty values
-                    const validImages = imagesArray.filter(img => img);
-                    if (validImages.length > 0) {
-                        mainImage = validImages[0];
-                        originalImagePath = mainImage; // Store original path
-                        console.log(`Using image from images array: ${mainImage}`);
-                    }
-                }
-                // If images is an object with properties (like {front: 'url', back: 'url'})
-                else if (imagesArray && typeof imagesArray === 'object' && !Array.isArray(imagesArray)) {
-                    // Try common image property names
-                    const imageValue = imagesArray.front || imagesArray.main || imagesArray.default || imagesArray.url || Object.values(imagesArray)[0];
-                    if (imageValue) {
-                        mainImage = imageValue;
-                        originalImagePath = mainImage; // Store original path
-                        console.log(`Using image from images object property: ${mainImage}`);
-                    }
-                }
-            }
-            
-            // Fallback to the legacy image field if images array didn't work
-            if (mainImage === '/admin/assets/placeholder.png' && product.image) {
-                mainImage = product.image;
-                originalImagePath = mainImage; // Store original path
-                console.log(`Using legacy image field: ${mainImage}`);
-            }
-            
-            // ⚠️ CRITICAL: Process the image URL correctly
-            if (mainImage && typeof mainImage === 'string') {
-                console.log(`Processing image URL for product ${product.id}. Original:`, mainImage);
-                
-                // Handle different image URL formats
-                if (mainImage.includes('cloudinary.com') || mainImage.includes('res.cloudinary.com')) {
-                    // Already a full Cloudinary URL, ensure it uses HTTPS
-                    if (mainImage.startsWith('http://')) {
-                        mainImage = mainImage.replace('http://', 'https://');
-                    }
-                    console.log(`✅ Using Cloudinary URL: ${mainImage}`);
-                }
-                else if (mainImage.startsWith('http') || mainImage.startsWith('https')) {
-                    // Already a full URL, no change needed
-                    console.log(`✅ Using absolute URL: ${mainImage}`);
-                } 
-                else if (mainImage.startsWith('data:image')) {
-                    // Data URL, no change needed
-                    console.log(`✅ Using data URL (truncated): ${mainImage.substring(0, 30)}...`);
-                } 
-                // Check for Cloudinary ID patterns - crucial for persistence
-                else if (mainImage.includes('/product-') || mainImage.includes('/v1/') || 
-                         mainImage.includes('/upload/') || mainImage.includes('images-')) {
-                    // This is likely a Cloudinary image with a partial path
-                    // Extract the ID/filename part
-                    let cloudinaryId = mainImage;
-                    
-                    // If it's a path with slashes, extract the last part as the filename
-                    if (mainImage.includes('/')) {
-                        const pathParts = mainImage.split('/');
-                        cloudinaryId = pathParts[pathParts.length - 1];
-                    }
-                    
-                    const cloudName = window.CLOUDINARY_CLOUD_NAME || 'dopvs93sl';
-                    mainImage = `https://res.cloudinary.com/${cloudName}/image/upload/v1/${cloudinaryId}`;
-                    console.log(`🔄 Constructed Cloudinary URL: ${mainImage}`);
-                }
-                else {
-                    // Not a Cloudinary URL or absolute URL, handle as local path
-                    // Ensure the image URL starts with a slash if it's a relative path
-                    if (!mainImage.startsWith('/')) {
-                        mainImage = '/' + mainImage;
-                    }
-                    console.log(`Using relative URL: ${mainImage}`);
-                    
-                    // If this URL starts with /uploads, it might be a backend URL
-                    if (mainImage.startsWith('/uploads') && window.API_URL && window.API_URL.includes('://')) {
-                        // Extract the base URL from the API URL
-                        const baseUrlMatch = window.API_URL.match(/^(https?:\/\/[^\/]+)/);
-                        if (baseUrlMatch && baseUrlMatch[1]) {
-                            const fullUrl = `${baseUrlMatch[1]}${mainImage}`;
-                            console.log(`Converted to full backend URL: ${fullUrl}`);
-                            mainImage = fullUrl;
-                        }
-                    }
-                }
-            } else if (mainImage && typeof mainImage === 'object') {
-                // If the image is an object (like a Cloudinary response), extract the URL
-                if (mainImage.secure_url) {
-                    mainImage = mainImage.secure_url;
-                    console.log(`Extracted secure_url from image object: ${mainImage}`);
-                } else if (mainImage.url) {
-                    mainImage = mainImage.url;
-                    console.log(`Extracted url from image object: ${mainImage}`);
-                } else {
-                    console.warn('Image is an object but has no URL property:', mainImage);
-                    mainImage = '/admin/assets/placeholder.png';
-                }
-            }
-        } catch (e) {
-            console.error(`Error processing image for product ${product.id}:`, e);
-            mainImage = '/admin/assets/placeholder.png';
-        }
-        
-        // Log the final image URL for debugging
-        console.log(`Final image URL for product ${product.id}: ${mainImage}`);
-        if (originalImagePath && originalImagePath !== mainImage) {
-            console.log(`Transformed from original: ${originalImagePath}`);
-        }
-
-        // Validate Cloudinary URL
-        if (mainImage.includes('cloudinary.com')) {
-            console.log(`✅ Valid Cloudinary URL detected for product ${product.id}`);
-            try {
-                // Try to fetch the image to verify it exists (via HEAD request only)
-                fetch(mainImage, { method: 'HEAD' })
-                    .then(response => {
-                        if (response.ok) {
-                            console.log(`✅ Cloudinary image verified accessible for product ${product.id}`);
-                        } else {
-                            console.warn(`⚠️ Cloudinary image might not be accessible for product ${product.id} - Status: ${response.status}`);
-                        }
-                    })
-                    .catch(err => console.warn(`⚠️ Could not verify Cloudinary image for product ${product.id}:`, err));
-            } catch (e) {
-                console.warn('Failed to verify image URL:', e);
-            }
-        }
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${product.id}</td>
-            <td>
-                <img src="${mainImage}" 
-                     alt="${product.name}" 
-                     class="product-thumbnail"
-                     data-original-src="${originalImagePath || ''}"
-                     onerror="this.onerror=null; this.src='/admin/assets/placeholder.png'; console.log('Image load error for product ${product.id}, using placeholder');"
-                     style="width: 50px; height: 50px; object-fit: cover;">
-            </td>
-            <td>${product.name}</td>
-            <td>${product.category || 'N/A'}</td>
-            <td>$${parseFloat(product.price).toFixed(2)}</td>
-            <td>${product.stock}</td>
-            <td>
-                <span class="badge bg-${product.status === 'active' ? 'success' : 'danger'}">
-                    ${product.status || 'inactive'}
-                </span>
-            </td>
-            <td>
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-primary me-1" onclick="window.editProduct(${product.id})">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="window.deleteProduct(${product.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-/**
- * Utility function to debounce input events
- */
-function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
-
-// Add a diagnostic test function that can be called from the console
-window.testImageUpload = async function(useConsoleLog = true) {
-    try {
-        // Create a small test image (1x1 pixel transparent GIF)
-        const base64Image = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        const blob = await (await fetch(`data:image/gif;base64,${base64Image}`)).blob();
-        const testFile = new File([blob], 'test-upload.gif', { type: 'image/gif' });
-        
-        const formData = new FormData();
-        formData.append('testImage', testFile);
-        
-        const token = localStorage.getItem('token');
-        if (!token) {
-            const message = 'Authentication required for test';
-            useConsoleLog ? console.error(message) : alert(message);
-            return { success: false, error: message };
-        }
-        
-        // Log what we're about to do
-        useConsoleLog ? console.log('Testing image upload with diagnostic endpoint...') : null;
-        useConsoleLog ? console.log('API URL:', window.API_URL) : null;
-        
-        // Make the request
-        const startTime = Date.now();
-        const response = await fetch(`${window.API_URL}/products/diagnostic-upload`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const endTime = Date.now();
-        
-        // Get the response content type
-        const contentType = response.headers.get('content-type');
-        
-        // Check if response is OK and is JSON
-        if (!response.ok) {
-            let errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
-            
-            if (contentType && contentType.includes('application/json')) {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-                useConsoleLog ? console.error('Server error:', errorData) : null;
-            } else {
-                const errorText = await response.text();
-                useConsoleLog ? console.error('Server response:', errorText) : null;
-            }
-            
-            const message = `Test failed: ${errorMessage}`;
-            useConsoleLog ? console.error(message) : alert(message);
-            
-            return { 
-                success: false, 
-                error: errorMessage,
-                status: response.status,
-                responseTime: endTime - startTime,
-                responseHeaders: Object.fromEntries(response.headers.entries())
-            };
-        }
-        
-        // Parse the response
-        let responseData = {};
-        if (contentType && contentType.includes('application/json')) {
-            responseData = await response.json();
-            useConsoleLog ? console.log('Test successful:', responseData) : alert('Test successful! Check console for details.');
-        } else {
-            const textResponse = await response.text();
-            useConsoleLog ? console.log('Unexpected response format:', textResponse) : alert('Unexpected response format. Check console.');
-            responseData = { rawText: textResponse };
-        }
-        
-        return {
-            success: true,
-            data: responseData,
-            status: response.status,
-            responseTime: endTime - startTime,
-            responseHeaders: Object.fromEntries(response.headers.entries())
-        };
-        
-    } catch (error) {
-        const message = `Network error during test: ${error.message}`;
-        useConsoleLog ? console.error(message, error) : alert(message);
-        return { success: false, error: error.message };
-    }
-};
-
-// Also add a function to check CORS setup
-window.testCORS = function() {
-    const origins = [
-        window.location.origin,
-        window.API_URL,
-        'https://t-shirt-customizer-backend.onrender.com',
-        'https://res.cloudinary.com'
-    ];
-    
-    console.log('Testing CORS from current origin:', window.location.origin);
-    console.log('API URL configured as:', window.API_URL);
-    
-    // Test each origin with a simple OPTIONS request
-    origins.forEach(async (origin) => {
-        try {
-            console.log(`Testing CORS with origin: ${origin}`);
-            
-            // Use fetch with no-cors mode first to see if the server is reachable
-            const noCorsResponse = await fetch(`${window.API_URL}/health`, { 
-                method: 'GET',
-                mode: 'no-cors'
-            });
-            console.log(`No-CORS mode request to ${window.API_URL}/health:`, noCorsResponse.type);
-            
-            // Then try with normal CORS mode
-            const response = await fetch(`${window.API_URL}/health`, {
-                method: 'GET',
-                headers: {
-                    'Origin': origin
-                }
-            });
-            
-            console.log(`CORS test for ${origin}: ${response.ok ? '✅ Success' : '❌ Failed'}`);
-            console.log('Status:', response.status);
-            console.log('CORS headers:', {
-                'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
-                'access-control-allow-methods': response.headers.get('access-control-allow-methods'),
-                'access-control-allow-headers': response.headers.get('access-control-allow-headers')
-            });
-            
-            // Try to get the response data
-            const data = await response.text();
-            console.log('Response data:', data.substring(0, 100) + (data.length > 100 ? '...' : ''));
-            
-        } catch (error) {
-            console.error(`❌ CORS test failed for ${origin}:`, error.message);
-        }
-    });
-    
-    return 'CORS tests initiated. Check console for results.';
-};
-
-// Additional diagnostic function to show configuration
-window.showConfig = function() {
-    console.log('Current configuration:');
-    console.log('API URL:', window.API_URL);
-    console.log('Current origin:', window.location.origin);
-    console.log('Is authenticated:', !!localStorage.getItem('token'));
-    
-    // Check if a token exists and show its expiration
-    const token = localStorage.getItem('token');
-    if (token) {
-        try {
-            // Split the JWT and decode the payload
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('Token payload:', payload);
-            
-            // Show token expiration
-            if (payload.exp) {
-                const expDate = new Date(payload.exp * 1000);
-                const now = new Date();
-                console.log('Token expires:', expDate);
-                console.log('Token expired:', expDate < now);
-                console.log('Time until expiration:', Math.floor((expDate - now) / 1000 / 60), 'minutes');
-            }
-        } catch (e) {
-            console.error('Error parsing token:', e);
-        }
-    }
-    
-    return 'Configuration displayed in console.';
-};
-
-// Add utility function for proper Cloudinary URL formatting
-window.formatCloudinaryUrl = function(url) {
-    if (!url) return null;
-    
-    // If it's already a full Cloudinary URL, ensure it uses HTTPS
-    if (url.includes('cloudinary.com')) {
-        if (url.startsWith('http://')) {
-            return url.replace('http://', 'https://');
-        }
-        return url;
-    }
-    
-    // If it's a partial Cloudinary path, construct full URL
-    if (url.includes('/image/upload/') || url.includes('/product-')) {
-        // Extract filename if needed
-        let filename = url;
-        if (url.includes('/')) {
-            const parts = url.split('/');
-            filename = parts[parts.length - 1];
-        }
-        
-        // Build proper Cloudinary URL
-        const cloudName = window.CLOUDINARY_CLOUD_NAME;
-        return `https://res.cloudinary.com/${cloudName}/image/upload/v1/${filename}`;
-    }
-    
-    return url;
-};
-
-/**
- * Initialize event listeners on page load to ensure buttons work
- */
-function initializePage() {
-    console.log('Initializing Products page...');
-    
-    // Load products initially
-    loadProducts();
-    
-    // Hook up search input
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        // Debounce search to avoid too many requests
-        const debouncedSearch = debounce((event) => {
-            loadProducts(event.target.value);
-        }, 300);
-        
-        searchInput.addEventListener('input', debouncedSearch);
-    }
-    
-    // Hook up product form submission
+    // Set up product form event listeners
     const productForm = document.getElementById('productForm');
     if (productForm) {
-        console.log('Adding submit event listener to product form');
-        productForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+        productForm.addEventListener('submit', function(event) {
+            event.preventDefault();
             saveProduct();
         });
-    } else {
-        console.warn('Product form not found in the DOM');
     }
     
-    // Hook up add product button
-    const addProductBtn = document.getElementById('addProductBtn');
-    if (addProductBtn) {
-        addProductBtn.addEventListener('click', showAddProductModal);
+    // Check if we have the product modal
+    const productModal = document.getElementById('productModal');
+    if (!productModal) {
+        console.error('Product modal not found. Functionality will be limited.');
     }
     
-    // Ensure product action buttons functionality (add, edit, delete) through event delegation
-    const productTable = document.getElementById('productsTable') || document.querySelector('.table-responsive');
-    if (productTable) {
-        productTable.addEventListener('click', function(e) {
-            // Edit product button
-            if (e.target.classList.contains('btn-edit') || e.target.closest('.btn-edit')) {
-                const row = e.target.closest('tr');
-                const productId = row.dataset.productId;
-                if (productId) {
-                    editProduct(productId);
-                }
-            }
-            
-            // Delete product button
-            if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete')) {
-                const row = e.target.closest('tr');
-                const productId = row.dataset.productId;
-                if (productId) {
-                    deleteProduct(productId);
-                }
-            }
-        });
+    // Double-check that necessary functions are in global scope
+    if (!window.editProduct || !window.deleteProduct) {
+        console.error('Product management functions not correctly initialized on window object.');
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
     }
     
-    // Hook up save button in modal
-    const saveBtn = document.querySelector('#productModal .modal-footer .btn-primary');
-    if (saveBtn) {
-        console.log('Adding click event listener to save button in product modal');
-        saveBtn.addEventListener('click', function() {
-            const form = document.getElementById('productForm');
-            if (form) {
-                // Trigger form submission which will call saveProduct()
-                const submitEvent = new Event('submit', { cancelable: true });
-                form.dispatchEvent(submitEvent);
-            } else {
-                // Fallback if form not found
-                saveProduct();
-            }
-        });
-    }
-}
-
-// Call initialization when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initializePage);
+    console.log('Products page initialization complete.');
+});
