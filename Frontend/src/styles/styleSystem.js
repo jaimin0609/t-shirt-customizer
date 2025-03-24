@@ -437,20 +437,8 @@ export const mixins = {
 // Style System
 // =============================================================================
 
-export const styleSystem = {
-  createStyles: (styles) => {
-    return Object.entries(styles).reduce((acc, [key, value]) => {
-      acc[key] = value;
-      return acc;
-    }, {});
-  }
-};
-
-// =============================================================================
-// Export All Styles
-// =============================================================================
-
 const styleSystem = {
+  // Core style systems
   colors,
   typography,
   spacing,
@@ -463,18 +451,26 @@ const styleSystem = {
   flex,
   grid,
   mixins,
+  
   // Helper functions
   space,
   textStyle,
   boxShadow,
   transition,
+  
   // Theme functions
   setTheme,
   getTheme,
   initializeTheme,
   toggleTheme,
-  // Style System
-  createStyles,
+  
+  // Style creation
+  createStyles: (styles) => {
+    return Object.entries(styles).reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+  }
 };
 
 export default styleSystem; 

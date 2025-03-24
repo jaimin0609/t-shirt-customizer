@@ -1,6 +1,6 @@
 import React from 'react';
 import withStyles from '../../styles/withStyles';
-import { styleSystem } from '../../styles/styleSystem';
+import styleSystem from '../../styles/styleSystem';
 
 const ProfileNotificationBase = ({ successMessage, errorMessage, styles }) => {
     if (!successMessage && !errorMessage) return null;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaUser, FaPhone, FaMapMarkerAlt, FaEnvelope } from 'react-icons/fa';
 import withStyles from '../../styles/withStyles';
-import { styleSystem } from '../../styles/styleSystem';
+import styleSystem from '../../styles/styleSystem';
 
 const ProfileInfoBase = ({ userData, formatFullAddress, onRefresh, isLoading, styles }) => {
   return (

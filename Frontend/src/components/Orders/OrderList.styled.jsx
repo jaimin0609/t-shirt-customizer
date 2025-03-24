@@ -1,6 +1,6 @@
 import React from 'react';
+import styleSystem from '../../styles/styleSystem';
 import { withStyles } from '../../styles/withStyles';
-import { styleSystem } from '../../styles/styleSystem';
 import OrderItem from './OrderItem.styled';
 
 /**

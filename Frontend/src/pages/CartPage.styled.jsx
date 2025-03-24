@@ -7,7 +7,7 @@ import CartItemList from '../components/Cart/CartItemList.styled.jsx';
 import OrderSummary from '../components/Cart/OrderSummary.styled.jsx';
 import EmptyCart from '../components/Cart/EmptyCart.styled.jsx';
 import { withStyles } from '../styles/withStyles';
-import { styleSystem } from '../styles/styleSystem';
+import styleSystem from '../styles/styleSystem';
 
 const CartPage = ({ styles }) => {
     const {

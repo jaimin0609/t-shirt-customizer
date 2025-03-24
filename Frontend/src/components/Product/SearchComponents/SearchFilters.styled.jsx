@@ -2,7 +2,7 @@ import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { FilterAccordion, FilterAccordionGroup } from '../../UI/FilterAccordion';
 import { withStyles } from '../../../styles/withStyles';
-import { styleSystem } from '../../../styles/styleSystem';
+import styleSystem from '../../../styles/styleSystem';
 
 const SearchFiltersBase = ({
     availableFilters,
