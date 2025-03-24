@@ -8,7 +8,7 @@
 import {
   runAllBenchmarks,
   compareTextControlsPerformance
-} from './benchmarkExamples';
+} from './benchmarkExamples.jsx';
 import { generatePerformanceReport } from './performanceBenchmark';
 
 /**

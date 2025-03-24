@@ -15,7 +15,7 @@ import './index.css';
 import './App.css';
 
 // Import performance benchmark tools for development mode
-import { addBenchmarkButton } from './utils/benchmarkExamples';
+import { addBenchmarkButton } from './utils/benchmarkExamples.jsx';
 
 // Ensure React is globally available in case any modules are looking for it
 // This needs to happen before importing any components that might use createContext
