@@ -1037,5 +1037,56 @@ function saveProfile() {
     });
 }
 
+// Initialize profile image preview when the modal is shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up profile image preview
+    const profileImageInput = document.getElementById('profileImage');
+    const profilePreview = document.getElementById('profilePreview');
+    
+    if (profileImageInput && profilePreview) {
+        profileImageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    profilePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Set up profile modal event handlers
+    const profileModal = document.getElementById('profileModal');
+    if (profileModal) {
+        profileModal.addEventListener('show.bs.modal', function() {
+            // Load user data when modal is about to be shown
+            const userName = localStorage.getItem('userName');
+            const userAvatar = localStorage.getItem('userAvatar');
+            
+            // Populate name field
+            const nameInput = document.getElementById('name');
+            if (nameInput && userName) {
+                nameInput.value = userName;
+            }
+            
+            // Set avatar preview
+            if (profilePreview && userAvatar) {
+                profilePreview.src = userAvatar;
+            }
+            
+            // Ensure email field has a value
+            const emailInput = document.getElementById('email');
+            if (emailInput && !emailInput.value) {
+                // Try to fetch from API or localStorage
+                const userEmail = localStorage.getItem('userEmail');
+                if (userEmail) {
+                    emailInput.value = userEmail;
+                }
+            }
+        });
+    }
+});
+
 // Make it available globally
 window.saveProfile = saveProfile; 
