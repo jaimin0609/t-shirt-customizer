@@ -1,5 +1,5 @@
 import React from 'react';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import { Link } from 'react-router-dom';
 import OrderStatus from './OrderStatus.styled';
 import { formatDate } from '../../utils/dateUtils';

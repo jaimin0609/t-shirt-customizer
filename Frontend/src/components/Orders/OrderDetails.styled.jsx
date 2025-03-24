@@ -1,5 +1,5 @@
 import React from 'react';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 
 /**
  * Styled component that displays order details like shipping address and payment info

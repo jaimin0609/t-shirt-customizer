@@ -1,5 +1,5 @@
 import React from 'react';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import styleSystem from '../../styles/styleSystem';
 
 const ProfileNotificationBase = ({ successMessage, errorMessage, styles }) => {

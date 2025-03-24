@@ -1,5 +1,5 @@
 import React from 'react';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import { formatCurrency } from '../../utils/currencyUtils';
 
 /**

@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import styleSystem from '../../styles/styleSystem';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import OrderItem from './OrderItem.styled';
 
 /**

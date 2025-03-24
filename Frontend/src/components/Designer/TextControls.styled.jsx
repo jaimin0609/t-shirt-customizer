@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import PropTypes from 'prop-types';
 import { useComponentPerformance } from '../../utils/performanceMonitor';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import styleSystem from '../../styles/styleSystem';
 import { combineStyles, conditionalStyles } from '../../styles/cssOptimizer';
+import { SketchPicker } from 'react-color';
 
 // Define component-specific styles
 const createTextControlsStyles = (props) => {

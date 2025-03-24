@@ -3,8 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import withStyles from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles.jsx';
 import styleSystem from '../../styles/styleSystem';
+import { Link } from 'react-router-dom';
+import { FiUser, FiShoppingBag, FiHeart, FiLogOut, FiBell, FiSettings } from 'react-icons/fi';
 
 // Import our components
 import ProfileInfo from './ProfileInfo.styled';
