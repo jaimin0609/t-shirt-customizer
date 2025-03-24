@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import axios from 'axios';
 import { API_URL, getCorsHeaders, getWorkingApiUrl } from '../config/api';
 import { useNavigate } from 'react-router-dom';
+import { decodeToken, isTokenExpiring, getTokenExpiration, setAuthToken, clearAuthToken, updateLastActivity } from '../utils/tokenUtils';
 
 // Create auth context with safer pattern
 const AuthContext = createContext({
@@ -309,26 +310,24 @@ export const AuthProvider = ({ children, initialState = null }) => {
 
     try {
       console.log('Logging in with API URL:', API_URL);
-      // Use the full API URL instead of relative path
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Login error response:', errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          throw new Error('Invalid server response');
+      const response = await axios.post(`${API_URL}/auth/login`,
+        { email, password },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: false
         }
-        throw new Error(errorData.message || 'Login failed');
+      );
+
+      if (response.status !== 200) {
+        throw new Error(response?.data?.message || 'Login failed');
       }
 
-      const data = await response.json();
+      const data = response.data;
+
+      // Store token and user data using our utility
+      setAuthToken(data.token, data.user);
+
+      // Update state
       setToken(data.token);
       setUser(data.user);
       setIsAuthenticated(true);
@@ -338,14 +337,28 @@ export const AuthProvider = ({ children, initialState = null }) => {
 
       // Set last activity time
       setLastActivity(Date.now());
-      localStorage.setItem('lastActivity', Date.now().toString());
 
-      navigate('/profile');
+      console.log('Login successful!');
+
+      // Use navigate after a small delay to ensure state updates
+      setTimeout(() => {
+        navigate('/profile');
+      }, 100);
+
       return { success: true };
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message);
-      return { success: false, error: err.message };
+      let errorMessage = 'Login failed';
+
+      // Try to extract error message from response
+      if (err.response && err.response.data) {
+        errorMessage = err.response.data.message || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -428,10 +441,8 @@ export const AuthProvider = ({ children, initialState = null }) => {
     setUser(null);
     setIsAuthenticated(false);
 
-    // Clear localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('lastActivity');
+    // Clear localStorage using our utility
+    clearAuthToken();
 
     // Clear axios auth header
     configureAxiosAuth(null);
@@ -442,8 +453,10 @@ export const AuthProvider = ({ children, initialState = null }) => {
       setTokenRefreshInterval(null);
     }
 
-    // Navigate to home page
-    navigate('/');
+    // Navigate to home page after a small delay to ensure state updates
+    setTimeout(() => {
+      navigate('/');
+    }, 100);
   }, [token, tokenRefreshInterval, navigate]);
 
   // Update user profile

@@ -83,7 +83,8 @@ export const CartProvider = ({ children, initialState = null }) => {
     try {
       console.log('Fetching cart from API URL:', API_URL);
       const response = await axios.get(`${API_URL}/cart`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000 // 10 seconds timeout
       });
 
       if (response.data && response.data.items) {
@@ -96,8 +97,13 @@ export const CartProvider = ({ children, initialState = null }) => {
       }
     } catch (err) {
       console.error('Failed to fetch user cart:', err);
-      // Don't show error to user for this background operation
-      // Instead, fall back to local storage cart
+
+      // Check if it's an authentication error
+      if (err.response && err.response.status === 401) {
+        console.log('Authentication error when fetching cart, using local cart');
+      }
+
+      // Fall back to local storage cart
       const localCart = localStorage.getItem('cart');
       if (localCart) {
         try {
@@ -511,24 +517,45 @@ export const CartProvider = ({ children, initialState = null }) => {
       try {
         console.log('Fetching cart from server, API URL:', API_URL);
         const response = await axios.get(`${API_URL}/cart`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000 // 10 seconds timeout
         });
 
-        if (response.data && response.data.items && response.data.items.length > 0) {
-          // Merge server cart with local cart (implementation depends on your business logic)
-          setCart(prevItems => {
-            // Simple merge strategy: prefer server items, add local items that aren't on server
-            const serverItemIds = response.data.items.map(item => item.productId);
-            const localItemsToKeep = prevItems.filter(item =>
-              !serverItemIds.includes(item.productId)
-            );
+        if (response.data && response.data.items) {
+          // If server returns empty cart but we have items locally, prefer local items
+          if (response.data.items.length === 0) {
+            const localCart = localStorage.getItem('cart');
+            if (localCart) {
+              const parsedLocalCart = JSON.parse(localCart);
+              if (parsedLocalCart && parsedLocalCart.length > 0) {
+                setCart(parsedLocalCart);
+                return;
+              }
+            }
+          }
 
-            return [...response.data.items, ...localItemsToKeep];
-          });
+          setCart(response.data.items);
+          localStorage.setItem('cart', JSON.stringify(response.data.items));
         }
       } catch (err) {
         console.error('Error fetching cart:', err);
-        // Don't show error, instead just fall back to local storage cart
+
+        // If it's an authentication error or network error, fall back to local cart
+        if (
+          (err.response && err.response.status === 401) ||
+          !err.response ||
+          err.code === 'ECONNABORTED'
+        ) {
+          console.log('Using local cart due to API error');
+          const localCart = localStorage.getItem('cart');
+          if (localCart) {
+            try {
+              setCart(JSON.parse(localCart));
+            } catch (parseErr) {
+              console.error('Failed to parse local cart:', parseErr);
+            }
+          }
+        }
       } finally {
         setLoading(false);
       }

@@ -97,13 +97,34 @@ const refreshAuthToken = async () => {
   }
 };
 
+// When sending requests, check for token in localStorage first
+const addAuthHeaders = (config) => {
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+  
+  // Add Authorization header if token exists
+  if (token) {
+    config.headers = {
+      ...config.headers,
+      'Authorization': `Bearer ${token}`
+    };
+    
+    // Debug in non-production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Adding auth token to request: ${config.url}`);
+    }
+  }
+  
+  return config;
+};
+
 /**
  * Create an axios instance with default configuration
  */
 const axiosInstance = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
-  withCredentials: true, // Include cookies in cross-origin requests
+  withCredentials: false, // Set to false for cross-origin requests to Vercel
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -120,31 +141,8 @@ axiosInstance.interceptors.request.use(
     // Add request start time for performance tracking
     config.metadata = { startTime: performance.now() };
     
-    // Get authentication token if available
-    let token = localStorage.getItem('token');
-    
-    // If token exists, check if it's about to expire and refresh if needed
-    if (token && config.url !== '/auth/refresh-token') {
-      if (isTokenExpiredOrClose(token)) {
-        try {
-          if (!isRefreshingToken) {
-            // Start token refresh process
-            refreshPromise = refreshAuthToken();
-          }
-          
-          // Wait for token refresh to complete
-          token = await refreshPromise;
-        } catch (error) {
-          console.error('Failed to refresh token before request:', error);
-          // Continue with original token, response interceptor will handle any 401 errors
-        }
-      }
-    }
-    
-    // Set Authorization header if token exists
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Add authentication headers
+    config = addAuthHeaders(config);
     
     // Add security headers for protection against CSRF
     config.headers['X-Requested-With'] = 'XMLHttpRequest';

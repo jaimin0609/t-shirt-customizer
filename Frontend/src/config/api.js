@@ -3,16 +3,16 @@
  * Centralized configuration for API endpoints and settings
  */
 
-// Get the base API URL from environment variables
-export const API_URL = import.meta.env.VITE_API_URL;
+// Get the base API URL from environment variables or use fallback for Vercel deployment
+export const API_URL = import.meta.env.VITE_API_URL || 
+                       'https://t-shirt-customizer-backend.onrender.com/api';
 
-// Validate API URL
-if (!API_URL) {
-  throw new Error('VITE_API_URL environment variable is not set');
-}
+// Log the API URL being used
+console.log('Using API URL:', API_URL); 
 
 // Fallback URL in case the main one is not available
-export const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL || null;
+export const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL || 
+                                'https://t-shirt-customizer-backend.onrender.com/api';
 
 // Log configuration in development only
 if (import.meta.env.DEV) {
@@ -24,7 +24,7 @@ if (import.meta.env.DEV) {
 
 // API configuration options
 export const API_CONFIG = {
-  timeout: 10000, // 10 seconds
+  timeout: 20000,  // 20 seconds timeout for slow connections
   retry: 2,       // Number of retries before using fallback
   headers: {
     'Content-Type': 'application/json',
@@ -67,7 +67,6 @@ export const getWorkingApiUrl = async () => {
           'Accept': 'application/json',
         },
         mode: 'cors',
-        credentials: 'include',
         signal: controller.signal
       });
       
@@ -87,12 +86,11 @@ export const getWorkingApiUrl = async () => {
     }
   }
   
-  // If no working URL found, throw an error
+  // If no working URL found, fall back to primary URL
   if (!workingUrl) {
-    throw new Error('No working API URL found');
+    console.warn('No working API URL found, falling back to primary URL');
+    return API_URL;
   }
   
   return workingUrl;
-};
-
-console.log('Using API URL:', API_URL); // Log the API URL being used 
+}; 
