@@ -289,7 +289,7 @@ async function deleteProduct(productId) {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
+                    const errorText = await response.text();
             throw new Error(errorText || `Failed to delete product: ${response.statusText}`);
         }
         

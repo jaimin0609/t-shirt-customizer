@@ -372,13 +372,13 @@ function showLoadingState(dropdown) {
         dropdown.querySelector('.notification-body').innerHTML = `
             <div class="dropdown-item loading-item py-3">
                 <div class="d-flex align-items-center justify-content-center">
-                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <span>Loading notifications...</span>
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
+                <span>Loading notifications...</span>
             </div>
-        `;
+        </div>
+    `;
     } else {
         dropdown.innerHTML = `
             <div class="dropdown-item loading-item py-3">
@@ -415,7 +415,7 @@ function showErrorState(dropdown, message = 'Failed to load notifications') {
             <i class="bi bi-arrow-clockwise me-1"></i> Retry
         </button>
     `;
-    
+
     // Add retry button handler
     const retryButton = errorItem.querySelector('.retry-button');
     if (retryButton) {

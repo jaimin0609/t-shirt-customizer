@@ -82,57 +82,42 @@ const securityMiddleware = initializeSecurityMiddleware();
 // IMPORTANT: Configure CORS first, before other middleware
 app.use(securityMiddleware.configureCors);
 
-// Configure Helmet with relaxed settings for the admin panel
+// Configure Helmet with consistent settings for all routes
 const helmetConfig = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.tiny.cloud'],
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com', 'https://cdn.tiny.cloud'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
             imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net', 'https://*.cloudinary.com', 'https://res.cloudinary.com'],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net', 'https://cdn.tiny.cloud'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
             connectSrc: ["'self'", process.env.API_URL || 'http://localhost:5000', 'https://*.cloudinary.com', 'https://res.cloudinary.com', 'https://api.cloudinary.com'],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'", 'https://*.cloudinary.com'],
             frameSrc: ["'none'"]
         }
     },
-    // Disable certain protections for admin panel functionality
     xssFilter: true,
-    hsts: false, // Disable HSTS for now to prevent issues
-    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
+    hsts: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     noSniff: true,
-    dnsPrefetchControl: { allow: true },
-    frameguard: { action: 'sameorigin' }
+    dnsPrefetchControl: { allow: false },
+    frameguard: { action: 'deny' }
 });
 
-// Apply relaxed helmet config to admin routes
-app.use('/admin', helmetConfig);
-app.use('/api/admin', helmetConfig);
-app.use('/api/auth', helmetConfig);
-
-// Configure Helmet with stricter settings for other routes
-app.use(securityMiddleware.configureHelmet);
+// Apply helmet config to all routes
+app.use(helmetConfig);
 
 // Apply rate limiting to all requests
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes instead of 3
-    max: process.env.NODE_ENV === 'production' ? 1000 : 5000, // Much higher limits
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: process.env.NODE_ENV === 'production' ? 100 : 500, // Lower limits for better security
     message: 'Too many requests from this IP, please try again after 15 minutes',
     standardHeaders: true,
-    legacyHeaders: false,
-    // Skip rate limiting for admin panel routes
-    skip: (req, res) => {
-        // Skip for admin panel and authentication routes
-        if (req.path.startsWith('/admin') || 
-            req.path.startsWith('/api/admin') || 
-            req.path.startsWith('/api/auth/login') ||
-            req.path.startsWith('/api/auth/logout')) {
-            return true;
-        }
-        return false;
-    }
+    legacyHeaders: false
 });
+
+// Apply rate limiting to all routes
 app.use(apiLimiter);
 
 // Middleware for parsing request bodies

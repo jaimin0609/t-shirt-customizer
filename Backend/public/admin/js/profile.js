@@ -132,7 +132,7 @@ function validatePasswordMatch() {
         if (password !== confirmPassword) {
             elements.passwordConfirmInput.setCustomValidity('Passwords do not match');
             elements.passwordConfirmInput.classList.add('is-invalid');
-        } else {
+                } else {
             elements.passwordConfirmInput.setCustomValidity('');
             elements.passwordConfirmInput.classList.remove('is-invalid');
             elements.passwordConfirmInput.classList.add('is-valid');
@@ -153,11 +153,11 @@ async function loadProfileData() {
         profileState.isLoading = true;
         showLoading();
         
-        const token = localStorage.getItem('token');
-        if (!token) {
+    const token = localStorage.getItem('token');
+    if (!token) {
             throw new Error('No authentication token found');
-        }
-        
+    }
+
         // Fetch profile data
         const response = await fetch(`${CONFIG.apiUrl}/admin/profile`, {
             method: 'GET',
@@ -166,7 +166,7 @@ async function loadProfileData() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             if (response.status === 401) {
                 // Unauthorized - token may be expired

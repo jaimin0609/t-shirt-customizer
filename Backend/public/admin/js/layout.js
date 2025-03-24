@@ -547,7 +547,7 @@ function determinePageTitle() {
     return pageTitles[page] || 'Admin Dashboard';
 }
 
-// Load user profile data specifically for the navbar 
+// Load user profile data specifically for the navbar
 async function loadUserProfileForNavbar() {
     try {
         // First try to use cached data
@@ -575,18 +575,18 @@ async function loadUserProfileForNavbar() {
         try {
             const response = await fetch(`${apiUrl}/admin/profile`, {
                 method: 'GET',
-                headers: {
+            headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
-            });
-            
-            if (!response.ok) {
+            }
+        });
+
+        if (!response.ok) {
                 console.warn(`API returned status ${response.status}, using default data`);
                 return defaultUserData;
-            }
-            
-            const userData = await response.json();
+        }
+
+        const userData = await response.json();
             console.log('Fetched user profile data:', userData);
             
             // Update localStorage with fetched data
@@ -676,7 +676,7 @@ async function showProfileModal() {
         console.error('Error loading profile:', error);
         showToast('error', 'Failed to load profile data');
     }
-}
+} 
 
 // Initialize navbar user profile
 async function initNavbarUserProfile() {
