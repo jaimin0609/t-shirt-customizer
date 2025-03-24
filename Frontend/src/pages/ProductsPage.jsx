@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { productService } from '../services/productService';
+import productService from '../services/productService';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import { FilterAccordion, FilterAccordionGroup } from '../components/UI/FilterAccordion';
 

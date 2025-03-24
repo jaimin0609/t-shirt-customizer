@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useCart } from '../contexts/CartContext';
-import { productService } from '../services/productService';
+import productService from '../services/productService';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { StarIcon } from '@heroicons/react/24/solid';
 

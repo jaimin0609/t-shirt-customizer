@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { productService } from '../services/productService';
+import productService from '../services/productService';
 import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { FilterAccordion, FilterAccordionGroup } from '../components/UI/FilterAccordion';
 
