@@ -2,6 +2,7 @@
  * Deployment Configuration
  * Central configuration for frontend deployment settings across different environments
  */
+import { API_URL } from './api';
 
 // Handle running outside of Vite context (direct Node.js execution)
 const getEnv = () => {
@@ -15,6 +16,11 @@ const getEnv = () => {
 // Get environment variables safely
 const env = getEnv();
 
+// Extract base URL from API_URL (remove '/api' suffix)
+const getBaseUrl = (apiUrl) => {
+  return apiUrl.replace(/\/api$/, '');
+};
+
 const config = {
   // Common settings
   common: {
@@ -26,8 +32,8 @@ const config = {
   // Environment-specific settings
   environments: {
     development: {
-      apiUrl: env.VITE_API_URL || 'http://localhost:5002/api',
-      assetUrl: env.VITE_ASSET_URL || 'http://localhost:5002',
+      apiUrl: API_URL,
+      assetUrl: getBaseUrl(API_URL),
       devServer: {
         port: 5173,
         host: 'localhost',
@@ -41,8 +47,8 @@ const config = {
     },
     
     test: {
-      apiUrl: env.VITE_API_URL || 'http://localhost:5002/api',
-      assetUrl: env.VITE_ASSET_URL || 'http://localhost:5002',
+      apiUrl: API_URL,
+      assetUrl: getBaseUrl(API_URL),
       features: {
         devTools: false,
         mockApi: true,
@@ -51,8 +57,8 @@ const config = {
     },
     
     production: {
-      apiUrl: env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api',
-      assetUrl: env.VITE_ASSET_URL || 'https://t-shirt-customizer-backend.onrender.com',
+      apiUrl: API_URL,
+      assetUrl: getBaseUrl(API_URL),
       features: {
         devTools: false,
         mockApi: false,
@@ -69,7 +75,7 @@ const config = {
       rewrites: [
         {
           source: '/api/:path*',
-          destination: 'https://t-shirt-customizer-backend.onrender.com/api/:path*'
+          destination: `${API_URL}/:path*`
         }
       ],
       redirects: [],

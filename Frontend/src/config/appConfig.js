@@ -4,6 +4,7 @@
  * A centralized place for all application configuration with environment variable handling,
  * validation, and fallbacks to ensure consistent configuration across the application.
  */
+import { API_URL } from './api';
 
 // Environment detection
 export const ENV = {
@@ -50,12 +51,7 @@ const isValidUrl = (url) => {
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: validateConfig(
-    'VITE_API_URL',
-    import.meta.env.VITE_API_URL,
-    (url) => isValidUrl(url),
-    IS_PRODUCTION ? '/api' : 'https://t-shirt-customizer-backend.onrender.com/api'
-  ),
+  BASE_URL: API_URL,
   
   TIMEOUT: validateConfig(
     'VITE_API_TIMEOUT',

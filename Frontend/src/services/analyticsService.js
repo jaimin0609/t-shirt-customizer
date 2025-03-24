@@ -2,9 +2,10 @@
  * Analytics Service - Collects and sends user activity data to the server
  * Modern ES module implementation for React/Vue frontend
  */
+import { API_URL } from '../config/api';
 
 // Configuration
-const ANALYTICS_ENDPOINT = '/api/analytics/track';
+const ANALYTICS_ENDPOINT = `${API_URL}/analytics/track`;
 const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 const HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds in milliseconds
 
