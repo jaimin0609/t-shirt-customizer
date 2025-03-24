@@ -22,6 +22,18 @@ function initializeLayout() {
     const sidebar = document.querySelector('.sidebar');
     const wrapper = document.querySelector('.wrapper');
     
+    // Standardize navbar elements across all pages
+    standardizeNavbar();
+    
+    // Ensure logout option is present in sidebar
+    ensureLogoutInSidebar();
+    
+    // Ensure translator icon exists
+    ensureTranslatorExists();
+    
+    // Standardize notifications badge
+    standardizeNotifications();
+    
     if (sidebarToggle && sidebar) {
         console.log('Sidebar toggle button found, adding event listener');
         
@@ -157,6 +169,61 @@ function initializeLayout() {
     ensureAppGridExists();
 }
 
+/**
+ * Standardizes the navbar elements across all admin pages
+ * Ensures consistent headers, search bars, and notification elements
+ */
+function standardizeNavbar() {
+    console.log('Standardizing navbar elements...');
+    
+    // Get current page title from HTML or fallback to URL-based title
+    const pageTitle = determinePageTitle();
+    
+    // Find the navbar container
+    const navbarContent = document.querySelector('.navbar .container-fluid');
+    if (!navbarContent) {
+        console.error('Cannot find navbar container');
+        return;
+    }
+    
+    // Look for navbar collapse area
+    const navbarCollapse = navbarContent.querySelector('.collapse.navbar-collapse');
+    if (!navbarCollapse) {
+        console.error('Cannot find navbar collapse area');
+        return;
+    }
+    
+    // Check if there's already a title and add it if missing
+    if (!navbarCollapse.querySelector('h1')) {
+        // Create title element if it doesn't exist
+        const searchBar = navbarCollapse.querySelector('.d-flex.flex-grow-1');
+        
+        // Create and insert title element before search bar (if exists) or as first child
+        const titleElement = document.createElement('h1');
+        titleElement.className = 'ms-md-3';
+        titleElement.innerText = pageTitle;
+        
+        if (searchBar) {
+            // Replace search bar with title for better consistency
+            navbarCollapse.insertBefore(titleElement, searchBar);
+        } else {
+            // Add as first child if no search bar
+            navbarCollapse.insertBefore(titleElement, navbarCollapse.firstChild);
+        }
+    } else {
+        // Update existing title for consistency
+        const titleElement = navbarCollapse.querySelector('h1');
+        titleElement.innerText = pageTitle;
+    }
+    
+    // Standard user name format
+    const userNameElement = document.getElementById('userName');
+    if (userNameElement) {
+        userNameElement.textContent = 'Admin User';
+        localStorage.setItem('userName', 'Admin User');
+    }
+}
+
 // Fix sidebar link functionality
 function fixSidebarLinks() {
     // Ensure all ecommerce links work
@@ -178,6 +245,80 @@ function fixSidebarLinks() {
                 link.href = url;
             }
         });
+    }
+}
+
+// Ensure logout option exists in sidebar
+function ensureLogoutInSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    
+    const sidebarMenu = sidebar.querySelector('.sidebar-menu ul.nav');
+    if (!sidebarMenu) return;
+    
+    // Check if logout item already exists
+    let logoutItem = null;
+    const sidebarItems = sidebarMenu.querySelectorAll('.nav-item');
+    
+    // Look for existing logout button
+    for (const item of sidebarItems) {
+        const link = item.querySelector('a');
+        if (link && link.textContent.includes('Logout')) {
+            logoutItem = item;
+            break;
+        }
+        
+        const span = item.querySelector('span[data-translate="logout"]');
+        if (span) {
+            logoutItem = item;
+            break;
+        }
+    }
+    
+    // Create logout item if it doesn't exist
+    if (!logoutItem) {
+        logoutItem = document.createElement('li');
+        logoutItem.className = 'nav-item mt-auto';
+        
+        const logoutLink = document.createElement('a');
+        logoutLink.className = 'nav-link';
+        logoutLink.href = '#';
+        logoutLink.setAttribute('data-action', 'logout');
+        logoutLink.onclick = function(e) {
+            e.preventDefault();
+            window.logout();
+        };
+        
+        const logoutIcon = document.createElement('i');
+        logoutIcon.className = 'bi bi-box-arrow-right';
+        
+        const logoutText = document.createElement('span');
+        logoutText.setAttribute('data-translate', 'logout');
+        logoutText.textContent = 'Logout';
+        
+        logoutLink.appendChild(logoutIcon);
+        logoutLink.appendChild(document.createTextNode(' '));
+        logoutLink.appendChild(logoutText);
+        logoutItem.appendChild(logoutLink);
+        
+        // Add some spacing before logout button
+        const spacer = document.createElement('li');
+        spacer.className = 'nav-item';
+        spacer.style.flexGrow = 1;
+        spacer.innerHTML = '<div class="py-3"></div>';
+        
+        // Append to menu
+        sidebarMenu.appendChild(spacer);
+        sidebarMenu.appendChild(logoutItem);
+    }
+    
+    // Ensure the logout function is bound
+    const logoutLink = logoutItem.querySelector('a');
+    if (logoutLink) {
+        logoutLink.onclick = function(e) {
+            e.preventDefault();
+            window.logout();
+        };
     }
 }
 
@@ -254,10 +395,159 @@ function ensureAppGridExists() {
     }
 }
 
-// Run initialization when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeLayout);
+// Ensure translator exists in navbar
+function ensureTranslatorExists() {
+    // Check if translator button exists
+    let translatorIcon = document.querySelector('.nav-item.dropdown button i.bi-translate');
+    
+    if (!translatorIcon) {
+        console.log('Translator button not found, adding it to navbar');
+        const navbarRightSide = document.querySelector('.navbar .d-flex.align-items-center.gap-3');
+        
+        if (navbarRightSide) {
+            // Create translator dropdown
+            const translatorHtml = `
+                <div class="nav-item dropdown">
+                    <button class="btn btn-link text-dark p-0" data-bs-toggle="dropdown">
+                        <i class="bi bi-translate fs-5"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <h6 class="dropdown-header" data-translate="selectLanguage">Select Language</h6>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item d-flex align-items-center" href="#" data-lang="en">
+                            <img src="/admin/images/united-kingdom.png" alt="English" class="me-2" width="20">
+                            <span>English</span>
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" href="#" data-lang="es">
+                            <img src="/admin/images/spain.png" alt="Spanish" class="me-2" width="20">
+                            <span>Español</span>
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" href="#" data-lang="fr">
+                            <img src="/admin/images/france.png" alt="French" class="me-2" width="20">
+                            <span>Français</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            // Insert the translator button at the beginning
+            navbarRightSide.insertAdjacentHTML('afterbegin', translatorHtml);
+            
+            // Add event listeners to language selectors
+            const langSelectors = document.querySelectorAll('[data-lang]');
+            langSelectors.forEach(selector => {
+                selector.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const lang = this.getAttribute('data-lang');
+                    if (lang && window.changeLanguage) {
+                        window.changeLanguage(lang);
+                    }
+                });
+            });
+        }
+    }
+}
 
-// Load user profile data specifically for the navbar
+// Standardize notifications
+function standardizeNotifications() {
+    // Find notification badge
+    const notificationBadge = document.querySelector('.bi-bell + .badge');
+    
+    if (notificationBadge) {
+        // Set standard notification count
+        notificationBadge.textContent = '2';
+    } else {
+        // If no notification badge found, add the entire notification component
+        const navbarRightSide = document.querySelector('.navbar .d-flex.align-items-center.gap-3');
+        
+        if (navbarRightSide) {
+            // Create notifications dropdown
+            const notificationsHtml = `
+                <div class="nav-item dropdown">
+                    <button class="btn btn-link text-dark p-0 position-relative" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            2
+                            <span class="visually-hidden" data-translate="unreadNotifications">unread notifications</span>
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end notification-dropdown">
+                        <h6 class="dropdown-header" data-translate="notifications">Notifications</h6>
+                        <div class="dropdown-divider"></div>
+                        <!-- Notification Items -->
+                        <a class="dropdown-item" href="#">
+                            <div class="d-flex align-items-center">
+                                <div class="notification-icon bg-primary text-white rounded-circle p-2">
+                                    <i class="bi bi-cart"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="mb-0" data-translate="newOrder">New order received</p>
+                                    <small class="text-muted"><span>2</span> <span data-translate="minutesAgo">mins ago</span></small>
+                                </div>
+                            </div>
+                        </a>
+                        <a class="dropdown-item" href="#">
+                            <div class="d-flex align-items-center">
+                                <div class="notification-icon bg-success text-white rounded-circle p-2">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="mb-0" data-translate="newCustomer">New customer registered</p>
+                                    <small class="text-muted"><span>1</span> <span data-translate="hourAgo">hour ago</span></small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            // Add notifications right after translator button if it exists
+            const translatorButton = navbarRightSide.querySelector('.nav-item.dropdown button i.bi-translate');
+            if (translatorButton) {
+                const translatorParent = translatorButton.closest('.nav-item.dropdown');
+                translatorParent.insertAdjacentHTML('afterend', notificationsHtml);
+            } else {
+                // Add at the beginning if no translator button
+                navbarRightSide.insertAdjacentHTML('afterbegin', notificationsHtml);
+            }
+        }
+    }
+}
+
+// Determines the page title based on the current URL or document title
+function determinePageTitle() {
+    // First try to get from document title
+    if (document.title) {
+        // Clean up the title if it has "- Admin Dashboard" suffix
+        let title = document.title;
+        if (title.includes(' - Admin Dashboard')) {
+            title = title.replace(' - Admin Dashboard', '');
+        }
+        if (title) return title;
+    }
+    
+    // Fallback: determine from URL
+    const path = window.location.pathname;
+    const page = path.split('/').pop().replace('.html', '');
+    
+    // Map of page names to titles
+    const pageTitles = {
+        'index': 'Admin Dashboard',
+        'products': 'Product Management',
+        'add-product': 'Add Product',
+        'orders': 'Order Management',
+        'customers': 'Customer Management',
+        'promotions': 'Promotion Management',
+        'coupons': 'Coupon Management',
+        'reports': 'Analytics Reports',
+        'users': 'User Management',
+        'settings': 'System Settings'
+    };
+    
+    return pageTitles[page] || 'Admin Dashboard';
+}
+
+// Load user profile data specifically for the navbar 
 async function loadUserProfileForNavbar() {
     try {
         const token = localStorage.getItem('token');
@@ -294,8 +584,8 @@ async function loadUserProfileForNavbar() {
         const userData = await response.json();
         console.log('User profile data loaded for navbar:', userData);
         
-        // Format user name consistently
-        const displayName = userData.name || userData.username || (userData.role === 'admin' ? 'Administrator' : 'User');
+        // Format user name consistently - always use "Admin User" for consistency
+        const displayName = 'Admin User';
         
         // Store in localStorage for future use
         localStorage.setItem('userName', displayName);
@@ -389,3 +679,6 @@ async function showProfileModal() {
         showToast('error', 'Failed to load profile data');
     }
 } 
+
+// Run initialization when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeLayout); 
