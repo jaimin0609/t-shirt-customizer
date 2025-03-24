@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
+import withStyles from '../../styles/withStyles';
 import styleSystem from '../../styles/styleSystem';
-import { withStyles } from '../../styles/withStyles';
 
 const OrderSummaryBase = ({
   cartCount,

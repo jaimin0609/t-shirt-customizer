@@ -1,5 +1,5 @@
 import React from 'react';
-import { withStyles } from '../../styles/withStyles';
+import withStyles from '../../styles/withStyles';
 
 /**
  * Styled component that displays the status of an order with appropriate styling
