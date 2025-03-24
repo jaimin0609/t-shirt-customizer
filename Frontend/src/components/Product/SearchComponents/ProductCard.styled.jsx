@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styleSystem from '../../../styles/styleSystem';
-import { withStyles } from '../../../styles/withStyles';
+import withStyles from '../../../styles/withStyles.jsx';
 
 const ProductCardBase = ({ product, getImageUrl, styles }) => {
   // Format price with proper currency symbol and decimals
