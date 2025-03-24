@@ -484,31 +484,20 @@ export const CartProvider = ({ children, initialState = null }) => {
     setError(null);
 
     try {
-      // Example API call - replace with your actual API call
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ items: cart })
-      });
+      console.log('Syncing cart with server, API URL:', API_URL);
+      const response = await axios.post(`${API_URL}/cart`,
+        { items: cart },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to sync cart with server');
-      }
-
-      const data = await response.json();
-
-      // Update local cart with server response if needed
-      if (data.items) {
-        setCart(data.items);
+      if (response.data && response.data.items) {
+        setCart(response.data.items);
       }
 
       return true;
     } catch (err) {
-      setError(err.message);
       console.error('Error syncing cart:', err);
+      setError('Failed to sync cart with server');
       return false;
     } finally {
       setLoading(false);
@@ -524,35 +513,26 @@ export const CartProvider = ({ children, initialState = null }) => {
       setError(null);
 
       try {
-        // Example API call - replace with your actual API call
-        const response = await fetch('/api/cart', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        console.log('Fetching cart from server, API URL:', API_URL);
+        const response = await axios.get(`${API_URL}/cart`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch cart from server');
-        }
-
-        const data = await response.json();
-
-        if (data.items && data.items.length > 0) {
+        if (response.data && response.data.items && response.data.items.length > 0) {
           // Merge server cart with local cart (implementation depends on your business logic)
           setCart(prevItems => {
             // Simple merge strategy: prefer server items, add local items that aren't on server
-            const serverItemIds = data.items.map(item => item.productId);
+            const serverItemIds = response.data.items.map(item => item.productId);
             const localItemsToKeep = prevItems.filter(item =>
               !serverItemIds.includes(item.productId)
             );
 
-            return [...data.items, ...localItemsToKeep];
+            return [...response.data.items, ...localItemsToKeep];
           });
         }
       } catch (err) {
-        setError(err.message);
         console.error('Error fetching cart:', err);
+        // Don't show error, instead just fall back to local storage cart
       } finally {
         setLoading(false);
       }
