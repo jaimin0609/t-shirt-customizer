@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { productService } from '../../services/productService';
+import productService from '../../services/productService';
 import {
     MagnifyingGlassIcon,
     XMarkIcon
