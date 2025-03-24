@@ -19,8 +19,8 @@ import { notifyError } from './services/errorHandler';
 
 // UI Components
 import SkipLink from './components/UI/SkipLink';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Header from './components/Header/Header';
+import Footer from './components/Footer/Footer';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
