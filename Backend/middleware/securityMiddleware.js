@@ -101,8 +101,11 @@ export const initializeSecurityMiddleware = () => {
 
     // CSRF token validation middleware - with exclusions for specific routes
     const validateCsrfToken = (req, res, next) => {
-        // Skip CSRF validation for authentication endpoints
-        if (req.path.startsWith('/api/auth/') || req.method === 'GET') {
+        // Skip CSRF validation for authentication endpoints, GET requests, 
+        // and calculate-price endpoint (which is used publicly)
+        if (req.path.startsWith('/api/auth/') || 
+            req.method === 'GET' || 
+            req.path === '/api/promotions/calculate-price') {
             return next();
         }
         
