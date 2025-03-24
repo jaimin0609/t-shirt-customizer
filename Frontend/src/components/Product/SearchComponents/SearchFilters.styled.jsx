@@ -1,7 +1,7 @@
 import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { FilterAccordion, FilterAccordionGroup } from '../../UI/FilterAccordion';
-import { withStyles } from '../../../styles/withStyles';
+import withStyles from '../../../styles/withStyles.jsx';
 import styleSystem from '../../../styles/styleSystem';
 
 const SearchFiltersBase = ({
