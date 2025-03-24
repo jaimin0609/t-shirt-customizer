@@ -3,7 +3,15 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import axios from 'axios';
 import { API_URL, getCorsHeaders, getWorkingApiUrl } from '../config/api';
 import { useNavigate } from 'react-router-dom';
-import { decodeToken, isTokenExpiring, getTokenExpiration, setAuthToken, clearAuthToken, updateLastActivity } from '../utils/tokenUtils';
+import {
+  decodeToken,
+  isTokenExpiring,
+  getTokenExpiration,
+  setAuthToken,
+  clearAuthToken,
+  updateLastActivity,
+  getAuthHeaders
+} from '../utils/tokenUtils';
 
 // Create auth context with safer pattern
 const AuthContext = createContext({
