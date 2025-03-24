@@ -304,5 +304,4 @@ const productService = {
   }
 };
 
-export { getImageUrl };
 export default productService; 
