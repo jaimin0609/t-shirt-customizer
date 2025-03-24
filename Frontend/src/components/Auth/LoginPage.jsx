@@ -97,10 +97,22 @@ const LoginPage = () => {
 
             console.log('Authentication successful, preparing to navigate');
 
-            // Redirect to the previous page or home
-            const redirectTo = location.state?.from || '/';
-            console.log('Redirecting to:', redirectTo);
-            navigate(redirectTo);
+            // Check for return URL in query parameters or location state
+            const searchParams = new URLSearchParams(location.search);
+            const returnUrl = searchParams.get('returnUrl') ||
+                location.state?.returnTo ||
+                location.state?.from ||
+                '/';
+
+            console.log('Redirecting to:', returnUrl);
+
+            // If we have a valid returnUrl that's not the login page itself, navigate to it
+            if (returnUrl && !returnUrl.includes('/login')) {
+                navigate(returnUrl);
+            } else {
+                // Default to profile or home page
+                navigate('/profile');
+            }
         } catch (err) {
             // Error is handled by AuthContext
             console.error('Authentication error in component:', err);

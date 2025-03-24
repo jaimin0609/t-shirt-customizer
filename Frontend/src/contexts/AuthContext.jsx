@@ -18,6 +18,7 @@ const AuthContext = createContext({
   checkAuthStatus: () => { },
   clearError: () => { },
   refreshUser: () => { },
+  refreshToken: () => { },
   requestPasswordReset: () => { },
   resetPassword: () => { }
 });
@@ -35,6 +36,41 @@ const configureAxiosAuth = (authToken) => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
   } else {
     delete axios.defaults.headers.common['Authorization'];
+  }
+};
+
+// Default token refresh interval (15 minutes)
+const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000;
+
+// Default session timeout (8 hours)
+const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
+
+// Function to decode JWT token
+const decodeToken = (token) => {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
+// Function to check if token is expired or about to expire
+const isTokenExpiredOrClose = (token, bufferTime = 5 * 60 * 1000) => {
+  if (!token) return true;
+
+  try {
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) return true;
+
+    // Check if token is expired or will expire within buffer time
+    const expirationTime = decoded.exp * 1000;
+    return Date.now() + bufferTime > expirationTime;
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return true;
   }
 };
 
@@ -116,7 +152,56 @@ export const AuthProvider = ({ children, initialState = null }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [tokenRefreshInterval, setTokenRefreshInterval] = useState(null);
+  const [lastActivity, setLastActivity] = useState(Date.now());
   const navigate = isServer ? null : useNavigate();
+
+  // Reset activity timer on user interaction
+  useEffect(() => {
+    if (isServer || !isAuthenticated) return;
+
+    // Update last activity on user interaction
+    const updateActivity = () => {
+      setLastActivity(Date.now());
+      localStorage.setItem('lastActivity', Date.now().toString());
+    };
+
+    // Listen for user activity events
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('click', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+    window.addEventListener('touchstart', updateActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('click', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+      window.removeEventListener('touchstart', updateActivity);
+    };
+  }, [isAuthenticated]);
+
+  // Check for inactivity timeout
+  useEffect(() => {
+    if (isServer || !isAuthenticated) return;
+
+    const checkInactivity = () => {
+      const storedActivity = localStorage.getItem('lastActivity');
+      const lastActivityTime = storedActivity ? parseInt(storedActivity) : Date.now();
+      const inactiveTime = Date.now() - lastActivityTime;
+
+      // Log out if user has been inactive for too long
+      if (inactiveTime > SESSION_TIMEOUT) {
+        console.log('Session timed out due to inactivity');
+        logout();
+      }
+    };
+
+    // Check every minute
+    const intervalId = setInterval(checkInactivity, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, lastActivity]);
 
   // Sync authentication state with localStorage
   useEffect(() => {
@@ -125,11 +210,95 @@ export const AuthProvider = ({ children, initialState = null }) => {
     if (token) {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      configureAxiosAuth(token);
+
+      // Setup token refresh interval if authenticated
+      if (isAuthenticated && !tokenRefreshInterval) {
+        const intervalId = setInterval(() => {
+          if (isTokenExpiredOrClose(token)) {
+            refreshToken();
+          }
+        }, TOKEN_REFRESH_INTERVAL);
+
+        setTokenRefreshInterval(intervalId);
+      }
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      configureAxiosAuth(null);
+
+      // Clear refresh interval if not authenticated
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+        setTokenRefreshInterval(null);
+      }
     }
-  }, [token, user]);
+
+    return () => {
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+      }
+    };
+  }, [token, user, isAuthenticated]);
+
+  // Initial token validation on mount
+  useEffect(() => {
+    if (isServer) return;
+
+    const validateToken = async () => {
+      if (token) {
+        // Check if token is expired or close to expiration
+        if (isTokenExpiredOrClose(token)) {
+          try {
+            await refreshToken();
+          } catch (err) {
+            // If token refresh fails, log out the user
+            logout();
+          }
+        } else {
+          // Ensure authentication state is correct
+          setIsAuthenticated(true);
+          configureAxiosAuth(token);
+        }
+      }
+    };
+
+    validateToken();
+  }, []);
+
+  // Token refresh handler
+  const refreshToken = useCallback(async () => {
+    if (isServer || !token) return false;
+
+    try {
+      setLoading(true);
+      console.log('Refreshing auth token...');
+
+      const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data && response.data.token) {
+        setToken(response.data.token);
+        setIsAuthenticated(true);
+
+        // Update axios auth header
+        configureAxiosAuth(response.data.token);
+
+        console.log('Token refreshed successfully');
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Failed to refresh token:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   // Login handler
   const login = async (email, password) => {
@@ -163,6 +332,13 @@ export const AuthProvider = ({ children, initialState = null }) => {
       setToken(data.token);
       setUser(data.user);
       setIsAuthenticated(true);
+
+      // Configure axios with new token
+      configureAxiosAuth(data.token);
+
+      // Set last activity time
+      setLastActivity(Date.now());
+      localStorage.setItem('lastActivity', Date.now().toString());
 
       navigate('/profile');
       return { success: true };
@@ -208,6 +384,13 @@ export const AuthProvider = ({ children, initialState = null }) => {
       setUser(data.user);
       setIsAuthenticated(true);
 
+      // Configure axios with new token
+      configureAxiosAuth(data.token);
+
+      // Set last activity time
+      setLastActivity(Date.now());
+      localStorage.setItem('lastActivity', Date.now().toString());
+
       return { success: true };
     } catch (err) {
       console.error('Signup error:', err);
@@ -219,14 +402,49 @@ export const AuthProvider = ({ children, initialState = null }) => {
   };
 
   // Logout handler
-  const logout = () => {
+  const logout = useCallback(() => {
     if (isServer) return;
 
+    // Call logout endpoint to invalidate token on server
+    if (token) {
+      try {
+        // Use fire-and-forget approach to avoid blocking logout on API errors
+        fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }).catch(err => {
+          console.warn('Error calling logout endpoint:', err);
+        });
+      } catch (err) {
+        console.warn('Error during logout API call:', err);
+      }
+    }
+
+    // Clear authentication state regardless of API call result
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
+
+    // Clear localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('lastActivity');
+
+    // Clear axios auth header
+    configureAxiosAuth(null);
+
+    // Clear token refresh interval
+    if (tokenRefreshInterval) {
+      clearInterval(tokenRefreshInterval);
+      setTokenRefreshInterval(null);
+    }
+
+    // Navigate to home page
     navigate('/');
-  };
+  }, [token, tokenRefreshInterval, navigate]);
 
   // Update user profile
   const updateProfile = async (userData) => {
@@ -271,6 +489,11 @@ export const AuthProvider = ({ children, initialState = null }) => {
     }
   };
 
+  // Clear authentication error
+  const clearError = () => {
+    setError(null);
+  };
+
   // Context value
   const contextValue = {
     user,
@@ -282,7 +505,8 @@ export const AuthProvider = ({ children, initialState = null }) => {
     signup,
     logout,
     updateProfile,
-    setError
+    refreshToken,
+    clearError
   };
 
   return (

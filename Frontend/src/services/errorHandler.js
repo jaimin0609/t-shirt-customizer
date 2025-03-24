@@ -178,6 +178,9 @@ export const handleAuthError = (error) => {
   
   const { status, data } = error.response;
   
+  // Track if auth events have been fired to prevent duplicates
+  let authEventFired = false;
+  
   // Token expired or invalid
   if (status === 401) {
     result.message = data?.message || 'Your session has expired. Please log in again.';
@@ -185,22 +188,60 @@ export const handleAuthError = (error) => {
     result.requiresLogin = true;
     result.action = 'logout';
     
-    // Attempt to logout and redirect if auth context is available
-    try {
-      const { useAuth } = require('../contexts/AuthContext');
-      const auth = useAuth();
-      if (auth && typeof auth.logout === 'function') {
-        auth.logout();
-        result.action = 'logged_out';
+    // Prevent multiple auth error event dispatches
+    if (!window.authErrorHandling) {
+      window.authErrorHandling = true;
+      
+      // Dispatch auth expired event
+      const authEvent = new CustomEvent('auth:expired', {
+        detail: { message: result.message }
+      });
+      window.dispatchEvent(authEvent);
+      authEventFired = true;
+      
+      // Clear auth error flag after a delay
+      setTimeout(() => {
+        window.authErrorHandling = false;
+      }, 2000);
+      
+      // Attempt to logout and redirect if auth context is available
+      try {
+        const { useAuth } = require('../contexts/AuthContext');
+        const auth = useAuth();
+        if (auth && typeof auth.logout === 'function') {
+          auth.logout();
+          result.action = 'logged_out';
+        }
+      } catch (err) {
+        // Auth context not available, redirect through event
+        if (!authEventFired) {
+          const redirectEvent = new CustomEvent('auth:redirect', {
+            detail: { returnUrl: window.location.pathname }
+          });
+          window.dispatchEvent(redirectEvent);
+        }
       }
-    } catch (err) {
-      // Auth context not available, handle in component
     }
   }
   // Permission denied
   else if (status === 403) {
     result.message = data?.message || 'You do not have permission to perform this action.';
     result.permissionDenied = true;
+    
+    // Dispatch permission denied event if configured to do so
+    if (data?.reason === 'token_invalid' && !window.authErrorHandling) {
+      window.authErrorHandling = true;
+      
+      const authEvent = new CustomEvent('auth:permission_denied', {
+        detail: { message: result.message }
+      });
+      window.dispatchEvent(authEvent);
+      
+      // Clear auth error flag after a delay
+      setTimeout(() => {
+        window.authErrorHandling = false;
+      }, 2000);
+    }
   }
   
   return result;

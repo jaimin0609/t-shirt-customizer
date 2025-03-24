@@ -1,10 +1,10 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Context providers
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -54,6 +54,9 @@ const App = ({ isSSR = false, initialState = {} }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [initError, setInitError] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, logout } = useAuth();
 
   // Lazily load route components for code splitting in client
   // During SSR, these would be pre-rendered
@@ -168,6 +171,64 @@ const App = ({ isSSR = false, initialState = {} }) => {
 
     return null;
   };
+
+  // Set up global authentication event listeners
+  useEffect(() => {
+    // Handler for expired authentication tokens
+    const handleAuthExpired = (event) => {
+      const message = event.detail?.message || 'Your session has expired. Please log in again.';
+
+      // Only show toast if not already on login page
+      if (!location.pathname.includes('/login')) {
+        toast.error(message, {
+          position: "top-center",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Get current path for potential redirect back after login
+        const currentPath = location.pathname + location.search;
+
+        // Navigate to login with returnUrl
+        navigate(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
+      }
+    };
+
+    // Handler for authentication permission denied
+    const handlePermissionDenied = (event) => {
+      const message = event.detail?.message || 'You do not have permission to access this resource.';
+
+      toast.error(message, {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    };
+
+    // Handler for redirect requests
+    const handleAuthRedirect = (event) => {
+      const returnUrl = event.detail?.returnUrl || '/';
+      navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+    };
+
+    // Register event listeners
+    window.addEventListener('auth:expired', handleAuthExpired);
+    window.addEventListener('auth:permission_denied', handlePermissionDenied);
+    window.addEventListener('auth:redirect', handleAuthRedirect);
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('auth:expired', handleAuthExpired);
+      window.removeEventListener('auth:permission_denied', handlePermissionDenied);
+      window.removeEventListener('auth:redirect', handleAuthRedirect);
+    };
+  }, [navigate, location, isAuthenticated, logout]);
 
   // Render error message if initialization failed
   if (initError || loadError) {

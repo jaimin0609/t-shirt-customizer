@@ -192,27 +192,32 @@ export const refreshToken = async (req, res) => {
 
 /**
  * Logout user
+ * Blacklists the current token
  */
 export const logout = async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         
         if (token) {
-            // Blacklist the token
-            await blacklistToken(token);
-            console.log('Token blacklisted successfully:', token.substring(0, 10) + '...');
+            // Add token to blacklist to invalidate it
+            blacklistToken(token);
+            
+            res.status(200).json({ 
+                message: 'Logged out successfully',
+                success: true 
+            });
         } else {
-            console.log('No token provided in logout request');
+            res.status(400).json({ 
+                message: 'No token provided',
+                success: false 
+            });
         }
-        
-        // Always return success, even if token was missing
-        // This ensures the client-side logout still works
-        res.json({ message: 'Logged out successfully' });
     } catch (error) {
         console.error('Logout error:', error);
-        
-        // Still return success to client to ensure they can complete logout
-        res.status(200).json({ message: 'Logged out successfully' });
+        res.status(500).json({ 
+            message: 'Server error during logout', 
+            success: false 
+        });
     }
 };
 
