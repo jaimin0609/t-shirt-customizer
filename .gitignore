@@ -4,7 +4,14 @@ node_modules/
 
 # Environment files
 .env
-**/.env
+.env.*
+!.env.example
+Frontend/.env
+Frontend/.env.*
+!Frontend/.env.example
+Backend/.env
+Backend/.env.*
+!Backend/.env.example
 .env.local
 .env.development.local
 .env.test.local

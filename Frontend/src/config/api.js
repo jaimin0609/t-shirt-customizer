@@ -4,10 +4,14 @@
  */
 
 // Get the base API URL from environment variables
-export const API_URL = import.meta.env.VITE_API_URL || 'https://t-shirt-customizer-backend.onrender.com/api';
+export const API_URL = import.meta.env.VITE_API_URL;
+
+// Validate API URL
+if (!API_URL) {
+  throw new Error('VITE_API_URL environment variable is not set');
+}
 
 // Fallback URL in case the main one is not available
-// Using nullish coalescing to ensure we don't fallback to an empty string
 export const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL || null;
 
 // Log configuration in development only
@@ -21,7 +25,7 @@ if (import.meta.env.DEV) {
 // API configuration options
 export const API_CONFIG = {
   timeout: 10000, // 10 seconds
-  retry: 1,       // Number of retries before using fallback
+  retry: 2,       // Number of retries before using fallback
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -83,8 +87,12 @@ export const getWorkingApiUrl = async () => {
     }
   }
   
-  // If no working URL found, still return the primary URL
-  return workingUrl || API_URL;
+  // If no working URL found, throw an error
+  if (!workingUrl) {
+    throw new Error('No working API URL found');
+  }
+  
+  return workingUrl;
 };
 
 console.log('Using API URL:', API_URL); // Log the API URL being used 

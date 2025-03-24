@@ -3,15 +3,18 @@
  * Handles all HTTP requests with consistent error handling and security
  */
 import axios from 'axios';
-import { handleApiError } from './errorHandler';
-import config from '../config/appConfig';
+import { notifyError, formatErrorMessage, getErrorType, ErrorType, ErrorSeverity } from './errorHandler';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Get API URL from environment variables with fallback
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_TIMEOUT = 30000; // 30 seconds timeout
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: BASE_URL,
-  timeout: config.API.TIMEOUT,
+/**
+ * Create an axios instance with default configuration
+ */
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: API_TIMEOUT,
   withCredentials: true, // Include cookies in cross-origin requests
   headers: {
     'Content-Type': 'application/json',
@@ -19,258 +22,296 @@ const api = axios.create({
   }
 });
 
-// Request interceptor
-api.interceptors.request.use(
+/**
+ * Handle request configuration
+ * @param {Object} config - Request configuration
+ * @returns {Object} Modified configuration
+ */
+axiosInstance.interceptors.request.use(
   (config) => {
-    // Log requests in development
-    if (config.IS_DEVELOPMENT) {
-      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-      
-      // Add performance marker to measure request duration
-      config.metadata = { startTime: new Date() };
-    }
+    // Add request start time for performance tracking
+    config.metadata = { startTime: performance.now() };
     
-    // Get token from storage for authenticated requests
+    // Get authentication token if available
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Add security headers
+    // Add security headers for protection against CSRF
     config.headers['X-Requested-With'] = 'XMLHttpRequest';
     
-    // Add CSRF token if available
+    // Add CSRF token if available from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
     }
     
+    // Log requests in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, { 
+        params: config.params,
+        data: config.data
+      });
+    }
+    
     return config;
   },
   (error) => {
-    if (config.IS_DEVELOPMENT) {
-      console.error('API Request Error:', error);
-    }
+    // Log request errors
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
-api.interceptors.response.use(
+/**
+ * Handle response processing
+ */
+axiosInstance.interceptors.response.use(
   (response) => {
-    // Calculate request duration for performance monitoring
-    if (config.IS_DEVELOPMENT && response.config.metadata) {
-      const duration = new Date() - response.config.metadata.startTime;
-      console.log(`API Response: ${response.status} ${response.config.url} (${duration}ms)`);
+    // Track request duration for performance monitoring
+    if (response.config.metadata) {
+      const duration = performance.now() - response.config.metadata.startTime;
       
-      // Log slow requests
-      if (duration > 1000) {
-        console.warn(`Slow API request: ${response.config.url} took ${duration}ms`);
+      // Log response details in development
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`API Response (${Math.round(duration)}ms): ${response.status} ${response.config.url}`);
+        
+        // Log slow requests as warnings
+        if (duration > 1000) {
+          console.warn(`Slow API request: ${response.config.url} took ${Math.round(duration)}ms`);
+        }
       }
     }
+    
     return response;
   },
   async (error) => {
-    // Handle specific error cases
-    if (error.response) {
-      // Server responded with error status
-      const status = error.response.status;
-      
-      // Handle authentication errors
-      if (status === 401) {
-        // Clear local auth data
-        localStorage.removeItem('token');
-        
-        // Fire an auth error event that can be caught by the app
-        window.dispatchEvent(new CustomEvent('auth:expired', {
-          detail: { message: 'Your session has expired. Please log in again.' }
-        }));
-        
-        // If not on login page, redirect to login
-        if (window.location.pathname !== '/login') {
-          // Use history to navigate instead of direct location change
-          // to maintain a clean history stack
-          window.dispatchEvent(new CustomEvent('auth:redirect', {
-            detail: { returnUrl: window.location.pathname }
-          }));
-        }
-      }
-      
-      // Handle CSRF token issues
-      if (status === 403 && error.response.data?.message?.includes('CSRF')) {
-        // Refresh the page to get a new CSRF token
-        window.location.reload();
-        return Promise.reject(error);
-      }
-    } else if (error.request) {
-      // Request was made but no response received (network error)
-      console.error('Network Error:', error.request);
-      
-      // Check if navigator is online
-      if (!navigator.onLine) {
-        // Fire a connection error event
-        window.dispatchEvent(new CustomEvent('app:offline', {
-          detail: { message: 'You appear to be offline. Please check your connection.' }
-        }));
-      } else {
-        // Fire a network error event
-        window.dispatchEvent(new CustomEvent('api:networkError', {
-          detail: { message: 'Network error. Please check your connection.' }
-        }));
+    // Handle different error scenarios
+    const originalRequest = error.config;
+    
+    // Track request duration for performance monitoring
+    if (originalRequest?.metadata) {
+      const duration = performance.now() - originalRequest.metadata.startTime;
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`API Error (${Math.round(duration)}ms): ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`, error);
       }
     }
     
-    // Handle request retry for specific errors
-    if (error.config && !error.config.__isRetryRequest) {
-      // Only retry on network errors or 5xx server errors
-      const shouldRetry = (
-        !error.response || 
-        (error.response.status >= 500 && error.response.status <= 599)
-      );
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      // Clear authentication data
+      localStorage.removeItem('token');
       
-      if (shouldRetry) {
-        error.config.__isRetryRequest = true;
-        error.config.__retryCount = error.config.__retryCount || 0;
-        
-        if (error.config.__retryCount < config.API.RETRY_COUNT) {
-          error.config.__retryCount++;
-          
-          // Add exponential backoff
-          const backoff = Math.pow(2, error.config.__retryCount) * 1000;
-          
-          if (config.IS_DEVELOPMENT) {
-            console.log(`Retrying request (${error.config.__retryCount}/${config.API.RETRY_COUNT}) after ${backoff}ms`);
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          
-          // Retry the request
-          return api(error.config);
-        }
+      // Dispatch authentication expired event
+      const authEvent = new CustomEvent('auth:expired', {
+        detail: { message: 'Your session has expired. Please log in again.' }
+      });
+      window.dispatchEvent(authEvent);
+      
+      // Redirect to login unless already on login page
+      if (!window.location.pathname.includes('/login')) {
+        const redirectEvent = new CustomEvent('auth:redirect', {
+          detail: { returnUrl: window.location.pathname }
+        });
+        window.dispatchEvent(redirectEvent);
       }
     }
     
-    // Rethrow the error for the calling code to handle
+    // Handle CSRF token errors
+    if (error.response?.status === 403 && 
+        (error.response.data?.message?.includes('CSRF') || 
+         error.response.data?.error?.includes('CSRF'))) {
+      console.warn('CSRF token validation failed. Refreshing page to get a new token.');
+      window.location.reload();
+      return Promise.reject(error);
+    }
+    
+    // Handle network errors with clear user-friendly message
+    if (!error.response) {
+      notifyError('Network error. Please check your internet connection and try again.', {
+        severity: ErrorSeverity.ERROR
+      });
+    }
+    
+    // Return rejected promise with the error
     return Promise.reject(error);
   }
 );
 
-// Wrapper for common HTTP methods with consistent error handling
-export const apiClient = {
+/**
+ * Unified API request method with error handling
+ * @param {Object} options - Request options
+ * @returns {Promise} - Response promise
+ */
+const apiRequest = async (options) => {
+  try {
+    const response = await axiosInstance(options);
+    return response.data;
+  } catch (error) {
+    // Get error type for handling
+    const errorType = getErrorType(error);
+    const errorMessage = formatErrorMessage(error, { 
+      fallback: 'An error occurred while processing your request.'
+    });
+    
+    // Log specific error details
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`API Error (${errorType}):`, {
+        url: options.url,
+        method: options.method,
+        status: error.response?.status,
+        message: errorMessage,
+        error
+      });
+    }
+    
+    // Don't auto-notify for certain error types that are handled elsewhere
+    const skipNotify = 
+      errorType === ErrorType.AUTH || // Auth errors handled by interceptor
+      (options.skipErrorNotification === true);
+    
+    if (!skipNotify) {
+      notifyError(errorMessage, {
+        severity: errorType === ErrorType.NETWORK ? ErrorSeverity.WARNING : ErrorSeverity.ERROR
+      });
+    }
+    
+    throw error;
+  }
+};
+
+/**
+ * API client with methods for different HTTP verbs
+ */
+const apiClient = {
   /**
-   * Make a GET request
-   * @param {string} url - The URL to request
+   * GET request
+   * @param {string} url - Endpoint URL
    * @param {Object} params - Query parameters
-   * @param {Object} options - Additional axios options
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async get(url, params = {}, options = {}) {
-    try {
-      const response = await api.get(url, { 
-        params,
-        ...options
-      });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to fetch data from ${url}`);
-    }
+    return apiRequest({
+      method: 'get',
+      url,
+      params,
+      ...options
+    });
   },
   
   /**
-   * Make a POST request
-   * @param {string} url - The URL to request
-   * @param {Object} data - The request body
-   * @param {Object} options - Additional axios options
+   * POST request
+   * @param {string} url - Endpoint URL
+   * @param {Object} data - Request payload
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async post(url, data = {}, options = {}) {
-    try {
-      const response = await api.post(url, data, options);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to submit data to ${url}`);
-    }
+    return apiRequest({
+      method: 'post',
+      url,
+      data,
+      ...options
+    });
   },
   
   /**
-   * Make a PUT request
-   * @param {string} url - The URL to request
-   * @param {Object} data - The request body
-   * @param {Object} options - Additional axios options
+   * PUT request
+   * @param {string} url - Endpoint URL
+   * @param {Object} data - Request payload
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async put(url, data = {}, options = {}) {
-    try {
-      const response = await api.put(url, data, options);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to update data at ${url}`);
-    }
+    return apiRequest({
+      method: 'put',
+      url,
+      data,
+      ...options
+    });
   },
   
   /**
-   * Make a PATCH request
-   * @param {string} url - The URL to request
-   * @param {Object} data - The request body
-   * @param {Object} options - Additional axios options
+   * PATCH request
+   * @param {string} url - Endpoint URL
+   * @param {Object} data - Request payload
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async patch(url, data = {}, options = {}) {
-    try {
-      const response = await api.patch(url, data, options);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to update data at ${url}`);
-    }
+    return apiRequest({
+      method: 'patch',
+      url,
+      data,
+      ...options
+    });
   },
   
   /**
-   * Make a DELETE request
-   * @param {string} url - The URL to request
-   * @param {Object} options - Additional axios options
+   * DELETE request
+   * @param {string} url - Endpoint URL
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async delete(url, options = {}) {
-    try {
-      const response = await api.delete(url, options);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to delete resource at ${url}`);
-    }
+    return apiRequest({
+      method: 'delete',
+      url,
+      ...options
+    });
   },
   
   /**
-   * Upload a file or multiple files with form data
-   * @param {string} url - The URL to upload to
-   * @param {FormData|Object} formData - FormData object or plain object to convert
-   * @param {Object} options - Additional axios options
+   * Upload file(s) with FormData
+   * @param {string} url - Endpoint URL
+   * @param {FormData} formData - Form data with files
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise
    */
   async upload(url, formData, options = {}) {
-    // Convert plain object to FormData if needed
-    const data = formData instanceof FormData 
-      ? formData 
-      : Object.entries(formData).reduce((fd, [key, value]) => {
-          fd.append(key, value);
-          return fd;
-        }, new FormData());
-    
-    try {
-      const response = await api.post(url, data, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        ...options
-      });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error, `Failed to upload file to ${url}`);
-    }
+    return apiRequest({
+      method: 'post',
+      url,
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      ...options
+    });
   },
   
   /**
-   * Check API health/connectivity
-   * @returns {Promise<boolean>} True if API is available
+   * Download a file
+   * @param {string} url - Endpoint URL 
+   * @param {Object} params - Query parameters
+   * @param {Object} options - Additional options
+   * @returns {Promise} - Response promise with blob data
+   */
+  async download(url, params = {}, options = {}) {
+    return apiRequest({
+      method: 'get',
+      url,
+      params,
+      responseType: 'blob',
+      ...options
+    });
+  },
+  
+  /**
+   * Check API health/connection
+   * @returns {Promise<boolean>} - True if API is healthy
    */
   async checkHealth() {
     try {
-      await api.get('/health', { timeout: 5000 });
-      return true;
+      const response = await apiRequest({
+        method: 'get',
+        url: '/health',
+        timeout: 5000,
+        skipErrorNotification: true
+      });
+      return response.status === 'ok';
     } catch (error) {
       console.error('API health check failed:', error);
       return false;
@@ -278,5 +319,4 @@ export const apiClient = {
   }
 };
 
-// Export the raw axios instance for advanced use cases
-export default api; 
+export default apiClient; 

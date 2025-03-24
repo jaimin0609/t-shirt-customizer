@@ -12,6 +12,12 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import { promotionLogger } from '../services/promotionLogger';
 
+// Import modular components
+import ProductImageGallery from '../components/Product/ProductImageGallery';
+import ProductPricing from '../components/Product/ProductPricing';
+import ProductReviews from '../components/Product/ProductReviews';
+import ProductActions from '../components/Product/ProductActions';
+
 // CSS for product description content
 const productDescriptionStyles = `
 .product-description {
@@ -52,190 +58,156 @@ const productDescriptionStyles = `
 .product-description i {
     font-style: italic;
 }
+
+.product-description h2 {
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.product-description h3 {
+    font-size: 1.25rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
 `;
 
+/**
+ * ProductDetailPage Component
+ * Shows detailed information about a specific product, including images, pricing,
+ * description, options, and reviews.
+ */
 const ProductDetailPage = () => {
-    const params = useParams();
-    // Get productId from all possible route parameter formats and log it for debugging
-    const productId = params.productId || params.id;
-
-    console.log('[ProductDetailPage] Rendered with params:', params);
-    console.log('[ProductDetailPage] Using productId:', productId, typeof productId);
-
+    const { productId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const { isAuthenticated } = useAuth();
+    const reviewFormRef = useRef(null);
 
+    // Product data state
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedSize, setSelectedSize] = useState(null);
-    const [selectedColor, setSelectedColor] = useState(null);
-    const [quantity, setQuantity] = useState(1);
-    const [similarProducts, setSimilarProducts] = useState([]);
-    const [reviews, setReviews] = useState([]);
-    const [priceInfo, setPriceInfo] = useState(null);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [reviewForm, setReviewForm] = useState({
-        rating: 5,
-        comment: ''
-    });
-    const [showSizeGuide, setShowSizeGuide] = useState(false);
-    const [showReviewForm, setShowReviewForm] = useState(false);
-    const [submittingReview, setSubmittingReview] = useState(false);
-    const [reviewSuccess, setReviewSuccess] = useState(false);
-    const [reviewError, setReviewError] = useState(null);
-    const sizeGuideRef = useRef(null);
-    const reviewFormRef = useRef(null);
+    const [selectedImage, setSelectedImage] = useState(0);
 
+    // Price information state
+    const [priceInfo, setPriceInfo] = useState(null);
+    const [loadingPrice, setLoadingPrice] = useState(false);
+
+    // Options and variants state
+    const [selectedOptions, setSelectedOptions] = useState({});
+    const [quantity, setQuantity] = useState(1);
+    const [isInStock, setIsInStock] = useState(true);
+
+    // Review state
+    const [reviews, setReviews] = useState([]);
+    const [reviewText, setReviewText] = useState('');
+    const [reviewRating, setReviewRating] = useState(5);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewError, setReviewError] = useState(null);
+
+    // UI state
+    const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const sizeGuideRef = useRef(null);
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
+
+    // Fetch product details when component mounts or productId changes
     useEffect(() => {
         const fetchProductDetails = async () => {
-            if (!productId) {
-                console.error('[ProductDetailPage] No productId provided');
-                setError('Product ID is missing. Please go back and try again.');
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
             try {
-                // Log product view if available
-                try {
-                    if (promotionLogger && typeof promotionLogger.logProductView === 'function') {
-                        promotionLogger.logProductView(productId, user?.id);
-                    } else {
-                        console.warn('[ProductDetailPage] promotionLogger.logProductView not available');
+                setLoading(true);
+                setError(null);
+
+                // Fetch product and reviews data
+                const productData = await productService.getProductById(productId);
+                setProduct(productData);
+
+                // Set default options based on variants if available
+                if (productData.variants && productData.variants.length > 0) {
+                    const defaultOptions = {};
+                    const firstVariant = productData.variants[0];
+
+                    if (firstVariant.options) {
+                        Object.entries(firstVariant.options).forEach(([key, value]) => {
+                            defaultOptions[key] = value;
+                        });
                     }
-                } catch (logError) {
-                    console.error('[ProductDetailPage] Error logging product view:', logError);
+
+                    setSelectedOptions(defaultOptions);
                 }
 
-                console.log('[ProductDetailPage] Fetching product details for ID:', productId);
-                const data = await productService.getProductById(productId);
+                // Fetch product reviews
+                const reviewsData = await productService.getProductReviews(productId);
+                setReviews(reviewsData);
 
-                if (!data) {
-                    console.error('[ProductDetailPage] No product data returned for ID:', productId);
-                    setError('Product not found. It may have been removed or is temporarily unavailable.');
-                    setLoading(false);
-                    return;
-                }
+                // Check stock status
+                setIsInStock(productData.stock > 0);
 
-                console.log('[ProductDetailPage] Successfully fetched product data:', data);
-                setProduct(data);
-
-                // Fetch similar products
-                if (data && data.category) {
+                // Log product view for analytics
+                if (productData) {
                     try {
-                        console.log('[ProductDetailPage] Fetching similar products for category:', data.category);
-                        const similarData = await productService.getSimilarProducts(productId, data.category);
-                        setSimilarProducts(similarData);
+                        await promotionLogger.logProductView(productId);
                     } catch (err) {
-                        console.error('[ProductDetailPage] Error fetching similar products:', err);
-                        setSimilarProducts([]);
+                        console.error('Error logging product view:', err);
+                        // Non-critical error, don't display to user
                     }
                 }
-
-                // Fetch reviews
-                try {
-                    console.log('[ProductDetailPage] Fetching reviews for product ID:', productId);
-                    const reviewsData = await productService.getProductReviews(productId);
-                    setReviews(reviewsData || []);
-                } catch (err) {
-                    console.error('[ProductDetailPage] Error fetching product reviews:', err);
-                    setReviews([]);
-                }
-
             } catch (err) {
-                console.error('[ProductDetailPage] Error fetching product:', err);
-                setError('Failed to load product. Please try again.');
+                console.error('Error fetching product details:', err);
+                setError(err.message || 'Failed to load product details');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchProductDetails();
-    }, [productId, user?.id]);
+    }, [productId]);
 
-    // Fetch price info when product data changes
+    // Fetch price information when product data or selected options change
     useEffect(() => {
-        if (product && product.price) {
-            const fetchPriceInfo = async () => {
-                try {
-                    const info = await calculateProductPrice(product.id, product.price);
-                    console.log('[ProductDetailPage] Price info from API:', info);
+        const fetchPriceInfo = async () => {
+            if (!product) return;
 
-                    // FORCE DISCOUNT: If the info doesn't have a discount but the product has a promotion, force the discount
-                    if (!info.hasDiscount && product.promotion && product.promotion.isActive) {
-                        console.log('[ProductDetailPage] Forcing discount display for product with promotion');
-                        const price = parseFloat(product.price);
-                        const discountValue = product.promotion.discountValue || 15;
-                        const discountedPrice = price * (1 - (discountValue / 100));
+            try {
+                setLoadingPrice(true);
 
-                        // Create a new info object with the discount
-                        const forcedInfo = {
-                            ...info,
-                            hasDiscount: true,
-                            discountPercentage: discountValue,
-                            finalPrice: formatPrice(discountedPrice),
-                            discountedPrice: formatPrice(discountedPrice),
-                            originalPrice: formatPrice(price),
-                            discountBadge: `${discountValue}% OFF`
-                        };
+                // Calculate price with any applicable discounts
+                const priceData = await calculateProductPrice(
+                    product,
+                    selectedOptions,
+                    quantity
+                );
 
-                        console.log('[ProductDetailPage] Setting forced price info:', forcedInfo);
-                        setPriceInfo(forcedInfo);
-                        return;
-                    }
+                setPriceInfo({
+                    originalPrice: priceData.originalPrice,
+                    finalPrice: priceData.finalPrice,
+                    discount: priceData.discount
+                });
+            } catch (err) {
+                console.error('Error calculating price:', err);
+                // Default to base price if calculation fails
+                setPriceInfo({
+                    originalPrice: product.price,
+                    finalPrice: product.price,
+                    discount: null
+                });
+            } finally {
+                setLoadingPrice(false);
+            }
+        };
 
-                    setPriceInfo(info);
-                } catch (error) {
-                    console.error('Error fetching price info:', error);
+        fetchPriceInfo();
+    }, [product, selectedOptions, quantity]);
 
-                    // FORCE DISCOUNT: Even on error, display the discount if the product has a promotion
-                    if (product.promotion && product.promotion.isActive) {
-                        console.log('[ProductDetailPage] Forcing discount display after error');
-                        const price = parseFloat(product.price);
-                        const discountValue = product.promotion.discountValue || 15;
-                        const discountedPrice = price * (1 - (discountValue / 100));
-
-                        setPriceInfo({
-                            hasDiscount: true,
-                            originalPrice: formatPrice(price),
-                            finalPrice: formatPrice(discountedPrice),
-                            discountedPrice: formatPrice(discountedPrice),
-                            discountPercentage: discountValue,
-                            promotions: [`${discountValue}% OFF`],
-                            condition: null,
-                            promotion: product.promotion,
-                            discountBadge: `${discountValue}% OFF`
-                        });
-                    } else {
-                        // Fallback to no discount if no promotion is available
-                        setPriceInfo({
-                            hasDiscount: false,
-                            originalPrice: formatPrice(product.price),
-                            finalPrice: formatPrice(product.price),
-                            discountedPrice: null,
-                            discountBadge: null,
-                            condition: null
-                        });
-                    }
-                }
-            };
-
-            fetchPriceInfo();
-        }
-    }, [product]);
-
-    // Handle clicks outside of modals
+    // Add click outside listener for size guide modal
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (sizeGuideRef.current && !sizeGuideRef.current.contains(event.target)) {
                 setShowSizeGuide(false);
-            }
-            if (reviewFormRef.current && !reviewFormRef.current.contains(event.target)) {
-                setShowReviewForm(false);
             }
         };
 
@@ -245,24 +217,10 @@ const ProductDetailPage = () => {
         };
     }, []);
 
-    const handleReviewChange = (e) => {
-        const { name, value } = e.target;
-        setReviewForm(prev => ({
-            ...prev,
-            [name]: name === 'rating' ? parseInt(value) : value
-        }));
-    };
-
-    const handleReviewSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!user) {
-            navigate('/login', { state: { from: `/products/${productId}` } });
-            return;
-        }
-
-        if (!reviewForm.rating || reviewForm.rating < 1 || reviewForm.rating > 5) {
-            setReviewError('Please select a rating between 1 and 5 stars');
+    // Handle review form submission
+    const handleReviewSubmit = async (reviewData) => {
+        if (!isAuthenticated) {
+            setReviewError('You must be logged in to submit a review');
             return;
         }
 
@@ -270,949 +228,355 @@ const ProductDetailPage = () => {
             setSubmittingReview(true);
             setReviewError(null);
 
-            // Add a small delay before submission to prevent rapid successive attempts
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const newReview = {
+                productId,
+                rating: reviewData.rating,
+                text: reviewData.text
+            };
 
-            const response = await productService.addProductReview(productId, {
-                userId: user._id,
-                userName: user.name,
-                rating: reviewForm.rating,
-                comment: reviewForm.comment
-            });
+            const response = await productService.submitProductReview(newReview);
 
-            // Add the new review to the reviews array
-            setReviews(prevReviews => [response.review, ...prevReviews]);
+            // Add the new review to the reviews list
+            setReviews([...reviews, response]);
 
-            // Reset form
-            setReviewForm({
-                rating: 5,
-                comment: ''
-            });
-
-            setReviewSuccess(true);
-            setShowReviewForm(false);
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setReviewSuccess(false);
-            }, 3000);
-
+            // Clear form
+            setReviewText('');
+            setReviewRating(5);
         } catch (err) {
             console.error('Error submitting review:', err);
-
-            // Handle rate limiting errors with more user-friendly message
-            if (err.message && (
-                err.message.includes('too quickly') ||
-                err.message.includes('too many') ||
-                err.message.includes('rate limit') ||
-                err.message.includes('authentication attempts')
-            )) {
-                setReviewError('You\'re submitting too quickly. Please wait 30 seconds before trying again.');
-
-                // Disable submit button temporarily
-                setTimeout(() => {
-                    setReviewError(null);
-                }, 5000);
-            } else {
-                setReviewError(err.message || 'Failed to submit review. Please try again.');
-            }
+            setReviewError(err.message || 'Failed to submit review');
         } finally {
             setSubmittingReview(false);
         }
     };
 
+    // Handle adding product to cart
     const handleAddToCart = () => {
-        if (!selectedSize) {
-            alert('Please select a size');
-            return;
-        }
+        if (!product) return;
 
-        // Only require color selection if colors are available
-        if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
-            alert('Please select a color');
-            return;
-        }
+        const selectedVariant = product.variants?.find(variant => {
+            if (!variant.options) return false;
 
-        const productToAdd = {
-            productId: product._id,
+            // Check if all selected options match this variant
+            return Object.entries(selectedOptions).every(
+                ([key, value]) => variant.options[key] === value
+            );
+        });
+
+        const itemToAdd = {
+            id: selectedVariant?.id || product.id,
+            productId: product.id,
             name: product.name,
-            price: product.price,
-            image: getImageUrl(product),
-            size: selectedSize,
-            color: selectedColor || 'default', // Use 'default' if no color is selected
+            price: priceInfo?.finalPrice || product.price,
+            image: product.images && product.images.length > 0 ? product.images[0] : null,
+            options: selectedOptions,
             quantity: quantity
         };
 
-        addToCart(productToAdd);
-        alert('Product added to cart!');
+        addToCart(itemToAdd);
     };
 
+    // Handle toggling wishlist status
     const toggleWishlist = () => {
-        if (!user) {
-            alert('Please log in to add items to wishlist');
-            return;
-        }
+        if (!product) return;
 
-        if (isInWishlist(product._id)) {
-            removeFromWishlist(product._id);
+        if (isInWishlist(product.id)) {
+            removeFromWishlist(product.id);
         } else {
-            const productToAdd = {
-                productId: product._id,
+            addToWishlist({
+                id: product.id,
                 name: product.name,
-                price: product.price,
-                image: getImageUrl(product)
-            };
-            addToWishlist(productToAdd);
+                price: priceInfo?.finalPrice || product.price,
+                image: product.images && product.images.length > 0 ? product.images[0] : null,
+            });
         }
     };
 
-    // A helper function to get a proper image URL
-    const getImageUrl = (product) => {
-        if (!product) return '/assets/placeholder-product.jpg';
+    // Helper to get full image URL
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return '/images/product-placeholder.jpg';
 
-        // Log available image fields for debugging
-        console.log('Product image data:', {
-            id: product.id,
-            name: product.name,
-            image: product.image,
-            imageUrl: product.imageUrl,
-            imagesArray: product.images,
-            thumbnail: product.thumbnail
-        });
-
-        let imagePath = null;
-
-        // Check for images array first (our newest format)
-        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            // Use the first image from the array
-            imagePath = product.images[0];
-            console.log('Using first image from images array:', imagePath);
-        }
-        // Then look for legacy image fields
-        else if (product.image) {
-            imagePath = product.image;
-            console.log('Using legacy image field:', imagePath);
-        }
-        // Then check for other possible image fields
-        else if (product.imageUrl) {
-            imagePath = product.imageUrl;
-            console.log('Using imageUrl field:', imagePath);
-        }
-        else if (product.images && product.images.front) {
-            imagePath = product.images.front;
-            console.log('Using images.front field:', imagePath);
-        }
-        else if (product.thumbnail) {
-            imagePath = product.thumbnail;
-            console.log('Using thumbnail field:', imagePath);
-        }
-
-        // If no image found, use placeholder
-        if (!imagePath) {
-            console.log('No image found, using placeholder');
-            return '/assets/placeholder-product.jpg';
-        }
-
-        // If it's a Cloudinary URL, use it as is
-        if (imagePath.includes('cloudinary.com')) {
-            console.log('Using Cloudinary URL:', imagePath);
-            return imagePath;
-        }
-
-        // If it's already a full URL, use it
         if (imagePath.startsWith('http')) {
-            console.log('Using full URL image:', imagePath);
             return imagePath;
         }
 
-        // If it's a backend image path (starts with /uploads)
-        if (imagePath.startsWith('/uploads')) {
-            // Don't try to load from backend - use placeholder instead
-            console.log('Backend image path detected, using placeholder');
-            return '/assets/placeholder-product.jpg';
-        }
-
-        // For relative paths
-        if (imagePath.startsWith('/')) {
-            console.log('Using relative path with leading slash:', imagePath);
-            return imagePath;
-        }
-
-        // Default case - assume it's a relative path without leading slash
-        console.log('Using relative path without leading slash:', `/${imagePath}`);
-        return `/${imagePath}`;
+        return `${process.env.VITE_API_URL || ''}/uploads/${imagePath}`;
     };
 
-    // Get the proper image URL for this product
-    const productImageUrl = product ? getImageUrl(product) : '/assets/placeholder-product.jpg';
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [imageError, setImageError] = useState(false);
-
-    const handleImageLoad = () => {
-        setImageLoaded(true);
-    };
-
-    const handleImageError = () => {
-        console.log(`[ProductDetailPage] Image error for ${product?.name}. Using placeholder.`);
-        setImageError(true);
-    };
-
-    // Size Guide Content based on product category
-    const getSizeGuideContent = () => {
-        const category = product.category ? product.category.toLowerCase() : '';
-
-        if (category.includes('shirt') || category.includes('tee')) {
-            return (
-                <div className="size-guide-content">
-                    <h3 className="text-lg font-medium mb-4">T-Shirt Size Guide (inches)</h3>
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="border p-2 text-left">Size</th>
-                                <th className="border p-2 text-left">Chest</th>
-                                <th className="border p-2 text-left">Length</th>
-                                <th className="border p-2 text-left">Sleeve</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="border p-2">S</td>
-                                <td className="border p-2">36-38</td>
-                                <td className="border p-2">28</td>
-                                <td className="border p-2">8</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">M</td>
-                                <td className="border p-2">38-40</td>
-                                <td className="border p-2">29</td>
-                                <td className="border p-2">8.5</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">L</td>
-                                <td className="border p-2">40-42</td>
-                                <td className="border p-2">30</td>
-                                <td className="border p-2">9</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">XL</td>
-                                <td className="border p-2">42-44</td>
-                                <td className="border p-2">31</td>
-                                <td className="border p-2">9.5</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">XXL</td>
-                                <td className="border p-2">44-46</td>
-                                <td className="border p-2">32</td>
-                                <td className="border p-2">10</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p className="mt-4 text-sm text-gray-600">Measurements may vary slightly between styles and materials.</p>
-                </div>
-            );
-        } else if (category.includes('hoodie') || category.includes('sweatshirt')) {
-            return (
-                <div className="size-guide-content">
-                    <h3 className="text-lg font-medium mb-4">Hoodie Size Guide (inches)</h3>
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="border p-2 text-left">Size</th>
-                                <th className="border p-2 text-left">Chest</th>
-                                <th className="border p-2 text-left">Length</th>
-                                <th className="border p-2 text-left">Sleeve</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="border p-2">S</td>
-                                <td className="border p-2">38-40</td>
-                                <td className="border p-2">26</td>
-                                <td className="border p-2">24</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">M</td>
-                                <td className="border p-2">40-42</td>
-                                <td className="border p-2">27</td>
-                                <td className="border p-2">24.5</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">L</td>
-                                <td className="border p-2">42-44</td>
-                                <td className="border p-2">28</td>
-                                <td className="border p-2">25</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">XL</td>
-                                <td className="border p-2">44-46</td>
-                                <td className="border p-2">29</td>
-                                <td className="border p-2">25.5</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2">XXL</td>
-                                <td className="border p-2">46-48</td>
-                                <td className="border p-2">30</td>
-                                <td className="border p-2">26</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p className="mt-4 text-sm text-gray-600">Measurements may vary slightly between styles and materials.</p>
-                </div>
-            );
-        } else {
-            // Default size guide
-            return (
-                <div className="size-guide-content">
-                    <h3 className="text-lg font-medium mb-4">Standard Size Guide</h3>
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="border p-2 text-left">Size</th>
-                                <th className="border p-2 text-left">S</th>
-                                <th className="border p-2 text-left">M</th>
-                                <th className="border p-2 text-left">L</th>
-                                <th className="border p-2 text-left">XL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="border p-2 font-medium">US Size</td>
-                                <td className="border p-2">4-6</td>
-                                <td className="border p-2">8-10</td>
-                                <td className="border p-2">12-14</td>
-                                <td className="border p-2">16-18</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2 font-medium">EU Size</td>
-                                <td className="border p-2">34-36</td>
-                                <td className="border p-2">38-40</td>
-                                <td className="border p-2">42-44</td>
-                                <td className="border p-2">46-48</td>
-                            </tr>
-                            <tr>
-                                <td className="border p-2 font-medium">UK Size</td>
-                                <td className="border p-2">8-10</td>
-                                <td className="border p-2">12-14</td>
-                                <td className="border p-2">16-18</td>
-                                <td className="border p-2">20-22</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p className="mt-4 text-sm text-gray-600">Please refer to product details for specific sizing information for this item.</p>
-                </div>
-            );
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <LoadingSpinner size="lg" label="Loading product details..." />
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4">
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4" role="alert">
-                    <p className="text-red-700">{error}</p>
-                </div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="bg-primary-500 text-white py-2 px-4 rounded hover:bg-primary-600 transition-colors"
-                    aria-label="Go back to previous page"
-                >
-                    Go Back
-                </button>
-            </div>
-        );
-    }
-
-    if (!product) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4">
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4" role="alert">
-                    <p className="text-yellow-700">Product not found.</p>
-                </div>
-                <Link
-                    to="/products"
-                    className="bg-primary-500 text-white py-2 px-4 rounded hover:bg-primary-600 transition-colors"
-                    aria-label="Browse all products"
-                >
-                    Browse Products
-                </Link>
-            </div>
-        );
-    }
-
-    // Render main image with thumbnails
-    const renderProductImages = () => {
-        if (!product.images || product.images.length === 0) {
-            return (
-                <div className="bg-gray-200 rounded-lg flex items-center justify-center h-[400px]" aria-label="No product image available">
-                    <p className="text-gray-500">No image available</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="product-images">
-                <div className="main-image mb-4 bg-white rounded-lg overflow-hidden shadow-sm">
-                    <img
-                        src={product.images[activeImageIndex]}
-                        alt={`${product.name} - ${activeImageIndex + 1}`}
-                        className="w-full h-[400px] object-contain"
-                        loading="eager" // Load main image immediately
-                    />
-                </div>
-
-                {product.images.length > 1 && (
-                    <div className="thumbnails flex space-x-2 overflow-x-auto pb-2">
-                        {product.images.map((image, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setActiveImageIndex(index)}
-                                className={`rounded-md overflow-hidden border-2 ${index === activeImageIndex
-                                    ? 'border-primary-500'
-                                    : 'border-transparent'
-                                    }`}
-                                aria-label={`View product image ${index + 1}`}
-                                aria-current={index === activeImageIndex ? 'true' : 'false'}
-                            >
-                                <img
-                                    src={image}
-                                    alt={`${product.name} thumbnail ${index + 1}`}
-                                    className="w-16 h-16 object-cover"
-                                    loading="lazy" // Lazy load thumbnails
-                                />
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
+    // Handle option changes (size, color, etc.)
+    const handleOptionChange = (name, value) => {
+        setSelectedOptions({
+            ...selectedOptions,
+            [name]: value
+        });
     };
 
     // Calculate average rating
-    const averageRating = reviews.length
-        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
-        : 0;
+    const calculateAverageRating = () => {
+        if (!reviews || reviews.length === 0) return 0;
+
+        const sum = reviews.reduce((total, review) => total + review.rating, 0);
+        return sum / reviews.length;
+    };
+
+    // Size guide content
+    const getSizeGuideContent = () => {
+        // This could be fetched from an API or CMS in a real app
+        return (
+            <div className="size-guide-content">
+                <h3 className="text-lg font-semibold mb-4">Size Guide</h3>
+                <table className="w-full border-collapse">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border p-2 text-left">Size</th>
+                            <th className="border p-2 text-left">Chest (inches)</th>
+                            <th className="border p-2 text-left">Waist (inches)</th>
+                            <th className="border p-2 text-left">Length (inches)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td className="border p-2">XS</td>
+                            <td className="border p-2">34-36</td>
+                            <td className="border p-2">28-30</td>
+                            <td className="border p-2">26</td>
+                        </tr>
+                        <tr>
+                            <td className="border p-2">S</td>
+                            <td className="border p-2">36-38</td>
+                            <td className="border p-2">30-32</td>
+                            <td className="border p-2">27</td>
+                        </tr>
+                        <tr>
+                            <td className="border p-2">M</td>
+                            <td className="border p-2">38-40</td>
+                            <td className="border p-2">32-34</td>
+                            <td className="border p-2">28</td>
+                        </tr>
+                        <tr>
+                            <td className="border p-2">L</td>
+                            <td className="border p-2">40-42</td>
+                            <td className="border p-2">34-36</td>
+                            <td className="border p-2">29</td>
+                        </tr>
+                        <tr>
+                            <td className="border p-2">XL</td>
+                            <td className="border p-2">42-44</td>
+                            <td className="border p-2">36-38</td>
+                            <td className="border p-2">30</td>
+                        </tr>
+                        <tr>
+                            <td className="border p-2">XXL</td>
+                            <td className="border p-2">44-46</td>
+                            <td className="border p-2">38-40</td>
+                            <td className="border p-2">31</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div className="mt-4">
+                    <p className="text-sm text-gray-600">
+                        Measurements may vary slightly depending on the specific style and cut.
+                    </p>
+                </div>
+            </div>
+        );
+    };
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-16 flex items-center justify-center">
+                <LoadingSpinner size="large" />
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-16">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+                    <p className="mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate('/products')}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                        Return to Products
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Show not found state
+    if (!product) {
+        return (
+            <div className="container mx-auto px-4 py-16">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+                    <p className="mb-6">The product you're looking for doesn't exist or has been removed.</p>
+                    <Link
+                        to="/products"
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                        Browse Products
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="container mx-auto py-8 px-4">
-            {/* Review success message */}
-            {reviewSuccess && (
-                <div className="fixed top-6 right-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50 shadow-md">
-                    <div className="flex items-center">
-                        <svg className="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <p>Your review has been submitted successfully!</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Size Guide Modal */}
-            {showSizeGuide && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div
-                        ref={sizeGuideRef}
-                        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-900">Size Guide</h2>
-                            <button
-                                onClick={() => setShowSizeGuide(false)}
-                                className="text-gray-400 hover:text-gray-500"
-                            >
-                                <XMarkIcon className="h-6 w-6" />
-                            </button>
-                        </div>
-                        {getSizeGuideContent()}
-                        <div className="mt-6 flex justify-center">
-                            <p className="text-sm text-gray-500">For any specific sizing questions, feel free to contact our customer support.</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Review Form Modal */}
-            {showReviewForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div
-                        ref={reviewFormRef}
-                        className="bg-white rounded-lg max-w-lg w-full p-6"
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-900">Write a Review</h2>
-                            <button
-                                onClick={() => setShowReviewForm(false)}
-                                className="text-gray-400 hover:text-gray-500"
-                            >
-                                <XMarkIcon className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        {reviewError && (
-                            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <p className="text-sm text-red-700">{reviewError}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleReviewSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Rating
-                                </label>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            type="button"
-                                            onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
-                                            className="focus:outline-none"
-                                        >
-                                            <StarIcon
-                                                className={`h-8 w-8 ${star <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label htmlFor="review-comment" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Your Review
-                                </label>
-                                <textarea
-                                    id="review-comment"
-                                    name="comment"
-                                    rows="4"
-                                    value={reviewForm.comment}
-                                    onChange={handleReviewChange}
-                                    placeholder="Share your experience with this product..."
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                                    required
-                                ></textarea>
-                            </div>
-
-                            <div className="flex justify-end space-x-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowReviewForm(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submittingReview}
-                                    className={`px-4 py-2 bg-primary-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${submittingReview ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                >
-                                    {submittingReview ? 'Submitting...' : 'Submit Review'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Breadcrumbs for navigation */}
-            <nav className="mb-4" aria-label="Breadcrumb">
-                <ol className="flex flex-wrap text-sm text-gray-500">
-                    <li>
-                        <Link to="/" className="hover:text-primary-600">Home</Link>
-                        <span className="mx-2">/</span>
+        <div className="container mx-auto px-4 py-8">
+            {/* Breadcrumb Navigation */}
+            <nav className="mb-6 text-sm">
+                <ol className="flex flex-wrap">
+                    <li className="flex items-center">
+                        <Link to="/" className="text-gray-600 hover:text-blue-600">Home</Link>
+                        <span className="mx-2 text-gray-400">/</span>
                     </li>
-                    <li>
-                        <Link to="/products" className="hover:text-primary-600">Products</Link>
-                        <span className="mx-2">/</span>
+                    <li className="flex items-center">
+                        <Link to="/products" className="text-gray-600 hover:text-blue-600">Products</Link>
+                        <span className="mx-2 text-gray-400">/</span>
                     </li>
                     {product.category && (
-                        <li>
-                            <Link
-                                to={`/products?category=${encodeURIComponent(product.category)}`}
-                                className="hover:text-primary-600"
-                            >
-                                {product.category}
+                        <li className="flex items-center">
+                            <Link to={`/products?category=${product.category.id}`} className="text-gray-600 hover:text-blue-600">
+                                {product.category.name}
                             </Link>
-                            <span className="mx-2">/</span>
+                            <span className="mx-2 text-gray-400">/</span>
                         </li>
                     )}
-                    <li className="text-gray-700 font-medium" aria-current="page">
-                        {product.name}
-                    </li>
+                    <li className="text-gray-900 font-medium">{product.name}</li>
                 </ol>
             </nav>
 
-            {/* Product content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left column: Product images */}
-                <div className="product-image-section">
-                    {renderProductImages()}
-                </div>
+            {/* Product Main Content */}
+            <div className="flex flex-col md:flex-row -mx-4">
+                {/* Product Images */}
+                <ProductImageGallery
+                    images={product.images}
+                    getImageUrl={getImageUrl}
+                />
 
-                {/* Right column: Product info */}
-                <div className="product-info-section">
-                    {/* Product header */}
-                    <div className="mb-4">
-                        <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+                {/* Product Info */}
+                <div className="w-full md:w-1/2 px-4">
+                    <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
 
-                        {/* Product rating */}
-                        <div className="flex items-center mt-2">
-                            <div className="flex text-yellow-400">
-                                {Array.from({ length: 5 }).map((_, index) => (
-                                    <StarIcon
-                                        key={index}
-                                        className={`h-5 w-5 ${index < Math.round(averageRating)
-                                            ? 'text-yellow-400'
-                                            : 'text-gray-300'
-                                            }`}
-                                        aria-hidden="true"
-                                    />
-                                ))}
-                            </div>
-                            <span className="ml-2 text-gray-600">
-                                {averageRating.toFixed(1)} out of 5 ({reviews.length} reviews)
-                            </span>
+                    {/* Product Ratings Preview */}
+                    <div className="flex items-center mb-4">
+                        <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <svg
+                                    key={star}
+                                    className={`w-5 h-5 ${star <= Math.round(calculateAverageRating())
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-300'
+                                        }`}
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            ))}
                         </div>
+                        <span className="ml-2 text-gray-600">
+                            {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                        </span>
+                        <a
+                            href="#reviews"
+                            className="ml-4 text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                            See all reviews
+                        </a>
                     </div>
 
-                    {/* Product price */}
-                    <div className="price-section mb-6">
-                        {priceInfo?.discountPercentage ? (
-                            <div className="flex items-baseline">
-                                <p className="text-2xl font-bold text-gray-900 mr-2">
-                                    {formatPrice(priceInfo.finalPrice)}
-                                </p>
-                                <p className="text-lg text-gray-500 line-through">
-                                    {formatPrice(product.price)}
-                                </p>
-                                <span className="ml-2 bg-red-100 text-red-800 px-2 py-1 rounded-md text-sm font-medium">
-                                    {priceInfo.discountPercentage}% OFF
-                                </span>
-                            </div>
-                        ) : (
-                            <p className="text-2xl font-bold text-gray-900">
-                                {formatPrice(product.price)}
-                            </p>
+                    {/* Product Pricing */}
+                    <ProductPricing
+                        priceInfo={priceInfo}
+                        isLoading={loadingPrice}
+                    />
+
+                    {/* Product Actions */}
+                    <ProductActions
+                        onAddToCart={handleAddToCart}
+                        onToggleWishlist={toggleWishlist}
+                        isInWishlist={isInWishlist(product.id)}
+                        isInStock={isInStock}
+                        variants={product.variants}
+                        selectedOptions={selectedOptions}
+                        onOptionChange={handleOptionChange}
+                        quantity={quantity}
+                        onQuantityChange={setQuantity}
+                    />
+
+                    {/* Size Guide Button */}
+                    {product.category &&
+                        product.category.name.toLowerCase().includes('clothing') && (
+                            <button
+                                onClick={() => setShowSizeGuide(true)}
+                                className="mt-4 text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                View Size Guide
+                            </button>
                         )}
 
-                        {/* Enhanced stock status with restock information */}
-                        {product.stockCount > 0 ? (
-                            <p className="mt-1 text-green-600 font-medium">
-                                {product.stockCount > 10
-                                    ? 'In Stock'
-                                    : `Only ${product.stockCount} left in stock - order soon`}
-                            </p>
-                        ) : (
-                            <div className="mt-2">
-                                <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-2">
-                                    <p className="text-red-700 font-medium">Currently Out of Stock</p>
-                                    {product.restockDate && (
-                                        <p className="text-sm text-gray-700">Expected restock: {new Date(product.restockDate).toLocaleDateString()}</p>
-                                    )}
-                                </div>
-                                <button
-                                    className="flex items-center text-primary-600 hover:text-primary-800 mt-2"
-                                    onClick={() => window.alert('You will be notified when this product is back in stock!')}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                                    </svg>
-                                    Notify Me When Available
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Color selector */}
-                    {product.availableColors && product.availableColors.length > 0 && (
-                        <div className="color-section mb-6">
-                            <h2 className="text-sm font-medium text-gray-900 mb-2">Color</h2>
-                            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Select a color">
-                                {product.availableColors.map((color) => (
-                                    <button
-                                        key={color}
-                                        onClick={() => product.stockCount > 0 && setSelectedColor(color)}
-                                        className={`
-                                            w-10 h-10 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2
-                                            ${product.stockCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                                            ${selectedColor === color ? 'ring-2 ring-offset-2 ring-primary-500' : ''}
-                                        `}
-                                        style={{ backgroundColor: color.toLowerCase() }}
-                                        aria-label={`Color: ${color}`}
-                                        aria-pressed={selectedColor === color}
-                                        disabled={product.stockCount === 0}
-                                        type="button"
-                                    />
-                                ))}
-                            </div>
-                            {product.stockCount === 0 && (
-                                <p className="text-sm text-gray-500 mt-1">Color selection unavailable — item currently out of stock</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Size selector with improved out-of-stock handling */}
-                    {product.availableSizes && product.availableSizes.length > 0 && (
-                        <div className="size-section mb-6">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-medium text-gray-900">Size</h2>
-                                <button
-                                    className="text-sm text-primary-600 hover:text-primary-500"
-                                    onClick={() => setShowSizeGuide(true)}
-                                    aria-label="View size guide"
-                                >
-                                    Size guide
-                                </button>
-                            </div>
+                    {/* Size Guide Modal */}
+                    {showSizeGuide && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                             <div
-                                className="grid grid-cols-4 gap-2 mt-2 sm:grid-cols-6"
-                                role="radiogroup"
-                                aria-label="Select a size"
+                                ref={sizeGuideRef}
+                                className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                             >
-                                {product.availableSizes.map((size) => {
-                                    const outOfStock = product.stockCount === 0;
-                                    return (
-                                        <button
-                                            key={size}
-                                            onClick={() => !outOfStock && setSelectedSize(size)}
-                                            className={`
-                                                border rounded-md py-2 px-3 flex items-center justify-center text-sm
-                                                font-medium uppercase focus:outline-none 
-                                                ${outOfStock
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                                    : selectedSize === size
-                                                        ? 'bg-primary-500 text-white border-transparent focus:ring-2 focus:ring-primary-500'
-                                                        : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 focus:ring-2 focus:ring-primary-500'
-                                                }
-                                            `}
-                                            aria-label={outOfStock ? `Size ${size} - Out of stock` : `Size: ${size}`}
-                                            aria-pressed={selectedSize === size}
-                                            disabled={outOfStock}
-                                            type="button"
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold">Size Guide</h2>
+                                    <button
+                                        onClick={() => setShowSizeGuide(false)}
+                                        className="text-gray-500 hover:text-gray-700"
+                                    >
+                                        <svg
+                                            className="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
                                         >
-                                            {size}
-                                        </button>
-                                    );
-                                })}
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                {getSizeGuideContent()}
                             </div>
-                            {product.stockCount === 0 && (
-                                <p className="text-sm text-gray-500 mt-1">Size selection unavailable — item currently out of stock</p>
-                            )}
                         </div>
                     )}
 
-                    {/* Quantity selector - disabled when out of stock */}
-                    <div className="quantity-section mb-6">
-                        <h2 className="text-sm font-medium text-gray-900 mb-2">Quantity</h2>
-                        <div className={`flex items-center border rounded-md w-32 ${product.stockCount === 0 ? 'border-gray-200 bg-gray-100' : 'border-gray-300'}`}>
-                            <button
-                                type="button"
-                                className={`px-3 py-1 focus:outline-none ${product.stockCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-700'}`}
-                                onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                                disabled={quantity <= 1 || product.stockCount === 0}
-                                aria-label="Decrease quantity"
-                            >
-                                -
-                            </button>
-                            <input
-                                type="number"
-                                min="1"
-                                max={product.stockCount || 1}
-                                value={product.stockCount === 0 ? 0 : quantity}
-                                onChange={(e) => product.stockCount > 0 && setQuantity(Math.min(Math.max(1, parseInt(e.target.value) || 1), product.stockCount))}
-                                className={`w-full text-center border-0 focus:outline-none focus:ring-0 ${product.stockCount === 0 ? 'bg-gray-100 text-gray-400' : ''}`}
-                                aria-label="Quantity"
-                                disabled={product.stockCount === 0}
-                            />
-                            <button
-                                type="button"
-                                className={`px-3 py-1 focus:outline-none ${product.stockCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-700'}`}
-                                onClick={() => quantity < product.stockCount && setQuantity(quantity + 1)}
-                                disabled={quantity >= product.stockCount || product.stockCount === 0}
-                                aria-label="Increase quantity"
-                            >
-                                +
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Action buttons with improved disabled states */}
-                    <div className="action-buttons-section flex flex-wrap gap-4 mb-6">
-                        <button
-                            onClick={() => {
-                                if (product.stockCount > 0) {
-                                    addToCart(product, selectedSize, selectedColor, quantity);
-                                }
-                            }}
-                            className={`flex-1 py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${product.stockCount === 0
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500'
-                                }`}
-                            disabled={product.stockCount === 0}
-                            aria-label={product.stockCount === 0 ? "Out of stock" : "Add to cart"}
-                        >
-                            {product.stockCount === 0 ? 'Out of Stock' : 'Add to Cart'}
-                        </button>
-                        <button
-                            onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
-                            className="p-3 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
-                            aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
-                            aria-pressed={isInWishlist(product.id)}
-                        >
-                            {isInWishlist(product.id) ? (
-                                <HeartIconSolid className="h-6 w-6 text-red-500" aria-hidden="true" />
-                            ) : (
-                                <HeartIcon className="h-6 w-6 text-gray-500" aria-hidden="true" />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Product description */}
-                    <div className="product-description-section mb-6">
-                        <h2 className="text-lg font-medium text-gray-900 mb-3">Description</h2>
-                        <style dangerouslySetInnerHTML={{ __html: productDescriptionStyles }} />
+                    {/* Product Description */}
+                    <div className="mt-8">
+                        <h2 className="text-xl font-semibold mb-4">Description</h2>
+                        <style>{productDescriptionStyles}</style>
                         <div
-                            className="product-description prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ __html: product.description || '<p>No detailed description available for this product.</p>' }}
+                            className="product-description"
+                            dangerouslySetInnerHTML={{ __html: product.description }}
                         />
                     </div>
-
-                    {/* Product features */}
-                    {product.features && product.features.length > 0 && (
-                        <div className="product-features-section mb-6">
-                            <h2 className="text-lg font-medium text-gray-900 mb-3">Features</h2>
-                            <ul className="list-disc pl-5 space-y-1">
-                                {product.features.map((feature, index) => (
-                                    <li key={index} className="text-gray-700">{feature}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
                 </div>
             </div>
 
-            {/* Reviews Section with improved empty state */}
-            <div className="reviews-section mt-12 mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
-                    <span>Customer Reviews {reviews.length > 0 && `(${reviews.length})`}</span>
-                    {user && product?.stockCount > 0 && (
-                        <button
-                            onClick={() => setShowReviewForm(true)}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-500"
-                        >
-                            Write a review
-                        </button>
-                    )}
-                </h2>
-
-                {reviews.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {reviews.map((review, index) => (
-                            <div key={review.id || index} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <div className="flex items-center">
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <StarIcon
-                                                    key={star}
-                                                    className={`h-5 w-5 ${star <= review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                />
-                                            ))}
-                                            {review.isVerifiedPurchase && (
-                                                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                                                    Verified Purchase
-                                                </span>
-                                            )}
-                                        </div>
-                                        {review.title && (
-                                            <h3 className="font-semibold text-gray-900 mt-1">{review.title}</h3>
-                                        )}
-                                    </div>
-                                    <span className="text-sm text-gray-500">
-                                        {new Date(review.createdAt).toLocaleDateString()}
-                                    </span>
-                                </div>
-                                <p className="text-gray-600">{review.comment}</p>
-                                {review.user && (
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        By {review.user.firstName || review.user.username || 'Anonymous'}
-                                    </p>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-6 text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
-                        <p className="text-gray-600 mb-4">Be the first to share your experience with this product!</p>
-                        <button
-                            onClick={() => {
-                                if (!user) {
-                                    navigate('/login', { state: { from: `/products/${productId}` } });
-                                } else if (product && product.stockCount > 0) {
-                                    setShowReviewForm(true);
-                                }
-                            }}
-                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm ${product && product.stockCount === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'text-white bg-primary-600 hover:bg-primary-700'}`}
-                            disabled={product && product.stockCount === 0}
-                        >
-                            Write a Review
-                        </button>
-                        {product.stockCount === 0 && (
-                            <p className="text-sm text-gray-500 mt-2">You'll be able to review this product once it's back in stock</p>
-                        )}
-                    </div>
-                )}
+            {/* Reviews Section */}
+            <div id="reviews" className="mt-12 pt-4 border-t">
+                <ProductReviews
+                    reviews={reviews}
+                    averageRating={calculateAverageRating()}
+                    onSubmitReview={handleReviewSubmit}
+                    isSubmitting={submittingReview}
+                    error={reviewError}
+                />
             </div>
-
-            {/* Similar Products Section with improved styling */}
-            {similarProducts.length > 0 && (
-                <div className="similar-products-section mt-12 mb-16 bg-gray-50 py-8 px-4 sm:px-6 rounded-lg">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">You May Also Like</h2>
-                    <p className="text-gray-600 mb-6">Discover more products that match your style</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-                        {similarProducts.map((similarProduct) => (
-                            <Link
-                                key={similarProduct.id}
-                                to={`/products/${similarProduct.id}`}
-                                className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                            >
-                                <div className="aspect-w-1 aspect-h-1 bg-gray-200 overflow-hidden">
-                                    <img
-                                        src={similarProduct.images?.[0] || '/assets/placeholder-product.jpg'}
-                                        alt={similarProduct.name}
-                                        className="w-full h-full object-center object-cover group-hover:opacity-90 transition-opacity"
-                                        loading="lazy" // Lazy load similar products images
-                                    />
-                                </div>
-                                <div className="p-4">
-                                    <h3 className="text-gray-900 font-medium group-hover:text-primary-600 transition-colors">{similarProduct.name}</h3>
-                                    <p className="text-gray-600 mt-1">{formatPrice(similarProduct.price)}</p>
-                                    {similarProduct.stockCount === 0 && (
-                                        <span className="inline-block mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">Out of Stock</span>
-                                    )}
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
