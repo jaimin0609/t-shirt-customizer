@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { orderService } from '../../services/orderService';
+import orderService from '../../services/orderService';
 
 // Import components
 import OrderList from './OrderList';
